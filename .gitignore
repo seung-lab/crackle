@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+connectomics.npy.cpso
+connectomics.npy.cpso.gz
+
+test*
