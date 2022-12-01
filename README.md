@@ -6,7 +6,9 @@ Next gen. 3D segmentation compression codec.
 
 Crackle is a new codec inspired by Compresso \[1\] for creating highly compressed 3D dense segmentation images. Compresso innovated by separating labels from boundary structures. There were conceptually four (but really five) elements in the format: header, labels, bit packed and RLE encoded binary image boundaries, and indeterminate boundary locations. 
 
-Crackle improves upon Compresso by replacing the bit-packed boundary map with a "crack code" and also uses 3D information to reduce redundancy in labels using "pins".
+Crackle improves upon Compresso by replacing the bit-packed boundary map with a "crack code" and also uses 3D information to reduce redundancy in labels using "pins". Like Compresso, Crackle uses a two pass compression strategy where the output of crackle may be further comrpessed with a bitstream compressor like gzip, bzip2, zstd, or lzma.
+
+Based on preliminary experiments, it seems likely that the output of Crackle will be in the ballpark of 2x to 4x smaller than Compresso. The second stage compressed Crackle file will likely be about 70% the size of the equivalent Compresso file.
 
 ## Boundary Structure: Crack Code
 
