@@ -51,6 +51,9 @@ def create_crack_code(labels):
   G = create_graph(labels)
   Gcc = list(nx.connected_components(G))
   
+  if len(Gcc) == 0:
+    return []
+
   left = 0b10
   right = 0b01
   up = 0b00
