@@ -2,6 +2,8 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 
+from .ccl import connected_components
+
 def sip(iterable, block_size):
   """Sips a fixed size from the iterable."""
   ct = 0
@@ -20,6 +22,10 @@ def sip(iterable, block_size):
 def create_graph(labels, include_borders=False):
   sx, sy = labels.shape
   G = nx.Graph()
+
+  # graph is of corners and edges
+  # origin is located at top left
+  # corner of the image
 
   for x in range(1, sx):
     for y in range(0, sy):
@@ -108,6 +114,86 @@ def create_crack_code(labels):
       code.append(dir_taken)
       node = next_node
     chains.append(code)
+
+  return chains
+
+def decode_crack_code(chains, sx, sy):
+  # voxel connectivity
+  # four bits: -y-x+y+x true is passable
+  edges = np.zeros((sx,sy), dtype=np.uint8) 
+  edges += 0b1111
+
+  left = 0b10
+  right = 0b01
+  up = 0b00
+  down = 0b11
+
+  # graph is of corners and edges
+  # origin is located at top left
+  # corner of the image
+
+  for node, symbols in chains.items():
+    y = node // sx
+    x = node - sx * y
+
+    revisit = []
+    for symbol in symbols:
+      if symbol == up:
+        edges[x-1,y-1] = edges[x-1,y-1] & 0b1110
+        edges[x,y-1] = edges[x,y-1] & 0b1101
+        y -= 1
+      elif symbol == down:
+        edges[x-1,y] = edges[x-1,y] & 0b1110
+        edges[x,y] = edges[x,y] & 0b1101
+        y += 1
+      elif symbol == left:
+        edges[x-1,y-1] = edges[x-1,y-1] & 0b1011
+        edges[x-1,y] = edges[x-1,y] & 0b0111
+        x -= 1
+      elif symbol == right:
+        edges[x,y-1] = edges[x,y-1] & 0b1011
+        edges[x,y] = edges[x,y] & 0b0111
+        x += 1
+      elif symbol == 'b':
+        revisit.append((x,y))
+      elif symbol =='t':
+        if len(revisit) > 0:
+          x, y = revisit.pop()
+
+  return connected_components(edges)
+
+def unpack_crack_binary(code):
+  symbols = []
+
+  if len(chain) == 0:
+    return symbols
+
+  code = np.frombuffer(code, dtype=np.uint32)
+  chains = {}
+
+  branches_taken = 0
+  node = 0
+  for moveset in chain:
+    if branches_taken == 0:
+      node = int(moveset)
+      branches_taken = 1
+      continue
+
+    symbols = []
+    for i in range(16):
+      move = (moveset >> (2*i)) & 0b11
+      
+      if move == 0 and symbols[-1] == 3 and len(symbols) > 1:
+        symbols[-1] = 't' # terminate
+        branches_taken -= 1
+        if branches_taken == 0:
+          break
+      elif move == 3 and symbols[-1] == 0 and len(symbols) > 1:
+        symbols[-1] = 'b' # branch
+        branches_taken += 1
+      else:
+        symbols.append(move)
+    chains[node] = symbols
 
   return chains
 

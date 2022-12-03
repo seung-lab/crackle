@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 
 from .header import CrackleHeader
+from . import crackcode
 
 width2dtype = {
   1: np.uint8,
@@ -50,7 +51,7 @@ def raw_pins(binary:bytes) -> np.ndarray:
   ])
   return np.frombuffer(pinset, dtype=dtype)
 
-def get_crack(binary:bytes) -> List[bytes]:
+def get_crack_codes(binary:bytes) -> List[bytes]:
   header = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES  
   offset = hb + header.num_label_bytes
@@ -66,19 +67,33 @@ def get_crack(binary:bytes) -> List[bytes]:
 
   return [ binary[z_offsets[i]:z_offsets[i+1]] for i in range(sz) ]
 
+def crack_codes_to_cc_labels(
+  crack_codes, 
+  sx:int, sy:int, sz:int
+):
+  cc_labels = np.zeros((sx,sy,sz), dtype=np.uint32)
+
+  Ntotal = 0
+  for z, code in enumerate(crack_codes):
+    code = crackcode.unpack_crack_binary(code)
+    cc_slice, N = crackcode.decode_crack_code(code)
+    cc_slice += Ntotal
+    Ntotal += N
+    cc_labels[:,:,z] = cc_slice
+
+  return cc_labels, Ntotal
 
 def decompress(binary: bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
   all_pins = raw_pins(binary)
-  crack_codes = get_crack(binary)
+  crack_codes = get_crack_codes(binary)
 
   sx,sy,sz = header.sx, header.sy, header.sz
 
-  # create CCL volume from crack codes
-  # N = num CCL labels in volume
-  cc_labels = np.zeros((header.sx, header.sy, header.sz)) # placeholder
-  N = 100
+  cc_labels, N = crack_codes_to_cc_labels(
+    crack_codes, sx, sy, sz
+  )
 
   label_map = np.array((N,), dtype=width2dtype[header.data_width])
 
@@ -91,15 +106,3 @@ def decompress(binary: bytes) -> np.ndarray:
       label_map[ccid] = pin['label']
 
   return label_map[cc_labels.flatten()].reshape((sx,sy,sz))
-
-
-
-
-  
-
-
-
-
-
-
-
