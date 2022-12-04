@@ -236,9 +236,10 @@ def unpack_binary(code):
         branches_taken += 1
       else:
         symbols.append(move)
-    
+
     if branches_taken == 0:
       chains[node].extend(symbols)
+      symbols = []
 
   return chains
 
