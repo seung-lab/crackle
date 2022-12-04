@@ -4,7 +4,7 @@
 import crackle
 import numpy
 
-labels = np.load(...) # a 2D or 3D dense segmentation
+labels = np.load("example.npy") # a 2D or 3D dense segmentation
 
 binary = crackle.compress(labels)
 labels = crackle.decompress(binary)
@@ -32,7 +32,7 @@ Crackle is a new codec inspired by Compresso \[1\] for creating highly compresse
 
 Crackle improves upon Compresso by replacing the bit-packed boundary map with a "crack code" and also uses 3D information to reduce redundancy in labels using "pins". Like Compresso, Crackle uses a two pass compression strategy where the output of crackle may be further comrpessed with a bitstream compressor like gzip, bzip2, zstd, or lzma.
 
-Based on preliminary experiments, it seems likely that the output of Crackle will be in the ballpark of 2x to 4x smaller than Compresso. The second stage compressed Crackle file will likely be about 70% the size of the equivalent Compresso file.
+Based on preliminary experiments, it seems likely that the output of Crackle will be in the ballpark of 2x to 3x smaller than Compresso. The second stage compressed Crackle file will likely be about 80% the size of the equivalent Compresso file.
 
 ## Boundary Structure: Crack Code
 
