@@ -82,9 +82,9 @@ def create_crack_codes(labels) -> List[List[int]]:
 
   # special codes
   BRANCH = [up,down]
+  BRANCH2 = [left,right]
   TERM = [down,up]
-  UNUSED1 = [left,right]
-  UNUSED2 = [right,left]
+  TERM2 = [right,left]
 
   revisit = []
   chains = []
@@ -107,7 +107,12 @@ def create_crack_codes(labels) -> List[List[int]]:
       ]
       
       if len(neighbors) == 0:
-        code.extend(TERM)
+        # Avoid palendroimic sequences that
+        # can be misinterpreted like down,up,down
+        if len(code) == 1 or code[-1] != up:
+          code.extend(TERM)
+        else:
+          code.extend(TERM2)
         branches_taken -= 1
         if len(revisit):
           node = revisit.pop()
@@ -115,7 +120,13 @@ def create_crack_codes(labels) -> List[List[int]]:
           node = next(iter(remaining))[0]
         continue
       elif len(neighbors) > 1:
-        code.extend(BRANCH)
+        # Avoid palendroimic sequences that
+        # can be misinterpreted like down,up,down
+        if len(code) == 1 or code[-1] != down:
+          code.extend(BRANCH)
+        else:
+          code.extend(BRANCH2)
+
         revisit.append(node)
         branches_taken += 1
 
@@ -126,7 +137,10 @@ def create_crack_codes(labels) -> List[List[int]]:
       node = next_node
 
     while branches_taken > 0:
-      code.extend(TERM)
+      if len(code) == 1 or code[-1] != up:
+        code.extend(TERM)
+      else:
+        code.extend(TERM2)
       branches_taken -= 1
 
     chains.append(code)
@@ -196,12 +210,18 @@ def unpack_binary(code):
     symbols = []
     for i in range(16):
       move = (moveset >> (2*i)) & 0b11
-      if move == 0 and len(symbols) > 0 and symbols[-1] == 3:
+      if (
+        (move == 0 and len(symbols) > 0 and symbols[-1] == 3)
+        or (move == 2 and len(symbols) > 0 and symbols[-1] == 1)
+      ):
         symbols[-1] = 't' # terminate
         branches_taken -= 1
         if branches_taken == 0:
           break
-      elif move == 3 and len(symbols) > 0 and symbols[-1] == 0:
+      elif (
+        (move == 3 and len(symbols) > 0 and symbols[-1] == 0)
+        or (move == 1 and len(symbols) > 0 and symbols[-1] == 2)
+      ):
         symbols[-1] = 'b' # branch
         branches_taken += 1
       else:
