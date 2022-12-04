@@ -57,15 +57,20 @@ def get_crack_codes(binary:bytes) -> List[bytes]:
   offset = hb + header.num_label_bytes
 
   zindex_bytes = header.z_index_width() * header.sz
+
   z_index = np.frombuffer(
     binary[offset:offset+zindex_bytes], 
     dtype=width2dtype[header.z_index_width()]
   )
-  # this calculation isn't right yet
-  z_offsets = np.concatenate((np.array([0]), z_index))
-  z_offsets = np.add.accumulate(z_index) + offset
 
-  return [ binary[z_offsets[i]:z_offsets[i+1]] for i in range(sz) ]
+  code_offsets = np.concatenate((np.array([0]), z_index))
+  code_offsets = np.add.accumulate(code_offsets)
+  code_offsets += offset + zindex_bytes
+  print(code_offsets)
+  return [ 
+    binary[code_offsets[i]:code_offsets[i+1]] 
+    for i in range(header.sz) 
+  ]
 
 def crack_codes_to_cc_labels(
   crack_codes, 
@@ -76,7 +81,7 @@ def crack_codes_to_cc_labels(
   Ntotal = 0
   for z, code in enumerate(crack_codes):
     code = crackcode.unpack_crack_binary(code)
-    cc_slice, N = crackcode.decode_crack_code(code)
+    cc_slice, N = crackcode.decode_crack_code(code, sx, sy)
     cc_slice += Ntotal
     Ntotal += N
     cc_labels[:,:,z] = cc_slice
@@ -95,14 +100,21 @@ def decompress(binary: bytes) -> np.ndarray:
     crack_codes, sx, sy, sz
   )
 
-  label_map = np.array((N,), dtype=width2dtype[header.data_width])
+  label_dtype = width2dtype[header.data_width]
+  label_map = np.array((N,), dtype=label_dtype)
 
   for pin in all_pins:
     for depth in range(pin['depth']):
       z = pin['idx'] // (sx*sy)
       y = (pin['idx'] - (z * sx*sy)) // sx
-      x = pin['idx'] - sx * (y - sy * z)
+      x = pin['idx'] - (sx * y) - (sx * sy * z)
       ccid = cc_labels[x,y,z+depth]
       label_map[ccid] = pin['label']
 
-  return label_map[cc_labels.flatten()].reshape((sx,sy,sz))
+  out = np.zeros((sx,sy,sz), dtype=label_dtype)
+  for z in range(sz):
+    for y in range(sy):
+      for x in range(sx):
+        out[x,y,z] = label_map[cc_labels[x,y,z]]
+
+  return out

@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import numpy as np
 import networkx as nx
 from tqdm import tqdm
@@ -91,6 +93,7 @@ def create_crack_code(labels):
     remaining.discard(node)
 
     code = [ node ]
+    print('node', code)
     while len(remaining) or len(revisit):
       neighbors = [ 
         n for n in G.neighbors(node) if n not in visited 
@@ -131,11 +134,10 @@ def decode_crack_code(chains, sx, sy):
   # graph is of corners and edges
   # origin is located at top left
   # corner of the image
-
   for node, symbols in chains.items():
     y = node // sx
-    x = node - sx * y
-
+    x = node - (sx * y)
+    print(node,x,y)
     revisit = []
     for symbol in symbols:
       if symbol == up:
@@ -163,42 +165,48 @@ def decode_crack_code(chains, sx, sy):
   return connected_components(edges)
 
 def unpack_crack_binary(code):
-  symbols = []
+  chains = defaultdict(list)
 
-  if len(chain) == 0:
-    return symbols
+  if len(code) == 0:
+    return chains
 
   code = np.frombuffer(code, dtype=np.uint32)
-  chains = {}
-
+  print(code)
   branches_taken = 0
   node = 0
-  for moveset in chain:
+  for moveset in code:
     if branches_taken == 0:
       node = int(moveset)
+      print(node)
       branches_taken = 1
       continue
 
     symbols = []
     for i in range(16):
       move = (moveset >> (2*i)) & 0b11
-      
-      if move == 0 and symbols[-1] == 3 and len(symbols) > 1:
+      if move == 0 and len(symbols) > 1 and symbols[-1] == 3:
         symbols[-1] = 't' # terminate
         branches_taken -= 1
         if branches_taken == 0:
           break
-      elif move == 3 and symbols[-1] == 0 and len(symbols) > 1:
+      elif move == 3 and len(symbols) > 1 and symbols[-1] == 0:
         symbols[-1] = 'b' # branch
         branches_taken += 1
       else:
         symbols.append(move)
-    chains[node] = symbols
+    chains[node].extend(symbols)
+
+  print(chains)
+
+  # for node, symbols in chains.items():
+    # print(node, symbols)
 
   return chains
 
 def crack_code_to_binary(chains):
   binary = b''
+
+  print(chains)
 
   for chain in chains:
     node = np.uint32(chain.pop(0))

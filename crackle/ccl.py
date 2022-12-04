@@ -1,3 +1,5 @@
+import numpy as np
+
 class DisjointSet:
   def __init__(self):
     self.data = {} 
@@ -54,19 +56,20 @@ def connected_components(vcg):
         equivalences.makeset(new_label)
 
   next_label = 0
-  renumbering = [None] * new_label
+  renumber = [None] * new_label
   for i in range(new_label):
     label = equivalences.find(i)
-    if renumbering[label] is None:
-      renumbering[label] = next_label
-      renumbering[i] = next_label
+    if renumber[label] is None:
+      renumber[label] = next_label
+      renumber[i] = next_label
       next_label += 1
     else:
-      renumbering[i] = renumber[label]
+      renumber[i] = renumber[label]
 
-  for y in range(sy):
-    for x in range(sx):
-      out[x,y] = renumbering[out[x,y]]
+  if len(renumber):
+    for y in range(sy):
+      for x in range(sx):
+        out[x,y] = renumber[out[x,y]]
 
   return out, next_label
 

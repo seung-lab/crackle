@@ -20,8 +20,8 @@ def compress(labels:np.ndarray) -> bytes:
     sx=labels.shape[0], sy=labels.shape[1], sz=labels.shape[2],
     num_label_bytes=0,
   )
-  z_levels = crackcode.encode_boundaries(labels)
-  z_index = [ len(level) for level in z_levels ]
+  crack_codes = crackcode.encode_boundaries(labels)
+  z_index = [ len(code) for code in crack_codes ]
 
   all_pins = pins.compute(labels)
   labels_binary = pins.fixed_width_binary(
@@ -38,13 +38,18 @@ def compress(labels:np.ndarray) -> bytes:
   z_index = b''.join([ 
     sz.to_bytes(z_index_width, 'little') for sz in z_index 
   ])
-  z_levels = b''.join(z_levels)
-  
+  crack_codes = b''.join(crack_codes)
+
+  print("header", header.tobytes())
+  print("pins", labels_binary)
+  print("z index", z_index)
+  print("crack codes", crack_codes)
+
   return b''.join([
     header.tobytes(),
     labels_binary,
     z_index,
-    z_levels
+    crack_codes
   ])
 
 
