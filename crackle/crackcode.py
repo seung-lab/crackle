@@ -39,7 +39,6 @@ def create_graph(labels, include_borders=False):
       if labels[x,y] != labels[x-1,y]:
         node_up = x + sxe * y
         node_down = x + sxe * (y + 1)
-        print(x,y, node_up, node_down)
         G.add_edge(node_up, node_down)
 
   # assign horizontal edges
@@ -96,6 +95,8 @@ def create_crack_codes(labels) -> List[List[int]]:
     node = next(iter(remaining))[0]
     remaining.discard(node)
 
+    branches_taken = 1
+
     code = [ node ]
     while len(remaining) or len(revisit):
       neighbors = [ 
@@ -105,6 +106,7 @@ def create_crack_codes(labels) -> List[List[int]]:
       
       if len(neighbors) == 0:
         code.extend(TERM)
+        branches_taken -= 1
         if len(revisit):
           node = revisit.pop()
         elif len(remaining):
@@ -113,12 +115,18 @@ def create_crack_codes(labels) -> List[List[int]]:
       elif len(neighbors) > 1:
         code.extend(BRANCH)
         revisit.append(node)
+        branches_taken += 1
 
       next_node = neighbors.pop()
       dir_taken = dirmap[next_node - node]
       code.append(dir_taken)
       remaining.discard(tuple(sorted([node,next_node])))
       node = next_node
+
+    while branches_taken > 0:
+      code.extend(TERM)
+      branches_taken -= 1
+
     chains.append(code)
 
   return chains
@@ -174,13 +182,12 @@ def unpack_binary(code):
     return chains
 
   code = np.frombuffer(code, dtype=np.uint32)
-  print(code)
+
   branches_taken = 0
   node = 0
   for moveset in code:
     if branches_taken == 0:
       node = int(moveset)
-      print(node)
       branches_taken = 1
       continue
 
@@ -199,7 +206,7 @@ def unpack_binary(code):
         symbols.append(move)
     chains[node].extend(symbols)
 
-  print(chains)
+  # print(chains)
 
   # for node, symbols in chains.items():
     # print(node, symbols)
@@ -209,7 +216,7 @@ def unpack_binary(code):
 def pack_codes(chains:List[List[int]]) -> bytes:
   binary = b''
 
-  print(chains)
+  # print("here", chains)
 
   for chain in chains:
     node = np.uint32(chain.pop(0))
