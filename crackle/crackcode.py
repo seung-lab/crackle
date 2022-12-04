@@ -5,7 +5,7 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 
-from .ccl import connected_components
+from .ccl import color_connectivity_graph
 
 def sip(iterable, block_size):
   """Sips a fixed size from the iterable."""
@@ -199,7 +199,7 @@ def decode_crack_code(chains, sx, sy):
         if len(revisit) > 0:
           x, y = revisit.pop()
 
-  return connected_components(edges)
+  return color_connectivity_graph(edges)
 
 def unpack_binary(code):
   chains = defaultdict(list)

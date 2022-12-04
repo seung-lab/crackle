@@ -1,16 +1,20 @@
 from collections import defaultdict
 
-import compresso
 import numpy as np
-import cc3d
 from tqdm import tqdm
+
+from .ccl import connected_components
 
 def extract_columns(labels:np.ndarray):
   sx,sy,sz = labels.shape
 
   cc_labels = np.zeros((sx,sy,sz), dtype=np.uint32)
+  N_total = 0
   for z in range(sz):
-    cc_labels[:,:,z] = cc3d.connected_components(labels[:,:,z], connectivity=4)
+    cc_slice, N = connected_components(labels[:,:,z])
+    cc_slice += N_total
+    cc_labels[:,:,z] = cc_slice
+    N_total += N
 
   pinsets = defaultdict(list)
 
@@ -23,12 +27,13 @@ def extract_columns(labels:np.ndarray):
         cur = labels[x,y,z]
         if label != cur:
           pinsets[label].append(
-            ((x,y,z_start), (x,y,z), label_set)
+            ((x,y,z_start), (x,y,z-1), label_set)
           )
           label = cur
           z_start = z
           label_set = set()
         label_set |= set([ cc_labels[x,y,z] ])
+
       pinsets[label].append(
         ((x,y,z_start), (x,y,z), label_set)
       )

@@ -1,6 +1,3 @@
-compresso
-connected-components-3d
 numpy
 networkx
-cloud-volume
 tqdm

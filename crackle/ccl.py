@@ -27,8 +27,7 @@ class DisjointSet:
     else:
       self.data[i] = j
 
-
-def connected_components(vcg):
+def color_connectivity_graph(vcg):
   sx, sy = vcg.shape
 
   equivalences = DisjointSet()
@@ -46,9 +45,9 @@ def connected_components(vcg):
     for x in range(sx):
       if x > 0 and (vcg[x,y] & 0b0010) > 0:
         out[x,y] = out[x-1,y]
-        if out[x,y] != out[x,y-1] and (vcg[x,y] & 0b1000) > 0:
+        if y > 0 and out[x,y] != out[x,y-1] and (vcg[x,y] & 0b1000) > 0:
           equivalences.union(out[x,y], out[x,y-1])
-      elif (vcg[x,y] & 0b1000) > 0:
+      elif y > 0 and (vcg[x,y] & 0b1000) > 0:
         out[x,y] = out[x,y-1]
       else:
         new_label += 1
@@ -73,6 +72,45 @@ def connected_components(vcg):
 
   return out, len(renumber)
 
+def connected_components(labels):
+  """4 connected CCL"""
+  sx, sy = labels.shape
+
+  equivalences = DisjointSet()
+  out = np.zeros((sx,sy), dtype=np.uint32)
+
+  new_label = 0
+  equivalences.makeset(0)
+  for y in range(sy):
+    for x in range(sx):
+      if x > 0 and labels[x-1,y] == labels[x,y]:
+        out[x,y] = out[x-1,y]
+        if y > 0 and out[x,y] != out[x,y-1] and labels[x,y] == labels[x,y-1]:
+          equivalences.union(out[x,y], out[x,y-1])
+      elif y > 0 and out[x,y] != out[x,y-1] and labels[x,y] == labels[x,y-1]:
+        out[x,y] = out[x,y-1]
+      else:
+        new_label += 1
+        out[x,y] = new_label
+        equivalences.makeset(new_label)
+
+  next_label = 0
+  renumber = [None] * (new_label+1)
+  for i in range(new_label+1):
+    label = equivalences.find(i)
+    if renumber[label] is None:
+      renumber[label] = next_label
+      renumber[i] = next_label
+      next_label += 1
+    else:
+      renumber[i] = renumber[label]
+
+  if len(renumber):
+    for y in range(sy):
+      for x in range(sx):
+        out[x,y] = renumber[out[x,y]]
+
+  return out, len(renumber)
 
 
 

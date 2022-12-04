@@ -1,0 +1,4 @@
+cloud-volume
+compresso
+pytest
+cython
