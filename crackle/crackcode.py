@@ -150,38 +150,48 @@ def create_crack_codes(labels) -> List[List[int]]:
 def decode_crack_code(chains, sx, sy):
   # voxel connectivity
   # four bits: -y-x+y+x true is passable
-  edges = np.zeros((sx,sy), dtype=np.uint8) 
-  edges += 0b1111
+  edges = np.full((sx,sy), fill_value=0b1111, dtype=np.uint8) 
 
   left = 0b10
   right = 0b01
   up = 0b00
   down = 0b11
 
+  sxe = sx + 1
+  sye = sy + 1
+
   # graph is of corners and edges
   # origin is located at top left
   # corner of the image
   for node, symbols in chains.items():
-    y = node // sx
-    x = node - (sx * y)
-
+    y = node // sxe
+    x = node - (sxe * y)
+    
     revisit = []
     for symbol in symbols:
       if symbol == up:
-        edges[x-1,y-1] = edges[x-1,y-1] & 0b1110
-        edges[x,y-1] = edges[x,y-1] & 0b1101
+        if (x-1) < sx and (y-1) < sy:
+          edges[x-1,y-1] = edges[x-1,y-1] & 0b1110
+        if x < sx and (y-1) < sy:
+          edges[x,y-1] = edges[x,y-1] & 0b1101
         y -= 1
       elif symbol == down:
-        edges[x-1,y] = edges[x-1,y] & 0b1110
-        edges[x,y] = edges[x,y] & 0b1101
+        if (x-1) < sx and y < sy:
+          edges[x-1,y] = edges[x-1,y] & 0b1110
+        if x < sx and y < sy:
+          edges[x,y] = edges[x,y] & 0b1101
         y += 1
       elif symbol == left:
-        edges[x-1,y-1] = edges[x-1,y-1] & 0b1011
-        edges[x-1,y] = edges[x-1,y] & 0b0111
+        if (x-1) < sx and (y-1) < sy:
+          edges[x-1,y-1] = edges[x-1,y-1] & 0b1011
+        if (x-1) < sx and y < sy:
+          edges[x-1,y] = edges[x-1,y] & 0b0111
         x -= 1
       elif symbol == right:
-        edges[x,y-1] = edges[x,y-1] & 0b1011
-        edges[x,y] = edges[x,y] & 0b0111
+        if x < sx and (y-1) < sy:
+          edges[x,y-1] = edges[x,y-1] & 0b1011
+        if x < sx and y < sy:
+          edges[x,y] = edges[x,y] & 0b0111
         x += 1
       elif symbol == 'b':
         revisit.append((x,y))
