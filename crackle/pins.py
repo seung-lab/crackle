@@ -14,7 +14,7 @@ def extract_columns(labels:np.ndarray):
 
   pinsets = defaultdict(list)
 
-  for x in tqdm(range(sx)):
+  for x in range(sx):
     for y in range(sy):
       label = labels[x,y,0]
       label_set = set([ cc_labels[x,y,0] ])
@@ -57,7 +57,7 @@ def compute(labels):
   pinsets = extract_columns(labels)
 
   all_pins = {}
-  for label in tqdm(pinsets):
+  for label in pinsets:
     pin = find_optimal_pins(pinsets[label])
     all_pins[label] = pin
 

@@ -40,11 +40,6 @@ def compress(labels:np.ndarray) -> bytes:
   ])
   crack_codes = b''.join(crack_codes)
 
-  print("header", header.tobytes())
-  print("pins", labels_binary)
-  print("z index", z_index)
-  print("crack codes", crack_codes)
-
   return b''.join([
     header.tobytes(),
     labels_binary,

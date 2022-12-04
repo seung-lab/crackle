@@ -166,7 +166,7 @@ def decode_crack_code(chains, sx, sy):
   for node, symbols in chains.items():
     y = node // sxe
     x = node - (sxe * y)
-    
+
     revisit = []
     for symbol in symbols:
       if symbol == up:
@@ -243,8 +243,6 @@ def unpack_binary(code):
 def pack_codes(chains:List[List[int]]) -> bytes:
   binary = b''
 
-  # print("here", chains)
-
   for chain in chains:
     node = np.uint32(chain.pop(0))
     binary += node.tobytes()[:4]
@@ -261,7 +259,7 @@ def encode_boundaries(labels):
   sz = labels.shape[2]
 
   binary_components = []
-  for z in tqdm(range(sz), desc='crack code z'):
+  for z in range(sz):
     codes = create_crack_codes(labels[:,:,z])
     binary_components.append(
       pack_codes(codes)

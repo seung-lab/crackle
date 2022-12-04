@@ -44,20 +44,20 @@ def connected_components(vcg):
 
   for y in range(1,sy):
     for x in range(sx):
-      if x > 0 and (vcg[x,y] & 0b0010):
+      if x > 0 and (vcg[x,y] & 0b0010) > 0:
         out[x,y] = out[x-1,y]
-        if out[x,y] != out[x,y-1]:
+        if out[x,y] != out[x,y-1] and (vcg[x,y] & 0b1000) > 0:
           equivalences.union(out[x,y], out[x,y-1])
-      elif (vcg[x,y] & 0b1000):
+      elif (vcg[x,y] & 0b1000) > 0:
         out[x,y] = out[x,y-1]
       else:
-        out[x,y] = new_label
         new_label += 1
+        out[x,y] = new_label
         equivalences.makeset(new_label)
 
   next_label = 0
-  renumber = [None] * new_label
-  for i in range(new_label):
+  renumber = [None] * (new_label+1)
+  for i in range(new_label+1):
     label = equivalences.find(i)
     if renumber[label] is None:
       renumber[label] = next_label
@@ -71,7 +71,7 @@ def connected_components(vcg):
       for x in range(sx):
         out[x,y] = renumber[out[x,y]]
 
-  return out, next_label
+  return out, len(renumber)
 
 
 

@@ -66,7 +66,7 @@ def get_crack_codes(binary:bytes) -> List[bytes]:
   code_offsets = np.concatenate((np.array([0]), z_index))
   code_offsets = np.add.accumulate(code_offsets)
   code_offsets += offset + zindex_bytes
-  print(code_offsets)
+
   return [ 
     binary[code_offsets[i]:code_offsets[i+1]] 
     for i in range(header.sz) 
@@ -101,7 +101,7 @@ def decompress(binary: bytes) -> np.ndarray:
   )
 
   label_dtype = width2dtype[header.data_width]
-  label_map = np.array((N,), dtype=label_dtype)
+  label_map = np.zeros((N,), dtype=label_dtype)
 
   for pin in all_pins:
     for depth in range(pin['depth']+1):
