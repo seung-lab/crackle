@@ -1,6 +1,30 @@
-# Crackle
+# Crackle: Next gen. 3D segmentation compression codec.
 
-Next gen. 3D segmentation compression codec.
+```python
+import crackle
+import numpy
+
+labels = np.load(...) # a 2D or 3D dense segmentation
+
+binary = crackle.compress(labels)
+labels = crackle.decompress(binary)
+
+# get unique labels without decompressing
+uniq = crackle.labels(binary) 
+
+# Remap labels without decompressing. Could
+# be useful for e.g. proofreading.
+remapped = crackle.remap(
+  binary, { 1: 2, 2: 3, ... },
+  preserve_missing_labels=True
+)
+
+# for working with files
+# if .gz is appended to the filename, the file will be
+# automatically gzipped (or ungzipped)
+crackle.save(labels, "example.ckl.gz")
+labels = crackle.load("example.ckl.gz")
+```
 
 *This repository is currently highly experimental.*
 
