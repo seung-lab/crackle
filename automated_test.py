@@ -4,6 +4,8 @@ import numpy as np
 
 import compresso
 
+import pytest
+
 def test_create_graph():
   labels = np.zeros((3,3), dtype=np.uint32)
   labels[1,1] = 1
@@ -29,18 +31,24 @@ def test_packed_encoding():
 
   assert ans == recovered
 
-def test_compress_decompress():
+def test_compress_decompress_empty():
+  labels = np.zeros((100,100,32), dtype=np.uint32)
+  binary = crackle.compress(labels)
+  recovered = crackle.decompress(binary)
+  assert np.all(labels == recovered)
+
+@pytest.mark.parametrize('i', range(10))
+def test_compress_decompress(i):
   labels = compresso.load("connectomics.npy.cpso.gz")
 
-  for i in range(10):
-    x,y,z = tuple(np.random.randint(128,384, size=(3,)))
-    print(x,y,z)
-    cutout = labels[x:x+128,y:y+128,z:z+16]
-    
-    binary = crackle.compress(cutout)
-    recovered = crackle.decompress(binary)
+  x,y,z = tuple(np.random.randint(128,384, size=(3,)))
+  print(x,y,z)
+  cutout = labels[x:x+128,y:y+128,z:z+16]
+  
+  binary = crackle.compress(cutout)
+  recovered = crackle.decompress(binary)
 
-    assert np.all(cutout == recovered)
+  assert np.all(cutout == recovered)
 
 
 
