@@ -91,7 +91,9 @@ def create_crack_codes(labels) -> List[List[int]]:
 
   for i in range(len(Gcc)):
     cc = Gcc[i]
-    remaining = set(G.subgraph(cc).edges)
+    remaining = set([ 
+      tuple(sorted(edg)) for edg in G.subgraph(cc).edges 
+    ])
     node = next(iter(remaining))[0]
     remaining.discard(node)
 
@@ -110,7 +112,7 @@ def create_crack_codes(labels) -> List[List[int]]:
         if len(revisit):
           node = revisit.pop()
         elif len(remaining):
-          node = next(iter(remaining))
+          node = next(iter(remaining))[0]
         continue
       elif len(neighbors) > 1:
         code.extend(BRANCH)
@@ -190,7 +192,7 @@ def unpack_binary(code):
       node = int(moveset)
       branches_taken = 1
       continue
-    
+
     symbols = []
     for i in range(16):
       move = (moveset >> (2*i)) & 0b11
