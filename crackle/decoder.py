@@ -104,7 +104,7 @@ def decompress(binary: bytes) -> np.ndarray:
   label_map = np.array((N,), dtype=label_dtype)
 
   for pin in all_pins:
-    for depth in range(pin['depth']):
+    for depth in range(pin['depth']+1):
       z = pin['idx'] // (sx*sy)
       y = (pin['idx'] - (z * sx*sy)) // sx
       x = pin['idx'] - (sx * y) - (sx * sy * z)
