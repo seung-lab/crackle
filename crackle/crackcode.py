@@ -148,7 +148,7 @@ def decode_crack_code(chains, sx, sy):
   for node, symbols in chains.items():
     y = node // sx
     x = node - (sx * y)
-    print(node,x,y)
+
     revisit = []
     for symbol in symbols:
       if symbol == up:
@@ -190,26 +190,21 @@ def unpack_binary(code):
       node = int(moveset)
       branches_taken = 1
       continue
-
+    
     symbols = []
     for i in range(16):
       move = (moveset >> (2*i)) & 0b11
-      if move == 0 and len(symbols) > 1 and symbols[-1] == 3:
+      if move == 0 and len(symbols) > 0 and symbols[-1] == 3:
         symbols[-1] = 't' # terminate
         branches_taken -= 1
         if branches_taken == 0:
           break
-      elif move == 3 and len(symbols) > 1 and symbols[-1] == 0:
+      elif move == 3 and len(symbols) > 0 and symbols[-1] == 0:
         symbols[-1] = 'b' # branch
         branches_taken += 1
       else:
         symbols.append(move)
     chains[node].extend(symbols)
-
-  # print(chains)
-
-  # for node, symbols in chains.items():
-    # print(node, symbols)
 
   return chains
 
