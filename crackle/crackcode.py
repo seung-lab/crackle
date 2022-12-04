@@ -77,8 +77,8 @@ def create_crack_codes(labels) -> List[List[int]]:
   dirmap = {
     1: right,
     -1: left,
-    sx: down,
-    -sx: up,
+    (sx+1): down,
+    -(sx+1): up,
   }
 
   # special codes
@@ -87,26 +87,22 @@ def create_crack_codes(labels) -> List[List[int]]:
   UNUSED1 = [left,right]
   UNUSED2 = [right,left]
 
-  visited = set()
   revisit = []
-
   chains = []
 
-  node = list(Gcc[0])[0]
   for i in range(len(Gcc)):
     cc = Gcc[i]
-    remaining = set(cc)
-    node = next(iter(remaining))
+    remaining = set(G.subgraph(cc).edges)
+    node = next(iter(remaining))[0]
     remaining.discard(node)
 
     code = [ node ]
     while len(remaining) or len(revisit):
       neighbors = [ 
-        n for n in G.neighbors(node) if n not in visited 
+        n for n in G.neighbors(node) 
+        if tuple(sorted([n,node])) in remaining
       ]
-      visited.add(node)
-      remaining.discard(node)
-
+      
       if len(neighbors) == 0:
         code.extend(TERM)
         if len(revisit):
@@ -121,6 +117,7 @@ def create_crack_codes(labels) -> List[List[int]]:
       next_node = neighbors.pop()
       dir_taken = dirmap[next_node - node]
       code.append(dir_taken)
+      remaining.discard(tuple(sorted([node,next_node])))
       node = next_node
     chains.append(code)
 
