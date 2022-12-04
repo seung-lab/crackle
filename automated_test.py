@@ -17,3 +17,13 @@ def test_create_crack_codes():
   codes = crackle.crackcode.create_crack_codes(labels)
   ans = [[9, 0, 3, 1, 0, 2, 3, 3, 0, 3, 0]]
   assert codes == ans
+
+def test_packed_encoding():
+  chains = [[9, 0, 3, 1, 0, 2, 3, 3, 0, 3, 0]]
+  ans = { 9: ['b', 1, 0, 2, 3, 't', 't'] }
+  packed_code = crackle.crackcode.pack_codes(chains)
+  recovered = crackle.crackcode.unpack_binary(packed_code)
+
+  assert ans == recovered
+
+
