@@ -14,7 +14,7 @@ Based on preliminary experiments, it seems likely that the output of Crackle wil
 
 Our different approach is partially inspired by the work of Zingaretti et al. \[2\]. We represent the boundary not by border voxels, but by a "crack code" that represents the edges between voxels. This code can be thought of as directions to draw edges on a graph where the vertices are where the corners of four pixels touch and the edges are the cracks in between them. 
 
-Since this regular graph is 4-connected, each "move" in a cardinal direction can be described using two bits. To represent special symbols such as "branch" and "terminate", an impossible set of instructions on an undirected graph such as "left-right" or "up-down" can be used (occupying 4 bits).
+Since this regular graph is 4-connected, each "move" in a cardinal direction can be described using two bits. To represent special symbols such as "branch" and "terminate", an impossible set of instructions on an undirected graph such as "left-right" or "up-down" can be used (occupying 4 bits). In order to avoid creating palendromic sequences such as (3, 0, 3) meaning (down, branch) but can be read (terminate, down), we can use the left-right impossible directions to rewrite it as (3, 2, 1).
 
 While the image is 3D, we treat the image in layers because working in 3D introduces a large increase in geometric complexity (a cube has 6 faces, 12 edges, and 8 corners while a square has 4 edges and 4 corners). This increase in complexity would inflate the size of the crack code and make the implementation more difficult.
 
