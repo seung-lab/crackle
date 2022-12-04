@@ -80,7 +80,7 @@ def crack_codes_to_cc_labels(
 
   Ntotal = 0
   for z, code in enumerate(crack_codes):
-    code = crackcode.unpack_crack_binary(code)
+    code = crackcode.unpack_binary(code)
     cc_slice, N = crackcode.decode_crack_code(code, sx, sy)
     cc_slice += Ntotal
     Ntotal += N

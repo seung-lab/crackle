@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import List
 
 import numpy as np
 import networkx as nx
@@ -29,32 +30,38 @@ def create_graph(labels, include_borders=False):
   # origin is located at top left
   # corner of the image
 
+  sxe = sx + 1 # sx edges
+  sye = sy + 1 # sy edges
+
+  # assign vertical edges
   for x in range(1, sx):
     for y in range(0, sy):
       if labels[x,y] != labels[x-1,y]:
-        node_up = x + sx * y
-        node_down = x + sx * (y + 1)
+        node_up = x + sxe * y
+        node_down = x + sxe * (y + 1)
+        print(x,y, node_up, node_down)
         G.add_edge(node_up, node_down)
 
+  # assign horizontal edges
   for x in range(0, sx):
     for y in range(1, sy):
       if labels[x,y] != labels[x,y-1]:
-        node_left = x + sx * y
-        node_right = (x+1) + sx * y
+        node_left = x + sxe * y
+        node_right = (x+1) + sxe * y
         G.add_edge(node_left, node_right)
 
   if include_borders:
-    for x in range(1,sx):
+    for x in range(1,sxe): # vertical
       G.add_edge(x-1, x)
-      G.add_edge(x-1 + sx * (sy-1), x + sx * (sy-1))
+      G.add_edge(x-1 + sxe * (sye-1), x + sxe * (sye-1))
 
-    for y in range(1,sy):
-      G.add_edge(sx * y, sx * (y+1))
-      G.add_edge((sx-1) + sx * y, (sx-1) + sx * (y+1))
+    for y in range(1,sye): # horizontal
+      G.add_edge(sxe * y, sxe * (y+1))
+      G.add_edge((sxe-1) + sxe * y, (sxe-1) + sxe * (y+1))
 
   return G
 
-def create_crack_code(labels):
+def create_crack_codes(labels) -> List[List[int]]:
   sx, sy = labels.shape
   G = create_graph(labels)
   Gcc = list(nx.connected_components(G))
@@ -93,7 +100,6 @@ def create_crack_code(labels):
     remaining.discard(node)
 
     code = [ node ]
-    print('node', code)
     while len(remaining) or len(revisit):
       neighbors = [ 
         n for n in G.neighbors(node) if n not in visited 
@@ -164,7 +170,7 @@ def decode_crack_code(chains, sx, sy):
 
   return connected_components(edges)
 
-def unpack_crack_binary(code):
+def unpack_binary(code):
   chains = defaultdict(list)
 
   if len(code) == 0:
@@ -203,7 +209,7 @@ def unpack_crack_binary(code):
 
   return chains
 
-def crack_code_to_binary(chains):
+def pack_codes(chains:List[List[int]]) -> bytes:
   binary = b''
 
   print(chains)
@@ -225,9 +231,9 @@ def encode_boundaries(labels):
 
   binary_components = []
   for z in tqdm(range(sz), desc='crack code z'):
-    chains = create_crack_code(labels[:,:,z])
+    codes = create_crack_codes(labels[:,:,z])
     binary_components.append(
-      crack_code_to_binary(chains)
+      pack_codes(codes)
     )
 
   return binary_components
