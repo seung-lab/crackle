@@ -211,13 +211,13 @@ def unpack_binary(code):
 
   branches_taken = 0
   node = 0
+  symbols = []
   for moveset in code:
     if branches_taken == 0:
       node = int(moveset)
       branches_taken = 1
       continue
 
-    symbols = []
     for i in range(16):
       move = (moveset >> (2*i)) & 0b11
       if (
@@ -236,7 +236,9 @@ def unpack_binary(code):
         branches_taken += 1
       else:
         symbols.append(move)
-    chains[node].extend(symbols)
+    
+    if branches_taken == 0:
+      chains[node].extend(symbols)
 
   return chains
 
