@@ -74,6 +74,7 @@ def fixed_width_binary(
   stored_data_width:int,
   index_width:int, z_width:int
 ) -> bytes:
+  """Format is [label][pin top index][pin depth] for each pin."""
 
   def toidx(tup):
     return int(tup[0] + sx * tup[1] + sx * sy * tup[2])
@@ -96,10 +97,38 @@ def fixed_width_binary(
   return b''.join(bytestream)
 
 
+def condensed_binary(
+  all_pins, 
+  sx:int, sy:int, sz:int,
+  stored_data_width:int,
+  index_width:int, z_width:int
+):
+  """Format is [label][num pins][pin1]...[pin_N] for each label."""
 
+  def toidx(tup):
+    return int(tup[0] + sx * tup[1] + sx * sy * tup[2])
 
+  linear = []
+  for label, pins in all_pins.items():
+    seq = []
+    seq.append(int(label))
+    seq.append(len(pins))
+    for pin in pins:
+      seq.append(
+        [ toidx(pin[0]), int(pin[1][2] - pin[0][2]) ]
+      )
+    linear.append(seq)
 
+  bytestream = []
+  for seq in linear:
+    bytestream.append(seq[0].to_bytes(stored_data_width, 'little'))
+    bytestream.append(seq[1].to_bytes(1, 'little'))
+    for pin in seq[2:]:
+      bytestream.append(pin[0].to_bytes(index_width, 'little'))
+      bytestream.append(pin[1].to_bytes(z_width, 'little'))
+  del linear
 
+  return b''.join(bytestream)
 
 
 
