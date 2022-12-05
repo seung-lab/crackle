@@ -20,3 +20,28 @@ width2dtype = {
 
 def compute_dtype(x) -> np.dtype:
   return width2dtype[compute_byte_width(x)]
+
+def pack_bits(attrs):
+  """[ (3, 2), (12, 4) ] # (value, bits)"""
+  encoded = 0
+  offset = 0
+  for value, bits in attrs:
+    assert value < (2 ** bits)
+    encoded = encoded | (int(value) << offset)
+    offset += bits
+  return encoded
+
+def unpack_bits(encoded, bits_per_value):
+  """[1,3,2,4... etc]"""
+  unpacked = []
+  offset = 0
+  for bits in bits_per_value:
+    unpacked.append(
+      (encoded >> offset) & ((1 << bits) - 1)
+    )
+  return unpacked
+
+
+
+
+

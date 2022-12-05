@@ -2,7 +2,7 @@ import numpy as np
 
 from . import crackcode
 from . import pins
-from .header import CrackleHeader
+from .header import CrackleHeader, LabelFormat, LabelSort, CrackFormat
 from .lib import compute_byte_width
 
 # parts of the file:
@@ -16,6 +16,9 @@ def compress(labels:np.ndarray) -> bytes:
   stored_data_width = compute_byte_width(np.max(labels))
 
   header = CrackleHeader(
+    label_format=LabelFormat.PINS_FIXED_WIDTH,
+    label_sort=LabelSort.INDEX,
+    crack_format=CrackFormat.IMPERMISSIBLE,
     data_width=np.dtype(labels.dtype).itemsize,
     stored_data_width=stored_data_width,
     sx=labels.shape[0], sy=labels.shape[1], sz=labels.shape[2],
