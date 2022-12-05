@@ -2,7 +2,8 @@ import numpy as np
 
 from . import crackcode
 from . import pins
-from .header import CrackleHeader, compute_byte_width
+from .header import CrackleHeader
+from .lib import compute_byte_width
 
 # parts of the file:
 # HEADER, LABELS, ZINDEX, BOUNDARIES
