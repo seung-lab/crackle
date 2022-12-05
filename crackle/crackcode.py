@@ -23,7 +23,9 @@ def sip(iterable, block_size):
   if len(block) > 0:
     yield block
 
-def create_graph(labels, include_borders=False):
+def create_graph(
+  labels, permissible=False, include_borders=False
+):
   sx, sy = labels.shape
   G = nx.Graph()
 
@@ -34,10 +36,14 @@ def create_graph(labels, include_borders=False):
   sxe = sx + 1 # sx edges
   sye = sy + 1 # sy edges
 
+  check = lambda a,b: a != b
+  if permissible:
+    check = lambda a,b: a == b
+
   # assign vertical edges
   for x in range(1, sx):
     for y in range(0, sy):
-      if labels[x,y] != labels[x-1,y]:
+      if check(labels[x,y], labels[x-1,y]):
         node_up = x + sxe * y
         node_down = x + sxe * (y + 1)
         G.add_edge(node_up, node_down)
@@ -45,12 +51,12 @@ def create_graph(labels, include_borders=False):
   # assign horizontal edges
   for x in range(0, sx):
     for y in range(1, sy):
-      if labels[x,y] != labels[x,y-1]:
+      if check(labels[x,y], labels[x,y-1]):
         node_left = x + sxe * y
         node_right = (x+1) + sxe * y
         G.add_edge(node_left, node_right)
 
-  if include_borders:
+  if include_borders and not permissible:
     for x in range(1,sxe): # vertical
       G.add_edge(x-1, x)
       G.add_edge(x-1 + sxe * (sye-1), x + sxe * (sye-1))
