@@ -34,6 +34,7 @@ def compress(labels:np.ndarray) -> bytes:
     stored_data_width=stored_data_width,
     index_width=header.index_width(),
     z_width=header.depth_width(),
+    sort=header.label_sort,
   )
 
   header.num_label_bytes = len(labels_binary)
