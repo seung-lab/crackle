@@ -99,7 +99,7 @@ def fixed_width_binary(
 
   if sort == LabelSort.INDEX:
     linear = sorted(linear, key=lambda x: x[1])
-  elif sort == LabelSort.LABEL:
+  elif sort == LabelSort.LABELS:
     linear = sorted(linear, key=lambda x: x[0])
   else:
     raise ValueError("should never happen")
