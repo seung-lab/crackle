@@ -35,6 +35,21 @@ def nbytes(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   return header.data_width * header.sx * header.sy * header.sz
 
+def components(binary:bytes):
+  header = CrackleHeader.frombytes(binary)
+
+  hl = len(header.tobytes())
+  ll = header.num_label_bytes
+  il = header.sz * header.z_index_width()
+  cl = len(binary) - hl -ll - il
+
+  return {
+    'header': hl,
+    'labels': ll,
+    'z_index': il,
+    'crack_codes': cl,
+  }
+
 def background_color(binary:bytes) -> int:
   header = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
