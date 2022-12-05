@@ -69,23 +69,12 @@ def create_crack_codes(labels) -> List[List[int]]:
   if len(Gcc) == 0:
     return []
 
-  left = 0b10
-  right = 0b01
-  up = 0b00
-  down = 0b11
-
   dirmap = {
-    1: right,
-    -1: left,
-    (sx+1): down,
-    -(sx+1): up,
+    1: 'r',
+    -1: 'l',
+    (sx+1): 'd',
+    -(sx+1): 'u',
   }
-
-  # special codes
-  BRANCH = [up,down]
-  BRANCH2 = [left,right]
-  TERM = [down,up]
-  TERM2 = [right,left]
 
   revisit = []
   chains = []
@@ -108,12 +97,7 @@ def create_crack_codes(labels) -> List[List[int]]:
       ]
       
       if len(neighbors) == 0:
-        # Avoid palendroimic sequences that
-        # can be misinterpreted like down,up,down
-        if len(code) == 1 or code[-1] != up:
-          code.extend(TERM)
-        else:
-          code.extend(TERM2)
+        code.append('t')
         branches_taken -= 1
         if len(revisit):
           node = revisit.pop()
@@ -121,13 +105,7 @@ def create_crack_codes(labels) -> List[List[int]]:
           node = next(iter(remaining))[0]
         continue
       elif len(neighbors) > 1:
-        # Avoid palendroimic sequences that
-        # can be misinterpreted like down,up,down
-        if len(code) == 1 or code[-1] != down:
-          code.extend(BRANCH)
-        else:
-          code.extend(BRANCH2)
-
+        code.append('b')
         revisit.append(node)
         branches_taken += 1
 
@@ -138,15 +116,52 @@ def create_crack_codes(labels) -> List[List[int]]:
       node = next_node
 
     while branches_taken > 0:
-      if len(code) == 1 or code[-1] != up:
-        code.extend(TERM)
-      else:
-        code.extend(TERM2)
+      code.append('t')
       branches_taken -= 1
 
     chains.append(code)
 
-  return chains
+  return symbols_to_integers(chains)
+
+def symbols_to_integers(chains):
+  encoded_chains = []
+
+  LEFT = 0b10
+  RIGHT = 0b01
+  UP = 0b00
+  DOWN = 0b11
+  
+  BRANCH = [UP,DOWN]
+  BRANCH2 = [LEFT,RIGHT]
+  TERM = [DOWN,UP]
+  TERM2 = [RIGHT,LEFT]
+
+  for chain in chains:
+    code = [ chain[0] ] # node
+    for symbol in chain[1:]:
+      if symbol == 'u':
+        code.append(UP)
+      elif symbol == 'd':
+        code.append(DOWN)
+      elif symbol == 'l':
+        code.append(LEFT)
+      elif symbol == 'r':
+        code.append(RIGHT)
+      elif symbol == 'b':
+        if code[-1] != BRANCH[1]:
+          code.extend(BRANCH)
+        else:
+          code.extend(BRANCH2)
+      elif symbol == 't':
+        if code[-1] != TERM[1]:
+          code.extend(TERM)
+        else:
+          code.extend(TERM2)
+      else:
+        raise ValueError(f"Got unsupported symbol: {symbol}")
+    encoded_chains.append(code)
+
+  return encoded_chains
 
 def decode_crack_code(chains, sx, sy):
   # voxel connectivity
