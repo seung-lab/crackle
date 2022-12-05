@@ -54,6 +54,14 @@ def test_compress_decompress(i):
 
   assert np.all(cutout == recovered)
 
+def test_labels():
+  labels = np.random.randint(0,100, size=(100,100,10), dtype=np.uint32)
+  binary = crackle.compress(labels)
+  uniq = np.unique(labels)  
+  uniq2 = crackle.labels(binary)
+
+  assert np.all(uniq == uniq2)
+
 
 
 
