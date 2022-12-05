@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 
-from .header import CrackleHeader
+from .header import CrackleHeader, CrackFormat, LabelFormat
 from . import crackcode
 from .lib import width2dtype
 
@@ -11,9 +11,15 @@ def labels(binary:bytes) -> np.ndarray:
   bgcolor = background_color(binary)
   return np.unique([ bgcolor ] + [ p['label'] for p in all_pins ])  
 
+def raw_labels(binary:bytes) -> bytes:
+  header = CrackleHeader.frombytes(binary)
+  hb = header.HEADER_BYTES
+  return binary[hb:hb+header.num_label_bytes]
+
 def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   binary = bytearray(binary)
   header = CrackleHeader.frombytes(binary)
+  hb = header.HEADER_BYTES
   pinset = binary[hb:hb+header.num_label_bytes]
   dtype = np.dtype([
     ('label', width2dtype[header.stored_data_width]), 
@@ -96,43 +102,58 @@ def get_crack_codes(binary:bytes) -> List[bytes]:
 
 def crack_codes_to_cc_labels(
   crack_codes, 
-  sx:int, sy:int, sz:int
+  sx:int, sy:int, sz:int,
+  permissible:bool
 ):
   cc_labels = np.zeros((sx,sy,sz), dtype=np.uint32)
 
   Ntotal = 0
   for z, code in enumerate(crack_codes):
     code = crackcode.unpack_binary(code, sx, sy)
-    cc_slice, N = crackcode.decode_crack_code(code, sx, sy)
+    cc_slice, N = crackcode.decode_crack_code(
+      code, sx, sy, permissible
+    )
     cc_slice += Ntotal
     Ntotal += N
     cc_labels[:,:,z] = cc_slice
 
   return cc_labels, Ntotal
 
-def decompress(binary: bytes) -> np.ndarray:
+def decode_flat_labels(binary:bytes, stored_dtype, dtype):
+  labels_binary = raw_labels(binary)
+  return np.frombuffer(labels_binary, dtype=stored_dtype)\
+    .astype(dtype, copy=False)
+
+def decompress(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
-  hb = CrackleHeader.HEADER_BYTES
-  bgcolor = background_color(binary)
-  all_pins = raw_pins(binary)
   crack_codes = get_crack_codes(binary)
 
   sx,sy,sz = header.sx, header.sy, header.sz
 
   cc_labels, N = crack_codes_to_cc_labels(
-    crack_codes, sx, sy, sz
+    crack_codes, sx, sy, sz, 
+    permissible=(header.crack_format == CrackFormat.PERMISSIBLE),
   )
 
+  stored_label_dtype = width2dtype[header.stored_data_width]
   label_dtype = width2dtype[header.data_width]
-  label_map = np.full((N,), fill_value=bgcolor, dtype=label_dtype)
 
-  for pin in all_pins:
-    for depth in range(pin['depth']+1):
-      z = pin['idx'] // (sx*sy)
-      y = (pin['idx'] - (z * sx*sy)) // sx
-      x = pin['idx'] - (sx * y) - (sx * sy * z)
-      ccid = cc_labels[x,y,z+depth]
-      label_map[ccid] = pin['label']
+  if header.label_format == LabelFormat.FLAT:
+    label_map = decode_flat_labels(binary, stored_label_dtype, label_dtype)
+  elif header.label_format == LabelFormat.PINS_FIXED_WIDTH:
+    bgcolor = background_color(binary)
+    all_pins = raw_pins(binary)
+    label_map = np.full((N,), fill_value=bgcolor, dtype=label_dtype)
+
+    for pin in all_pins:
+      for depth in range(pin['depth']+1):
+        z = pin['idx'] // (sx*sy)
+        y = (pin['idx'] - (z * sx*sy)) // sx
+        x = pin['idx'] - (sx * y) - (sx * sy * z)
+        ccid = cc_labels[x,y,z+depth]
+        label_map[ccid] = pin['label']
+  else:
+    raise ValueError(f"should never happen. labels fmt: {header.label_format}")
 
   out = np.zeros((sx,sy,sz), dtype=label_dtype)
   for z in range(sz):

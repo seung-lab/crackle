@@ -39,6 +39,7 @@ def unpack_bits(encoded, bits_per_value):
     unpacked.append(
       (encoded >> offset) & ((1 << bits) - 1)
     )
+    offset += bits
   return unpacked
 
 

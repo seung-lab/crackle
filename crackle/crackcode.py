@@ -169,7 +169,67 @@ def symbols_to_integers(chains):
 
   return encoded_chains
 
-def decode_crack_code(chains, sx, sy):
+def decode_crack_code(chains, sx, sy, permissible):
+  if permissible:
+    return decode_permissible_crack_code(chains, sx, sy)
+  else:
+    return decode_impermissible_crack_code(chains, sx, sy)
+
+def decode_permissible_crack_code(chains, sx, sy):
+   # voxel connectivity
+  # four bits: -y-x+y+x true is passable
+  edges = np.zeros((sx,sy), dtype=np.uint8) 
+
+  left = 0b10
+  right = 0b01
+  up = 0b00
+  down = 0b11
+
+  sxe = sx + 1
+  sye = sy + 1
+
+  # graph is of corners and edges
+  # origin is located at top left
+  # corner of the image
+  for node, symbols in chains.items():
+    y = node // sxe
+    x = node - (sxe * y)
+
+    revisit = []
+    for symbol in symbols:
+      if symbol == up:
+        if (x-1) < sx and (y-1) < sy:
+          edges[x-1,y-1] |= 0b0001
+        if x < sx and (y-1) < sy:
+          edges[x,y-1] |= 0b0010
+        y -= 1
+      elif symbol == down:
+        if (x-1) < sx and y < sy:
+          edges[x-1,y] |= 0b0001
+        if x < sx and y < sy:
+          edges[x,y] |= 0b0010
+        y += 1
+      elif symbol == left:
+        if (x-1) < sx and (y-1) < sy:
+          edges[x-1,y-1] |= 0b0100
+        if (x-1) < sx and y < sy:
+          edges[x-1,y] |= 0b1000
+        x -= 1
+      elif symbol == right:
+        if x < sx and (y-1) < sy:
+          edges[x,y-1] |= 0b0100
+        if x < sx and y < sy:
+          edges[x,y] |= 0b1000
+        x += 1
+      elif symbol == 'b':
+        revisit.append((x,y))
+      elif symbol =='t':
+        if len(revisit) > 0:
+          x, y = revisit.pop()
+
+  return color_connectivity_graph(edges) 
+
+def decode_impermissible_crack_code(chains, sx, sy):
   # voxel connectivity
   # four bits: -y-x+y+x true is passable
   edges = np.full((sx,sy), fill_value=0b1111, dtype=np.uint8) 
