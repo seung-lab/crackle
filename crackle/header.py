@@ -1,19 +1,9 @@
 import numpy as np
 
+from .lib import compute_byte_width
+
 class FormatError(Exception):
 	pass
-
-def compute_byte_width(x) -> int:
-  byte_width = 8
-  if x < np.iinfo(np.uint8).max:
-    byte_width = 1
-  elif x < np.iinfo(np.uint16).max:
-    byte_width = 2
-  elif x < np.iinfo(np.uint32).max:
-    byte_width = 4
-
-  return byte_width
-
 
 class CrackleHeader:
   MAGIC = b'crkl'

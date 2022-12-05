@@ -4,13 +4,7 @@ import numpy as np
 
 from .header import CrackleHeader
 from . import crackcode
-
-width2dtype = {
-  1: np.uint8,
-  2: np.uint16,
-  4: np.uint32,
-  8: np.uint64,
-}
+from .lib import width2dtype
 
 def labels(binary:bytes) -> np.ndarray:
   all_pins = raw_pins(binary)
@@ -80,7 +74,7 @@ def crack_codes_to_cc_labels(
 
   Ntotal = 0
   for z, code in enumerate(crack_codes):
-    code = crackcode.unpack_binary(code)
+    code = crackcode.unpack_binary(code, sx, sy)
     cc_slice, N = crackcode.decode_crack_code(code, sx, sy)
     cc_slice += Ntotal
     Ntotal += N

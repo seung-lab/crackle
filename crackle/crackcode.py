@@ -5,6 +5,7 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 
+from .lib import compute_dtype
 from .ccl import color_connectivity_graph
 
 def sip(iterable, block_size):
@@ -201,13 +202,16 @@ def decode_crack_code(chains, sx, sy):
 
   return color_connectivity_graph(edges)
 
-def unpack_binary(code):
+def unpack_binary(code, sx, sy):
   chains = defaultdict(list)
 
   if len(code) == 0:
     return chains
 
-  code = np.frombuffer(code, dtype=np.uint32)
+  dtype = compute_dtype((sx+1) * (sy+1))
+  num_moves = np.dtype(dtype).itemsize * 8 // 2
+  
+  code = np.frombuffer(code, dtype=dtype)
 
   branches_taken = 0
   node = 0
@@ -218,7 +222,7 @@ def unpack_binary(code):
       branches_taken = 1
       continue
 
-    for i in range(16):
+    for i in range(num_moves):
       move = (moveset >> (2*i)) & 0b11
       if (
         (move == 0 and len(symbols) > 0 and symbols[-1] == 3)
@@ -243,29 +247,35 @@ def unpack_binary(code):
 
   return chains
 
-def pack_codes(chains:List[List[int]]) -> bytes:
+def pack_codes(
+  chains:List[List[int]], sx:int, sy:int
+) -> bytes:
   binary = b''
 
+  dtype = compute_dtype((sx+1) * (sy+1))
+  num_bytes = np.dtype(dtype).itemsize
+  num_moves = num_bytes * 8 // 2
+
   for chain in chains:
-    node = np.uint32(chain.pop(0))
-    binary += node.tobytes()[:4]
+    node = dtype(chain.pop(0))
+    binary += node.tobytes()[:num_bytes]
  
-    for moveset in sip(chain, 16):
-      encoded = np.uint32(0)
+    for moveset in sip(chain, num_moves):
+      encoded = dtype(0)
       for i, move in enumerate(moveset):
         encoded |= (move << (2*i))
-      binary += encoded.tobytes()[:4]
+      binary += encoded.tobytes()[:num_bytes]
 
   return binary
 
 def encode_boundaries(labels):
-  sz = labels.shape[2]
+  sx, sy, sz = labels.shape
 
   binary_components = []
   for z in range(sz):
     codes = create_crack_codes(labels[:,:,z])
     binary_components.append(
-      pack_codes(codes)
+      pack_codes(codes, sx, sy)
     )
 
   return binary_components
