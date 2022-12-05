@@ -50,27 +50,11 @@ def color_connectivity_graph(vcg):
       elif y > 0 and (vcg[x,y] & 0b1000) > 0:
         out[x,y] = out[x,y-1]
       else:
-        new_label += 1
         out[x,y] = new_label
         equivalences.makeset(new_label)
+        new_label += 1
 
-  next_label = 0
-  renumber = [None] * (new_label+1)
-  for i in range(new_label+1):
-    label = equivalences.find(i)
-    if renumber[label] is None:
-      renumber[label] = next_label
-      renumber[i] = next_label
-      next_label += 1
-    else:
-      renumber[i] = renumber[label]
-
-  if len(renumber):
-    for y in range(sy):
-      for x in range(sx):
-        out[x,y] = renumber[out[x,y]]
-
-  return out, len(renumber)
+  return relabel(out, equivalences, new_label)
 
 def connected_components(labels):
   """4 connected CCL"""
@@ -90,13 +74,18 @@ def connected_components(labels):
       elif y > 0 and out[x,y] != out[x,y-1] and labels[x,y] == labels[x,y-1]:
         out[x,y] = out[x,y-1]
       else:
-        new_label += 1
         out[x,y] = new_label
         equivalences.makeset(new_label)
+        new_label += 1
+
+  return relabel(out, equivalences, new_label)
+
+def relabel(out, equivalences, nlabels):
+  sx, sy = out.shape
 
   next_label = 0
-  renumber = [None] * (new_label+1)
-  for i in range(new_label+1):
+  renumber = [None] * nlabels
+  for i in range(nlabels):
     label = equivalences.find(i)
     if renumber[label] is None:
       renumber[label] = next_label
@@ -111,11 +100,6 @@ def connected_components(labels):
         out[x,y] = renumber[out[x,y]]
 
   return out, len(renumber)
-
-
-
-
-
 
 
 

@@ -67,9 +67,9 @@ def create_graph(
 
   return G
 
-def create_crack_codes(labels) -> List[List[int]]:
+def create_crack_codes(labels, permissible) -> List[List[int]]:
   sx, sy = labels.shape
-  G = create_graph(labels)
+  G = create_graph(labels, permissible=permissible)
   Gcc = list(nx.connected_components(G))
   
   if len(Gcc) == 0:
@@ -289,12 +289,12 @@ def pack_codes(
 
   return binary
 
-def encode_boundaries(labels):
+def encode_boundaries(labels, permissible:bool  =False):
   sx, sy, sz = labels.shape
 
   binary_components = []
   for z in range(sz):
-    codes = create_crack_codes(labels[:,:,z])
+    codes = create_crack_codes(labels[:,:,z], permissible)
     binary_components.append(
       pack_codes(codes, sx, sy)
     )
