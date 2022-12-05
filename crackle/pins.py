@@ -79,6 +79,15 @@ def fixed_width_binary(
   def toidx(tup):
     return int(tup[0] + sx * tup[1] + sx * sy * tup[2])
 
+  max_pins_label = 0
+  max_pins = 0
+  for label, pins in all_pins.items():
+    if len(pins) > max_pins:
+      max_pins_label = int(label)
+      max_pins = len(pins)
+
+  all_pins.pop(max_pins_label)
+
   linear = []
   for label, pins in all_pins.items():
     for pin in pins:
@@ -88,6 +97,7 @@ def fixed_width_binary(
 
   linear = sorted(linear, key=lambda x: x[1])
   bytestream = []
+  bytestream.append(max_pins_label.to_bytes(stored_data_width, 'little'))
   for pin in linear:
       bytestream.append(pin[0].to_bytes(stored_data_width, 'little'))
       bytestream.append(pin[1].to_bytes(index_width, 'little'))
@@ -95,7 +105,6 @@ def fixed_width_binary(
   del linear
 
   return b''.join(bytestream)
-
 
 def condensed_binary(
   all_pins, 

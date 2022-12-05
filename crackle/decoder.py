@@ -8,7 +8,8 @@ from .lib import width2dtype
 
 def labels(binary:bytes) -> np.ndarray:
   all_pins = raw_pins(binary)
-  return np.unique([ p['label'] for p in all_pins ])  
+  bgcolor = background_color(binary)
+  return np.unique([ bgcolor ] + [ p['label'] for p in all_pins ])  
 
 def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   binary = bytearray(binary)
@@ -34,12 +35,24 @@ def nbytes(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   return header.data_width * header.sx * header.sy * header.sz
 
+def background_color(binary:bytes) -> int:
+  header = CrackleHeader.frombytes(binary)
+  hb = CrackleHeader.HEADER_BYTES
+  dtype = width2dtype[header.stored_data_width]
+  bgcolor = np.frombuffer(binary[hb:hb+header.stored_data_width], dtype=dtype)
+  return int(bgcolor[0])
+
 def raw_pins(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
-  pinset = binary[hb:hb+header.num_label_bytes]
+  # background color followed by pins
+  # but skip bgcolor
+  pinset = binary[
+    hb+header.stored_data_width:hb+header.num_label_bytes
+  ]
+
   dtype = np.dtype([
-    ('label', width2dtype[header.stored_data_width]), 
+    ('label', width2dtype[header.stored_data_width]),
     ('idx', width2dtype[header.index_width()]), 
     ('depth', width2dtype[header.depth_width()])
   ])
@@ -85,6 +98,7 @@ def crack_codes_to_cc_labels(
 def decompress(binary: bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
+  bgcolor = background_color(binary)
   all_pins = raw_pins(binary)
   crack_codes = get_crack_codes(binary)
 
@@ -95,7 +109,7 @@ def decompress(binary: bytes) -> np.ndarray:
   )
 
   label_dtype = width2dtype[header.data_width]
-  label_map = np.zeros((N,), dtype=label_dtype)
+  label_map = np.full((N,), fill_value=bgcolor, dtype=label_dtype)
 
   for pin in all_pins:
     for depth in range(pin['depth']+1):
