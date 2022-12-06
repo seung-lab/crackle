@@ -67,6 +67,18 @@ def create_graph(
 
   return G
 
+def print_graph(G, sx, sy):
+  """for debugging"""
+  sxe = sx + 1 # sx edges
+  sye = sy + 1 # sy edges
+
+  img = np.zeros((sxe*sye,), dtype=np.uint32)
+  for node in G.nodes:
+    img[node] = 1
+  img = img.reshape((sxe,sye), order="F")
+  print()
+  print(img)
+
 def create_crack_codes(labels, permissible) -> List[List[int]]:
   sx, sy = labels.shape
   G = create_graph(labels, permissible=permissible)
