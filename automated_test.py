@@ -62,6 +62,14 @@ def test_labels():
 
   assert np.all(uniq == uniq2)
 
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  x,y,z = tuple(np.random.randint(128,384, size=(3,)))
+  print(x,y,z)
+  labels = labels[x:x+128,y:y+128,z:z+16]
+  binary = crackle.compress(labels)
+  uniq = np.unique(labels)  
+  uniq2 = crackle.labels(binary)
+  assert np.all(uniq == uniq2)
 
 
 

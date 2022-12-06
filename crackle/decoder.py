@@ -17,9 +17,19 @@ def labels(binary:bytes) -> np.ndarray:
       decode_flat_labels(binary, head.stored_dtype, head.dtype)
     )
   else:
-    all_pins = decode_pins(binary)
+    hb = CrackleHeader.HEADER_BYTES
+    # bgcolor, num labels (u64), N labels, pins
+    offset = hb + head.stored_data_width
+    num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+    offset += 8
+    labels = np.frombuffer(
+      binary[offset:offset+num_labels*head.stored_data_width],
+      dtype=head.stored_dtype
+    )
     bgcolor = background_color(binary)
-    return np.unique([ bgcolor ] + [ p['label'] for p in all_pins ])  
+    labels = np.concatenate(([ bgcolor ], labels))
+    labels.sort()
+    return labels
 
 def raw_labels(binary:bytes) -> bytes:
   header = CrackleHeader.frombytes(binary)
