@@ -232,10 +232,5 @@ def decompress(binary:bytes) -> np.ndarray:
   else:
     raise ValueError(f"should never happen. labels fmt: {header.label_format}")
 
-  out = np.zeros((sx,sy,sz), dtype=label_dtype)
-  for z in range(sz):
-    for y in range(sy):
-      for x in range(sx):
-        out[x,y,z] = label_map[cc_labels[x,y,z]]
-
-  return out
+  out = label_map[cc_labels.reshape((sx*sy*sz,))]
+  return out.reshape((sx,sy,sz))
