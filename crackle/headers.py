@@ -2,7 +2,10 @@ from enum import IntEnum
 
 import numpy as np
 
-from .lib import compute_byte_width, pack_bits, unpack_bits
+from .lib import (
+  compute_byte_width, compute_dtype,
+  pack_bits, unpack_bits
+)
 
 class FormatError(Exception):
 	pass
@@ -88,6 +91,14 @@ class CrackleHeader:
       self.sz.to_bytes(2, 'little'),
       self.num_label_bytes.to_bytes(4, 'little'),
     ])
+
+  @property
+  def stored_dtype(self):
+    return compute_dtype(self.stored_data_width)
+
+  @property
+  def dtype(self):
+    return compute_dtype(self.data_width)
 
   def index_width(self) -> int: 
     return compute_byte_width(self.sx * self.sy * self.sz)

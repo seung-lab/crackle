@@ -10,9 +10,16 @@ def header(binary:bytes) -> dict:
   return CrackleHeader.frombytes(binary)
 
 def labels(binary:bytes) -> np.ndarray:
-  all_pins = raw_pins(binary)
-  bgcolor = background_color(binary)
-  return np.unique([ bgcolor ] + [ p['label'] for p in all_pins ])  
+  head = header(binary)
+
+  if head.label_format == LabelFormat.FLAT:
+    return np.unique(
+      decode_flat_labels(binary, head.stored_dtype, head.dtype)
+    )
+  else:
+    all_pins = raw_pins(binary)
+    bgcolor = background_color(binary)
+    return np.unique([ bgcolor ] + [ p['label'] for p in all_pins ])  
 
 def raw_labels(binary:bytes) -> bytes:
   header = CrackleHeader.frombytes(binary)
