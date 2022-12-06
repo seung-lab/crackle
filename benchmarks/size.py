@@ -3,12 +3,10 @@ import compresso
 
 import numpy as np
 import zlib
-import fastremap
-from cloudvolume import view
 
 def sample(labels, shape):
-  x,y,z = tuple(np.random.randint(128,384, size=(3,)))
-  return labels[x:x+256,y:y+256,z:z+32]
+  x,y,z = tuple(np.random.randint(0,max(labels.shape) - max(shape), size=(3,)))
+  return labels[x:x+shape[0],y:y+shape[1],z:z+shape[2]]
 
 def run_sample(labels, shape, N):
   for i in range(10):
@@ -29,20 +27,22 @@ def run_sample(labels, shape, N):
       ckl.gz:  {len(cckl_binary)}      
       cpso.gz  {len(ccpso_binary)}  ({len(cckl_binary)/len(ccpso_binary)*100:.2f}%)
       raw:.gz  {len(craw_binary)}  ({len(cckl_binary)/len(craw_binary)*100:.2f}%)
-    """)
+    """, flush=True)
 
-N = 10
+N = 3
 shape = (128,128,64)
 
-print("PINKY40 CUTOUTS")
+print("shape:", shape)
+
+print("PINKY40 CUTOUTS (connectomics.npy)")
 labels = compresso.load("benchmarks/connectomics.npy.cpso.gz")
 run_sample(labels, shape, N)
 
-print("WATERSHED CUTOUTS")
+print("WATERSHED CUTOUTS (ws.npy)")
 labels = compresso.load("benchmarks/ws.npy.cpso.gz")
 run_sample(labels, shape, N)
 
-print("RANDOM NOISE")
+print("RANDOM NOISE [0,2000) uint32")
 labels = np.random.randint(0,2000, size=(512,512,512), dtype=np.uint32)
 run_sample(labels, shape, N)
 
