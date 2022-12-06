@@ -4,7 +4,7 @@ import fastremap
 
 from . import crackcode
 from . import pins
-from .headers import CrackleHeader, LabelFormat, LabelSort, CrackFormat
+from .headers import CrackleHeader, LabelFormat, CrackFormat
 from .lib import compute_byte_width, width2dtype
 from .ccl import connected_components
 
@@ -49,7 +49,6 @@ def compress(labels:np.ndarray) -> bytes:
 
   header = CrackleHeader(
     label_format=label_format,
-    label_sort=LabelSort.INDEX,
     crack_format=crack_format,
     data_width=np.dtype(labels.dtype).itemsize,
     stored_data_width=stored_data_width,
@@ -71,7 +70,6 @@ def compress(labels:np.ndarray) -> bytes:
       stored_data_width=stored_data_width,
       index_width=header.index_width(),
       z_width=header.depth_width(),
-      sort=header.label_sort,
     )
   elif label_format == LabelFormat.FLAT:
     labels_binary = encode_flat_labels(labels, width2dtype[stored_data_width])

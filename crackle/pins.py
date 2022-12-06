@@ -5,7 +5,6 @@ from tqdm import tqdm
 
 from .ccl import connected_components
 from .lib import compute_byte_width
-from .headers import LabelSort
 
 def extract_columns(labels:np.ndarray):
   sx,sy,sz = labels.shape
@@ -74,8 +73,7 @@ def fixed_width_binary(
   all_pins, 
   sx:int, sy:int, sz:int,
   stored_data_width:int,
-  index_width:int, z_width:int,
-  sort:int
+  index_width:int, z_width:int
 ) -> bytes:
   """Format is [label][pin top index][pin depth] for each pin."""
 
@@ -99,13 +97,7 @@ def fixed_width_binary(
         [ int(label), toidx(pin[0]), int(pin[1][2] - pin[0][2]) ]
       )
 
-  if sort == LabelSort.INDEX:
-    linear = sorted(linear, key=lambda x: x[1])
-  elif sort == LabelSort.LABELS:
-    linear = sorted(linear, key=lambda x: x[0])
-  else:
-    raise ValueError("should never happen")
-
+  linear = sorted(linear, key=lambda x: x[1])
   bgcolor = max_pins_label.to_bytes(stored_data_width, 'little')
 
   all_labels = sorted(list(all_pins.keys()))

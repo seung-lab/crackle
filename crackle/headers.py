@@ -15,11 +15,6 @@ class LabelFormat(IntEnum):
   PINS_FIXED_WIDTH = 1
   PINS_VARIABLE_WIDTH = 2
 
-# only applies to fixed width pins
-class LabelSort(IntEnum): 
-  INDEX = 0
-  LABELS = 1
-
 class CrackFormat(IntEnum):
   IMPERMISSIBLE = 0
   PERMISSIBLE = 1
@@ -31,14 +26,13 @@ class CrackleHeader:
 
   def __init__(
     self, 
-    label_format:int, label_sort:int,
+    label_format:int,
     crack_format:int,
     data_width:int, stored_data_width:int,
     sx:int, sy:int, sz:int,
     num_label_bytes:int
   ):
     self.label_format = label_format
-    self.label_sort = label_sort
     self.crack_format = crack_format
     self.data_width = int(data_width)
     self.stored_data_width = int(stored_data_width)
@@ -58,12 +52,11 @@ class CrackleHeader:
     	raise FormatError(f"Wrong format version. Got: {buffer[4]} Expected: {CrackleHeader.FORMAT_VERSION}")
 
     values = unpack_bits(int(buffer[5]), [
-      2, 2, 1, 2, 1
+      2, 2, 1, 2
     ])
 
     return CrackleHeader(
       label_format=values[3],
-      label_sort=values[4],
       crack_format=values[2],
     	data_width=(2 ** values[0]),
     	stored_data_width=(2 ** values[1]),
@@ -79,7 +72,6 @@ class CrackleHeader:
       (int(np.log2(self.stored_data_width)), 2),
       (self.crack_format, 1),
       (self.label_format, 2),
-      (self.label_sort, 1),
     ])
 
     return b''.join([
