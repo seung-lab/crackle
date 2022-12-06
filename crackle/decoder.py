@@ -4,7 +4,7 @@ import numpy as np
 
 from .headers import CrackleHeader, CrackFormat, LabelFormat
 from . import crackcode
-from .lib import width2dtype, compute_byte_width
+from .lib import width2dtype, compute_byte_width, compute_dtype
 
 def header(binary:bytes) -> dict:
   return CrackleHeader.frombytes(binary)
@@ -167,8 +167,16 @@ def crack_codes_to_cc_labels(
 
 def decode_flat_labels(binary:bytes, stored_dtype, dtype):
   labels_binary = raw_labels(binary)
-  return np.frombuffer(labels_binary, dtype=stored_dtype)\
-    .astype(dtype, copy=False)
+  num_labels = int.from_bytes(labels_binary[:8], 'little')
+  offset = 8
+
+  uniq_bytes = num_labels * np.dtype(stored_dtype).itemsize
+  uniq = np.frombuffer(labels_binary[8:8+uniq_bytes], dtype=stored_dtype)
+  uniq = uniq.astype(dtype, copy=False)
+
+  cc_label_dtype = compute_dtype(uniq[-1])
+  cc_map = np.frombuffer(labels_binary[8+uniq_bytes:], dtype=cc_label_dtype)
+  return uniq[cc_map]
 
 def decode_fixed_width_pins(
   binary:bytes, 

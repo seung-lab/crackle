@@ -5,7 +5,7 @@ import fastremap
 from . import crackcode
 from . import pins
 from .headers import CrackleHeader, LabelFormat, CrackFormat
-from .lib import compute_byte_width, width2dtype
+from .lib import compute_byte_width, width2dtype, compute_dtype
 from .ccl import connected_components
 
 def encode_flat_labels(labels, stored_data_dtype):
@@ -20,12 +20,23 @@ def encode_flat_labels(labels, stored_data_dtype):
     N_total += N
 
   mapping = fastremap.component_map(cc_labels, labels)
-  array = np.zeros((N_total,), dtype=stored_data_dtype)
+  
+  uniq = np.array(list(mapping.values()), dtype=stored_data_dtype)
+  uniq = np.unique(uniq)
+
+  remapping = { k:i for i,k in enumerate(uniq) }
+  key_dtype = compute_dtype(uniq[-1])
+
+  array = np.zeros((N_total,), dtype=key_dtype)
 
   for ccid, label in mapping.items():
-    array[ccid] = label
+    array[ccid] = remapping[label]
 
-  return array.tobytes()
+  return b''.join([
+    len(uniq).to_bytes(8, 'little'),
+    uniq.tobytes(),
+    array.tobytes()
+  ])
 
 # parts of the file:
 # HEADER, LABELS, ZINDEX, BOUNDARIES
