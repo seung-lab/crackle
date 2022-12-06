@@ -120,7 +120,7 @@ def decode_pins(binary:bytes) -> np.ndarray:
   embiggened = np.empty((len(pinset),), dtype=dtype_big)
   embiggened[:] = pinset
   del pinset
-  
+
   for pin in embiggened:
     pin['label'] = labels[pin['label']]
   return embiggened

@@ -24,8 +24,10 @@ def sip(iterable, block_size):
     yield block
 
 def create_graph(
-  labels, permissible=False, include_borders=False
-):
+  labels:np.ndarray, 
+  permissible:bool = False, 
+  include_borders:bool = False
+) -> nx.Graph:
   sx, sy = labels.shape
   G = nx.Graph()
 
