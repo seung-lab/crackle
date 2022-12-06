@@ -25,7 +25,7 @@ def encode_flat_labels(labels, stored_data_dtype):
   uniq = np.unique(uniq)
 
   remapping = { k:i for i,k in enumerate(uniq) }
-  key_dtype = compute_dtype(uniq[-1])
+  key_dtype = compute_dtype(len(uniq))
 
   array = np.zeros((N_total,), dtype=key_dtype)
 

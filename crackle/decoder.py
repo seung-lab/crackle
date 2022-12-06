@@ -174,7 +174,7 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype):
   uniq = np.frombuffer(labels_binary[8:8+uniq_bytes], dtype=stored_dtype)
   uniq = uniq.astype(dtype, copy=False)
 
-  cc_label_dtype = compute_dtype(uniq[-1])
+  cc_label_dtype = compute_dtype(num_labels)
   cc_map = np.frombuffer(labels_binary[8+uniq_bytes:], dtype=cc_label_dtype)
   return uniq[cc_map]
 
