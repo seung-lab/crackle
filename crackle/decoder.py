@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy as np
+import fastremap
 
 from .headers import CrackleHeader, CrackFormat, LabelFormat
 from . import crackcode
@@ -37,24 +38,32 @@ def raw_labels(binary:bytes) -> bytes:
   return binary[hb:hb+header.num_label_bytes]
 
 def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
+  orig = binary
   binary = bytearray(binary)
-  header = CrackleHeader.frombytes(binary)
-  hb = header.HEADER_BYTES
-  pinset = binary[hb:hb+header.num_label_bytes]
-  dtype = np.dtype([
-    ('label', width2dtype[header.stored_data_width]), 
-    ('idx', width2dtype[header.index_width()]), 
-    ('depth', width2dtype[header.depth_width()])
-  ])
-  all_pins = np.frombuffer(pinset, dtype=dtype)
+  
+  head = CrackleHeader.frombytes(binary)
+  hb = CrackleHeader.HEADER_BYTES
 
-  for pin in all_pins:
-    try:
-      ids[i] = mapping[ids[i]]
-    except KeyError:
-      if not preserve_missing_labels:
-        raise
+  # flat: num_labels, N labels, remapped labels
+  # pins: bgcolor, num labels (u64), N labels, pins
 
+  offset = hb
+  if head.label_format == LabelFormat.PINS_FIXED_WIDTH:
+    offset += head.stored_data_width
+
+  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+  offset += 8
+  uniq_bytes = num_labels * head.stored_data_width
+  all_labels = np.frombuffer(
+    binary[offset:offset+uniq_bytes],
+    dtype=head.stored_dtype
+  )
+  fastremap.remap(
+    all_labels, mapping, 
+    preserve_missing_labels=preserve_missing_labels, 
+    in_place=True
+  )
+  binary[offset:offset+uniq_bytes] = list(all_labels.view(np.uint8))
   return bytes(binary)
 
 def nbytes(binary:bytes) -> np.ndarray:

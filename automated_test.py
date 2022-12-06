@@ -71,6 +71,22 @@ def test_labels():
   uniq2 = crackle.labels(binary)
   assert np.all(uniq == uniq2)
 
+def test_remap():
+  labels = np.arange(0,1000).reshape((10,10,10))
+  binary = crackle.compress(labels)
+
+  labels = crackle.labels(binary)
+  assert np.all(labels == np.arange(0,1000))
+
+  binary = crackle.remap(binary, { i:i+1 for i in range(1000) }, preserve_missing_labels=False)
+  labels = crackle.labels(binary)
+  assert np.all(labels == np.arange(1,1001))  
+
+
+
+
+
+
 
 
 
