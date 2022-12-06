@@ -97,9 +97,8 @@ def relabel(out, equivalences):
       renumber[i] = renumber[label]
 
   if len(renumber):
-    for y in range(sy):
-      for x in range(sx):
-        out[x,y] = renumber[out[x,y]]
+    renumber = np.array(renumber)
+    out[:] = renumber[out.reshape((sx*sy,))].reshape((sx,sy))
 
   return out, next_label
 
