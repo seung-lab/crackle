@@ -9,7 +9,7 @@ def sample(labels, shape):
   return labels[x:x+shape[0],y:y+shape[1],z:z+shape[2]]
 
 def run_sample(labels, shape, N):
-  for i in range(10):
+  for i in range(N):
     cutout = sample(labels, shape)
     
     ckl_binary = crackle.compress(cutout)
