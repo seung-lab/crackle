@@ -38,16 +38,16 @@ def color_connectivity_graph(vcg):
   new_label = 0
   equivalences.makeset(new_label)
   for x in range(sx):
-    out[x,0] = new_label
-    if vcg[x,0] & 0b0001 == 0:
+    if x > 0 and vcg[x,0] & 0b0010 == 0:
       new_label += 1
       equivalences.makeset(new_label)
+    out[x,0] = new_label
 
   for y in range(1,sy):
     for x in range(sx):
       if x > 0 and (vcg[x,y] & 0b0010) > 0:
         out[x,y] = out[x-1,y]
-        if y > 0 and out[x,y] != out[x,y-1] and (vcg[x,y] & 0b1000) > 0:
+        if y > 0 and (vcg[x,y] & 0b1000) > 0:
           equivalences.union(out[x,y], out[x,y-1])
       elif y > 0 and (vcg[x,y] & 0b1000) > 0:
         out[x,y] = out[x,y-1]
@@ -65,21 +65,20 @@ def connected_components(labels):
   equivalences = DisjointSet()
   out = np.zeros((sx,sy), dtype=np.uint32)
 
-  new_label = 0
-  equivalences.makeset(0)
+  new_label = -1
   for y in range(sy):
     for x in range(sx):
       if x > 0 and labels[x-1,y] == labels[x,y]:
         out[x,y] = out[x-1,y]
-        if y > 0 and out[x,y] != out[x,y-1] and labels[x,y] == labels[x,y-1]:
+        if y > 0 and labels[x,y] == labels[x,y-1]:
           equivalences.union(out[x,y], out[x,y-1])
-      elif y > 0 and out[x,y] != out[x,y-1] and labels[x,y] == labels[x,y-1]:
+      elif y > 0 and labels[x,y] == labels[x,y-1]:
         out[x,y] = out[x,y-1]
       else:
+        new_label += 1
         out[x,y] = new_label
         equivalences.makeset(new_label)
-        new_label += 1
-
+        
   return relabel(out, equivalences)
 
 def relabel(out, equivalences):
@@ -103,15 +102,4 @@ def relabel(out, equivalences):
         out[x,y] = renumber[out[x,y]]
 
   return out, len(renumber)
-
-
-
-
-
-
-
-
-
-
-
 
