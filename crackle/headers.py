@@ -3,7 +3,7 @@ from enum import IntEnum
 import numpy as np
 
 from .lib import (
-  compute_byte_width, compute_dtype,
+  compute_byte_width, width2dtype,
   pack_bits, unpack_bits
 )
 
@@ -94,11 +94,11 @@ class CrackleHeader:
 
   @property
   def stored_dtype(self):
-    return compute_dtype(self.stored_data_width)
+    return width2dtype[self.stored_data_width]
 
   @property
   def dtype(self):
-    return compute_dtype(self.data_width)
+    return width2dtype[self.data_width]
 
   def index_width(self) -> int: 
     return compute_byte_width(self.sx * self.sy * self.sz)
