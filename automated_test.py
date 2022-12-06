@@ -20,7 +20,7 @@ def test_create_crack_codes():
   labels[1,1] = 1
 
   codes = crackle.crackcode.create_crack_codes(labels, permissible=False)
-  ans = [[9, 0, 3, 1, 0, 2, 3, 3, 0, 1, 2]]
+  ans = [[9, 1, 0, 2, 3, 3, 0]]
   assert codes == ans
 
 @pytest.mark.parametrize("size", [16, 64, 128, 1024])

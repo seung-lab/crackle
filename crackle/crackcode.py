@@ -107,6 +107,7 @@ def create_crack_codes(labels, permissible) -> List[List[int]]:
     node = next(iter(remaining))[0]
     remaining.discard(node)
 
+    branch_nodes = defaultdict(list)
     branches_taken = 1
 
     code = [ node ]
@@ -127,6 +128,7 @@ def create_crack_codes(labels, permissible) -> List[List[int]]:
       elif len(neighbors) > 1:
         code.append('b')
         revisit.append(node)
+        branch_nodes[node].append(len(code) - 1)
         branches_taken += 1
 
       next_node = neighbors.pop()
@@ -134,6 +136,13 @@ def create_crack_codes(labels, permissible) -> List[List[int]]:
       code.append(dir_taken)
       remaining.discard(tuple(sorted([node,next_node])))
       node = next_node
+
+      if node in revisit:
+        tmp = revisit[::-1]
+        tmp.remove(node)
+        revisit = tmp[::-1]
+        branches_taken -= 1
+        code[branch_nodes[node].pop()] = 's'
 
     while branches_taken > 0:
       code.append('t')
@@ -159,7 +168,9 @@ def symbols_to_integers(chains):
   for chain in chains:
     code = [ chain[0] ] # node
     for symbol in chain[1:]:
-      if symbol == 'u':
+      if symbol == 's':
+        continue
+      elif symbol == 'u':
         code.append(UP)
       elif symbol == 'd':
         code.append(DOWN)
