@@ -19,7 +19,7 @@ def test_create_crack_codes():
   labels = np.zeros((3,3), dtype=np.uint32)
   labels[1,1] = 1
 
-  codes = crackle.crackcode.create_crack_codes(labels)
+  codes = crackle.crackcode.create_crack_codes(labels, permissible=False)
   ans = [[9, 0, 3, 1, 0, 2, 3, 3, 0, 1, 2]]
   assert codes == ans
 
