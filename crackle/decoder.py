@@ -220,6 +220,8 @@ def decompress(binary:bytes) -> np.ndarray:
     )
   elif header.label_format == LabelFormat.PINS_FIXED_WIDTH:
     label_map = decode_fixed_width_pins(binary, cc_labels, N, label_dtype)
+  elif header.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+    raise NotImplemented("")
   else:
     raise ValueError(f"should never happen. labels fmt: {header.label_format}")
 

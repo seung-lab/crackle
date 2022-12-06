@@ -48,7 +48,8 @@ def compress(labels:np.ndarray) -> bytes:
 
   num_pairs = fastremap.pixel_pairs(labels)
   crack_format = CrackFormat.IMPERMISSIBLE
-  label_format = LabelFormat.PINS_FIXED_WIDTH
+  # label_format = LabelFormat.PINS_FIXED_WIDTH
+  label_format = LabelFormat.PINS_VARIABLE_WIDTH
   if num_pairs / labels.size < 0.5:
     crack_format = CrackFormat.PERMISSIBLE
     label_format = LabelFormat.FLAT
@@ -82,8 +83,20 @@ def compress(labels:np.ndarray) -> bytes:
       index_width=header.index_width(),
       z_width=header.depth_width(),
     )
+  elif label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+    all_pins = pins.compute(labels)
+
+    labels_binary = pins.variable_width_binary(
+      all_pins, 
+      sx, sy, sz,
+      stored_data_width=stored_data_width,
+      index_width=header.index_width(),
+      z_width=header.depth_width(),
+    )
   elif label_format == LabelFormat.FLAT:
     labels_binary = encode_flat_labels(labels, width2dtype[stored_data_width])
+  else:
+    raise ValueError("should never happen")
 
   header.num_label_bytes = len(labels_binary)
 

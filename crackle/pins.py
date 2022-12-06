@@ -77,9 +77,79 @@ def fixed_width_binary(
 ) -> bytes:
   """Format is [label][pin top index][pin depth] for each pin."""
 
+  (bytestream, renumbering, renum_data_width) = bytestream_preamble(  
+    all_pins, 
+    sx, sy, sz,
+    stored_data_width,
+    index_width, z_width
+  )
+
   def toidx(tup):
     return int(tup[0] + sx * tup[1] + sx * sy * tup[2])
 
+  linear = []
+  for label, pins in all_pins.items():
+    for pin in pins:
+      linear.append(
+        [ int(label), toidx(pin[0]), int(pin[1][2] - pin[0][2]) ]
+      )
+
+  linear = sorted(linear, key=lambda x: x[1])
+
+  for pin in linear:
+    bytestream.append(
+      renumbering[pin[0]].to_bytes(renum_data_width, 'little')
+    )
+    bytestream.append(pin[1].to_bytes(index_width, 'little'))
+    bytestream.append(pin[2].to_bytes(z_width, 'little'))
+  del linear
+
+  return b''.join(bytestream)
+
+def variable_width_binary(
+  all_pins, 
+  sx:int, sy:int, sz:int,
+  stored_data_width:int,
+  index_width:int, z_width:int
+) -> bytes:
+  """Format is [label][num pins][pin1]...[pin_N] for each label."""
+
+  (bytestream, renumbering, renum_data_width) = bytestream_preamble(  
+    all_pins, 
+    sx, sy, sz,
+    stored_data_width,
+    index_width, z_width
+  )
+
+  def toidx(tup):
+    return int(tup[0] + sx * tup[1] + sx * sy * tup[2])
+
+  npin_width = compute_byte_width(max(( len(x) for x in all_pins.values() )))
+  bytestream.append(npin_width.to_bytes(1, 'little'))
+
+  for label, pins in all_pins.items():
+    bytestream.append(renumbering[label].to_bytes(renum_data_width, 'little'))
+    bytestream.append(len(pins).to_bytes(npin_width, 'little'))
+
+    linear = []
+    for pin in pins:
+      linear.append(
+        [ toidx(pin[0]), int(pin[1][2] - pin[0][2]) ]
+      )
+    linear = sorted(linear, key=lambda x: x[0])
+    for pin in linear:
+      bytestream.append(pin[0].to_bytes(index_width, 'little'))
+      bytestream.append(pin[1].to_bytes(z_width, 'little'))
+  del linear
+
+  return b''.join(bytestream)
+
+def bytestream_preamble(
+  all_pins, 
+  sx:int, sy:int, sz:int,
+  stored_data_width:int,
+  index_width:int, z_width:int
+):
   # find bg color
   max_pins_label = 0
   max_pins = 0
@@ -90,14 +160,6 @@ def fixed_width_binary(
 
   all_pins.pop(max_pins_label)
 
-  linear = []
-  for label, pins in all_pins.items():
-    for pin in pins:
-      linear.append(
-        [ int(label), toidx(pin[0]), int(pin[1][2] - pin[0][2]) ]
-      )
-
-  linear = sorted(linear, key=lambda x: x[1])
   bgcolor = max_pins_label.to_bytes(stored_data_width, 'little')
 
   all_labels = sorted(list(all_pins.keys()))
@@ -111,48 +173,7 @@ def fixed_width_binary(
   renumbering = { x: i for i, x in enumerate(all_labels) }
   renum_data_width = compute_byte_width(len(renumbering))
 
-  for pin in linear:
-    bytestream.append(
-      renumbering[pin[0]].to_bytes(renum_data_width, 'little')
-    )
-    bytestream.append(pin[1].to_bytes(index_width, 'little'))
-    bytestream.append(pin[2].to_bytes(z_width, 'little'))
-  del linear
-
-  return b''.join(bytestream)
-
-def condensed_binary(
-  all_pins, 
-  sx:int, sy:int, sz:int,
-  stored_data_width:int,
-  index_width:int, z_width:int
-):
-  """Format is [label][num pins][pin1]...[pin_N] for each label."""
-
-  def toidx(tup):
-    return int(tup[0] + sx * tup[1] + sx * sy * tup[2])
-
-  linear = []
-  for label, pins in all_pins.items():
-    seq = []
-    seq.append(int(label))
-    seq.append(len(pins))
-    for pin in pins:
-      seq.append(
-        [ toidx(pin[0]), int(pin[1][2] - pin[0][2]) ]
-      )
-    linear.append(seq)
-
-  bytestream = []
-  for seq in linear:
-    bytestream.append(seq[0].to_bytes(stored_data_width, 'little'))
-    bytestream.append(seq[1].to_bytes(1, 'little'))
-    for pin in seq[2:]:
-      bytestream.append(pin[0].to_bytes(index_width, 'little'))
-      bytestream.append(pin[1].to_bytes(z_width, 'little'))
-  del linear
-
-  return b''.join(bytestream)
+  return (bytestream, renumbering, renum_data_width)
 
 
 
