@@ -4,7 +4,7 @@ import fastremap
 
 from . import crackcode
 from . import pins
-from .header import CrackleHeader, LabelFormat, LabelSort, CrackFormat
+from .headers import CrackleHeader, LabelFormat, LabelSort, CrackFormat
 from .lib import compute_byte_width, width2dtype
 from .ccl import connected_components
 

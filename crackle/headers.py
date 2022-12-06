@@ -97,3 +97,6 @@ class CrackleHeader:
 
   def z_index_width(self) -> int:
     return compute_byte_width(self.sx * self.sy * 2)
+
+  def __repr__(self):
+    return str(self.__dict__)

@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .ccl import connected_components
-from .header import LabelSort
+from .headers import LabelSort
 
 def extract_columns(labels:np.ndarray):
   sx,sy,sz = labels.shape

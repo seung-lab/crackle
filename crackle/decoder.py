@@ -2,9 +2,12 @@ from typing import List
 
 import numpy as np
 
-from .header import CrackleHeader, CrackFormat, LabelFormat
+from .headers import CrackleHeader, CrackFormat, LabelFormat
 from . import crackcode
 from .lib import width2dtype
+
+def header(binary:bytes) -> dict:
+  return CrackleHeader.frombytes(binary)
 
 def labels(binary:bytes) -> np.ndarray:
   all_pins = raw_pins(binary)
@@ -124,6 +127,28 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype):
   return np.frombuffer(labels_binary, dtype=stored_dtype)\
     .astype(dtype, copy=False)
 
+def decode_fixed_width_pins(
+  binary:bytes, 
+  cc_labels:np.ndarray, N:int, 
+  label_dtype
+):
+  header = CrackleHeader.frombytes(binary)
+  sx, sy, sz = header.sx, header.sy, header.sz
+
+  bgcolor = background_color(binary)
+  all_pins = raw_pins(binary)
+  label_map = np.full((N,), fill_value=bgcolor, dtype=label_dtype)
+
+  for pin in all_pins:
+    for depth in range(pin['depth']+1):
+      z = pin['idx'] // (sx*sy)
+      y = (pin['idx'] - (z * sx*sy)) // sx
+      x = pin['idx'] - (sx * y) - (sx * sy * z)
+      ccid = cc_labels[x,y,z+depth]
+      label_map[ccid] = pin['label']
+
+  return label_map
+
 def decompress(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   crack_codes = get_crack_codes(binary)
@@ -139,19 +164,11 @@ def decompress(binary:bytes) -> np.ndarray:
   label_dtype = width2dtype[header.data_width]
 
   if header.label_format == LabelFormat.FLAT:
-    label_map = decode_flat_labels(binary, stored_label_dtype, label_dtype)
+    label_map = decode_flat_labels(
+      binary, stored_label_dtype, label_dtype
+    )
   elif header.label_format == LabelFormat.PINS_FIXED_WIDTH:
-    bgcolor = background_color(binary)
-    all_pins = raw_pins(binary)
-    label_map = np.full((N,), fill_value=bgcolor, dtype=label_dtype)
-
-    for pin in all_pins:
-      for depth in range(pin['depth']+1):
-        z = pin['idx'] // (sx*sy)
-        y = (pin['idx'] - (z * sx*sy)) // sx
-        x = pin['idx'] - (sx * y) - (sx * sy * z)
-        ccid = cc_labels[x,y,z+depth]
-        label_map[ccid] = pin['label']
+    label_map = decode_fixed_width_pins(binary, cc_labels, N, label_dtype)
   else:
     raise ValueError(f"should never happen. labels fmt: {header.label_format}")
 
