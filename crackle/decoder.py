@@ -60,11 +60,14 @@ def components(binary:bytes):
   cl = len(binary) - hl -ll - il
 
   return {
-    'header': hl,
-    'labels': ll,
-    'z_index': il,
-    'crack_codes': cl,
+    'header': binary[:hl],
+    'labels': binary[hl:hl+ll],
+    'z_index': binary[hl+ll:hl+ll+il],
+    'crack_codes': binary[-cl:],
   }
+
+def component_lengths(binary:bytes):
+  return { k:len(v) for k,v in components(binary) }
 
 def background_color(binary:bytes) -> int:
   header = CrackleHeader.frombytes(binary)
