@@ -101,5 +101,5 @@ def relabel(out, equivalences):
       for x in range(sx):
         out[x,y] = renumber[out[x,y]]
 
-  return out, len(renumber)
+  return out, next_label
 
