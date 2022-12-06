@@ -52,9 +52,9 @@ def color_connectivity_graph(vcg):
       elif y > 0 and (vcg[x,y] & 0b1000) > 0:
         out[x,y] = out[x,y-1]
       else:
+        new_label += 1
         out[x,y] = new_label
         equivalences.makeset(new_label)
-        new_label += 1
 
   return relabel(out, equivalences)
 
