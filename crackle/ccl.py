@@ -3,6 +3,8 @@ import numpy as np
 class DisjointSet:
   def __init__(self):
     self.data = {} 
+  def __len__(self):
+    return len(self.data)
   def makeset(self, x):
     self.data[x] = x
     return x
@@ -54,7 +56,7 @@ def color_connectivity_graph(vcg):
         equivalences.makeset(new_label)
         new_label += 1
 
-  return relabel(out, equivalences, new_label)
+  return relabel(out, equivalences)
 
 def connected_components(labels):
   """4 connected CCL"""
@@ -78,10 +80,11 @@ def connected_components(labels):
         equivalences.makeset(new_label)
         new_label += 1
 
-  return relabel(out, equivalences, new_label)
+  return relabel(out, equivalences)
 
-def relabel(out, equivalences, nlabels):
+def relabel(out, equivalences):
   sx, sy = out.shape
+  nlabels = len(equivalences)
 
   next_label = 0
   renumber = [None] * nlabels
