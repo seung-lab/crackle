@@ -42,6 +42,9 @@ def compress(labels:np.ndarray) -> bytes:
     crack_format = CrackFormat.PERMISSIBLE
     label_format = LabelFormat.FLAT
 
+  if sz == 1:
+    label_format = LabelFormat.FLAT
+
   stored_data_width = compute_byte_width(np.max(labels))
 
   header = CrackleHeader(
