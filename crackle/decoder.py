@@ -67,7 +67,7 @@ def components(binary:bytes):
   }
 
 def component_lengths(binary:bytes):
-  return { k:len(v) for k,v in components(binary) }
+  return { k:len(v) for k,v in components(binary).items() }
 
 def background_color(binary:bytes) -> int:
   header = CrackleHeader.frombytes(binary)
