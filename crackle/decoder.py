@@ -4,7 +4,7 @@ import numpy as np
 
 from .headers import CrackleHeader, CrackFormat, LabelFormat
 from . import crackcode
-from .lib import width2dtype
+from .lib import width2dtype, compute_byte_width
 
 def header(binary:bytes) -> dict:
   return CrackleHeader.frombytes(binary)
@@ -17,7 +17,7 @@ def labels(binary:bytes) -> np.ndarray:
       decode_flat_labels(binary, head.stored_dtype, head.dtype)
     )
   else:
-    all_pins = raw_pins(binary)
+    all_pins = decode_pins(binary)
     bgcolor = background_color(binary)
     return np.unique([ bgcolor ] + [ p['label'] for p in all_pins ])  
 
@@ -76,21 +76,44 @@ def background_color(binary:bytes) -> int:
   bgcolor = np.frombuffer(binary[hb:hb+header.stored_data_width], dtype=dtype)
   return int(bgcolor[0])
 
-def raw_pins(binary:bytes) -> np.ndarray:
+def decode_pins(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
-  # background color followed by pins
-  # but skip bgcolor
+
+  # bgcolor, num labels (u64), N labels, pins
+  offset = hb + header.stored_data_width
+  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+  offset += 8
+  labels = np.frombuffer(
+    binary[offset:offset+num_labels*header.stored_data_width],
+    dtype=header.stored_dtype
+  )
+  offset += num_labels*header.stored_data_width
+  renum_width = compute_byte_width(len(labels))
+
   pinset = binary[
-    hb+header.stored_data_width:hb+header.num_label_bytes
+    offset:hb+header.num_label_bytes
   ]
 
   dtype = np.dtype([
-    ('label', width2dtype[header.stored_data_width]),
+    ('label', width2dtype[renum_width]),
     ('idx', width2dtype[header.index_width()]), 
     ('depth', width2dtype[header.depth_width()])
   ])
-  return np.frombuffer(pinset, dtype=dtype)
+  pinset = np.frombuffer(pinset, dtype=dtype).copy()
+
+  dtype_big = np.dtype([
+    ('label', header.stored_dtype),
+    ('idx', width2dtype[header.index_width()]), 
+    ('depth', width2dtype[header.depth_width()])
+  ])
+  embiggened = np.empty((len(pinset),), dtype=dtype_big)
+  embiggened[:] = pinset
+  del pinset
+  
+  for pin in embiggened:
+    pin['label'] = labels[pin['label']]
+  return embiggened
 
 def get_crack_codes(binary:bytes) -> List[bytes]:
   header = CrackleHeader.frombytes(binary)
@@ -146,7 +169,7 @@ def decode_fixed_width_pins(
   sx, sy, sz = header.sx, header.sy, header.sz
 
   bgcolor = background_color(binary)
-  all_pins = raw_pins(binary)
+  all_pins = decode_pins(binary)
   label_map = np.full((N,), fill_value=bgcolor, dtype=label_dtype)
 
   for pin in all_pins:

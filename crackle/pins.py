@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .ccl import connected_components
+from .lib import compute_byte_width
 from .headers import LabelSort
 
 def extract_columns(labels:np.ndarray):
@@ -81,6 +82,7 @@ def fixed_width_binary(
   def toidx(tup):
     return int(tup[0] + sx * tup[1] + sx * sy * tup[2])
 
+  # find bg color
   max_pins_label = 0
   max_pins = 0
   for label, pins in all_pins.items():
@@ -104,12 +106,25 @@ def fixed_width_binary(
   else:
     raise ValueError("should never happen")
 
+  bgcolor = max_pins_label.to_bytes(stored_data_width, 'little')
+
+  all_labels = sorted(list(all_pins.keys()))
+
   bytestream = []
-  bytestream.append(max_pins_label.to_bytes(stored_data_width, 'little'))
+  bytestream.append(bgcolor) # bgcolor
+  bytestream.append(len(all_labels).to_bytes(8, 'little'))
+  for label in all_labels:
+    bytestream.append(int(label).to_bytes(stored_data_width, 'little'))
+
+  renumbering = { x: i for i, x in enumerate(all_labels) }
+  renum_data_width = compute_byte_width(len(renumbering))
+
   for pin in linear:
-      bytestream.append(pin[0].to_bytes(stored_data_width, 'little'))
-      bytestream.append(pin[1].to_bytes(index_width, 'little'))
-      bytestream.append(pin[2].to_bytes(z_width, 'little'))
+    bytestream.append(
+      renumbering[pin[0]].to_bytes(renum_data_width, 'little')
+    )
+    bytestream.append(pin[1].to_bytes(index_width, 'little'))
+    bytestream.append(pin[2].to_bytes(z_width, 'little'))
   del linear
 
   return b''.join(bytestream)
