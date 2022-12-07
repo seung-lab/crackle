@@ -22,7 +22,7 @@ class CrackFormat(IntEnum):
 class CrackleHeader:
   MAGIC = b'crkl'
   FORMAT_VERSION = 0
-  HEADER_BYTES = 16
+  HEADER_BYTES = 22
 
   def __init__(
     self, 
@@ -60,10 +60,10 @@ class CrackleHeader:
       crack_format=values[2],
     	data_width=(2 ** values[0]),
     	stored_data_width=(2 ** values[1]),
-    	sx=int.from_bytes(buffer[6:8], byteorder='little', signed=False),
-    	sy=int.from_bytes(buffer[8:10], byteorder='little', signed=False),
-    	sz=int.from_bytes(buffer[10:12], byteorder='little', signed=False),
-    	num_label_bytes=int.from_bytes(buffer[12:16], byteorder='little', signed=False),
+    	sx=int.from_bytes(buffer[6:10], byteorder='little', signed=False),
+    	sy=int.from_bytes(buffer[10:14], byteorder='little', signed=False),
+    	sz=int.from_bytes(buffer[14:18], byteorder='little', signed=False),
+    	num_label_bytes=int.from_bytes(buffer[18:22], byteorder='little', signed=False),
     )
 
   def tobytes(self) -> bytes:
@@ -78,9 +78,9 @@ class CrackleHeader:
       self.MAGIC,
       self.FORMAT_VERSION.to_bytes(1, 'little'),
       fmt_byte.to_bytes(1, 'little'),
-      self.sx.to_bytes(2, 'little'),
-      self.sy.to_bytes(2, 'little'),
-      self.sz.to_bytes(2, 'little'),
+      self.sx.to_bytes(4, 'little'),
+      self.sy.to_bytes(4, 'little'),
+      self.sz.to_bytes(4, 'little'),
       self.num_label_bytes.to_bytes(4, 'little'),
     ])
 
