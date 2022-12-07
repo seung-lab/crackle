@@ -70,7 +70,11 @@ def connected_components(labels):
     for x in range(sx):
       if x > 0 and labels[x-1,y] == labels[x,y]:
         out[x,y] = out[x-1,y]
-        if y > 0 and labels[x,y] == labels[x,y-1]:
+        if (
+          y > 0 
+          and (labels[x,y] != labels[x-1,y-1]) 
+          and (labels[x,y] == labels[x,y-1])
+        ):
           equivalences.union(out[x,y], out[x,y-1])
       elif y > 0 and labels[x,y] == labels[x,y-1]:
         out[x,y] = out[x,y-1]
