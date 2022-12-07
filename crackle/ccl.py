@@ -47,7 +47,7 @@ def color_connectivity_graph(vcg):
     for x in range(sx):
       if x > 0 and (vcg[x,y] & 0b0010) > 0:
         out[x,y] = out[x-1,y]
-        if y > 0 and (vcg[x,y] & 0b1000) > 0:
+        if y > 0 and (vcg[x,y-1] & 0b0010) == 0 and (vcg[x,y] & 0b1000) > 0:
           equivalences.union(out[x,y], out[x,y-1])
       elif y > 0 and (vcg[x,y] & 0b1000) > 0:
         out[x,y] = out[x,y-1]
