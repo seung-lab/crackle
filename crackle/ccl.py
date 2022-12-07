@@ -5,7 +5,7 @@ class DisjointSet:
     self.data = {} 
   def __len__(self):
     return len(self.data)
-  def makeset(self, x):
+  def add(self, x):
     self.data[x] = x
     return x
   def find(self, x):
@@ -16,13 +16,13 @@ class DisjointSet:
       self.data[i] = self.data[self.data[i]]
       i = self.data[i]
     return i
-  def union(self, x, y):
+  def unify(self, x, y):
     i = self.find(x)
     j = self.find(y)
     if i is None:
-      i = self.makeset(x)
+      i = self.add(x)
     if j is None:
-      j = self.makeset(y)
+      j = self.add(y)
 
     if i < j:
       self.data[j] = i
@@ -36,11 +36,11 @@ def color_connectivity_graph(vcg):
   out = np.zeros((sx,sy), dtype=np.uint32)
 
   new_label = 0
-  equivalences.makeset(new_label)
+  equivalences.add(new_label)
   for x in range(sx):
     if x > 0 and vcg[x,0] & 0b0010 == 0:
       new_label += 1
-      equivalences.makeset(new_label)
+      equivalences.add(new_label)
     out[x,0] = new_label
 
   for y in range(1,sy):
@@ -48,13 +48,13 @@ def color_connectivity_graph(vcg):
       if x > 0 and (vcg[x,y] & 0b0010):
         out[x,y] = out[x-1,y]
         if y > 0 and (vcg[x,y-1] & 0b0010) == 0 and (vcg[x,y] & 0b1000) > 0:
-          equivalences.union(out[x,y], out[x,y-1])
+          equivalences.unify(out[x,y], out[x,y-1])
       elif y > 0 and (vcg[x,y] & 0b1000):
         out[x,y] = out[x,y-1]
       else:
         new_label += 1
         out[x,y] = new_label
-        equivalences.makeset(new_label)
+        equivalences.add(new_label)
 
   return relabel(out, equivalences)
 
@@ -75,13 +75,13 @@ def connected_components(labels):
           and (labels[x,y] != labels[x-1,y-1]) 
           and (labels[x,y] == labels[x,y-1])
         ):
-          equivalences.union(out[x,y], out[x,y-1])
+          equivalences.unify(out[x,y], out[x,y-1])
       elif y > 0 and labels[x,y] == labels[x,y-1]:
         out[x,y] = out[x,y-1]
       else:
         new_label += 1
         out[x,y] = new_label
-        equivalences.makeset(new_label)
+        equivalences.add(new_label)
         
   return relabel(out, equivalences)
 
