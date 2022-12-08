@@ -47,6 +47,7 @@ def compress(labels:np.ndarray) -> bytes:
   if labels.ndim < 3:
     labels = labels[..., np.newaxis]
 
+  labels = np.asfortranarray(labels)
   sx,sy,sz = labels.shape
 
   num_pairs = fastremap.pixel_pairs(labels)

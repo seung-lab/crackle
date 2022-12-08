@@ -2,3 +2,4 @@ numpy
 networkx
 tqdm
 fastremap
+pybind11

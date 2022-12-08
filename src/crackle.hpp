@@ -88,7 +88,7 @@ std::vector<CCL> crack_codes_to_cc_labels(
 ) {
 	const uint64_t sxy = sx * sy;
 
-	std::unique_ptr<uint8_t[]> edges(new uint8_t[sx*sy*sz]());
+	std::vector<uint8_t> edges(sx*sy*sz);
 
 	for (uint64_t z = 0; z < crack_codes.size(); z++) {
 		auto code = crackle::crackcodes::unpack_binary(crack_codes[z], sx, sy);
@@ -101,7 +101,7 @@ std::vector<CCL> crack_codes_to_cc_labels(
 	}
 
 	return crackle::cc3d::color_connectivity_graph<CCL>(
-		edges.get(), sx, sy, sz, N
+		edges, sx, sy, sz, N
 	);
 }
 

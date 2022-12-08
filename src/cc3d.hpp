@@ -147,7 +147,7 @@ OUT* relabel(
 
 template <typename OUT>
 std::vector<OUT> color_connectivity_graph(
-  uint8_t* vcg, // voxel connectivity graph
+  const std::vector<uint8_t> &vcg, // voxel connectivity graph
   const int64_t sx, const int64_t sy, const int64_t sz,
   uint64_t &N = _dummy_N
 ) {
