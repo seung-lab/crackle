@@ -33,7 +33,7 @@ def color_connectivity_graph(vcg):
   sx, sy = vcg.shape
 
   equivalences = DisjointSet()
-  out = np.zeros((sx,sy), dtype=np.uint32, order='F')
+  out = np.zeros((sx,sy), dtype=np.uint32)
 
   new_label = 0
   equivalences.add(new_label)
@@ -63,7 +63,7 @@ def connected_components(labels):
   sx, sy = labels.shape
 
   equivalences = DisjointSet()
-  out = np.zeros((sx,sy), dtype=np.uint32, order='F')
+  out = np.zeros((sx,sy), dtype=np.uint32)
 
   new_label = -1
   for y in range(sy):
@@ -102,7 +102,7 @@ def relabel(out, equivalences):
 
   if len(renumber):
     renumber = np.array(renumber)
-    out[:] = renumber[out.reshape((sx*sy,))].reshape((sx,sy), order='F')
+    out[:] = renumber[out.reshape((sx*sy,))].reshape((sy,sx), order='C')
 
   return out, next_label
 

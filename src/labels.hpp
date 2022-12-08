@@ -145,7 +145,6 @@ std::vector<LABEL> decode_pins_helper3(
 
 	const uint64_t sx = header.sx;
 	const uint64_t sy = header.sy;
-	const uint64_t sz = header.sz;
 
 	const uint64_t sxy = sx * sy;
 
@@ -232,8 +231,6 @@ std::vector<LABEL> decode_fixed_width_pins(
 	const std::vector<uint32_t> &cc_labels,
 	const uint64_t N
 ) {
-  const uint64_t hb = crackle::CrackleHeader::header_size;
-
   std::vector<unsigned char> labels_binary = raw_labels(binary);
   const LABEL bgcolor = static_cast<LABEL>(
   	crackle::lib::ctoi<STORED_LABEL>(
@@ -245,7 +242,6 @@ std::vector<LABEL> decode_fixed_width_pins(
 
   // bgcolor, num labels (u64), N labels, pins
   const int renum_width = crackle::lib::compute_byte_width(num_labels);
-  uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels;
 
   if (renum_width == 1) {
 	return decode_pins_helper<LABEL, STORED_LABEL, uint8_t>(

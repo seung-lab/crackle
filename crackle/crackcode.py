@@ -43,16 +43,16 @@ def create_graph(
     check = lambda a,b: a == b
 
   # assign vertical edges
-  for x in range(1, sx):
-    for y in range(0, sy):
+  for y in range(0, sy):
+    for x in range(1, sx):
       if check(labels[x,y], labels[x-1,y]):
         node_up = x + sxe * y
         node_down = x + sxe * (y + 1)
         G.add_edge(node_up, node_down)
 
   # assign horizontal edges
-  for x in range(0, sx):
-    for y in range(1, sy):
+  for y in range(1, sy):
+    for x in range(0, sx):
       if check(labels[x,y], labels[x,y-1]):
         node_left = x + sxe * y
         node_right = (x+1) + sxe * y
@@ -374,7 +374,7 @@ def pack_codes(
 
   return binary
 
-def encode_boundaries(labels, permissible:bool  =False):
+def encode_boundaries(labels, permissible:bool = False):
   sx, sy, sz = labels.shape
 
   binary_components = []

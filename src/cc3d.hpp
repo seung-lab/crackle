@@ -176,7 +176,6 @@ std::vector<OUT> color_connectivity_graph(
 
     const int64_t B = -1;
     const int64_t C = -sx;
-    const int64_t D = -1-sx;
 
     for (int64_t y = 1; y < sy; y++) {
       for (int64_t x = 0; x < sx; x++) {
