@@ -9,12 +9,11 @@
 namespace crackle {
 namespace labels {
 
-
 std::vector<unsigned char> raw_labels(
 	const std::vector<unsigned char> &binary
 ) {
-	CrackleHeader header(binary);
-	uint64_t hb = CrackleHeader::HEADER_BYTES;
+	crackle::CrackleHeader header(binary);
+	uint64_t hb = crackle::CrackleHeader::header_size;
 	std::vector<unsigned char> labels_binary(
 		binary.begin() + hb,
 		binary.begin() + hb + header.num_label_bytes
@@ -28,13 +27,14 @@ uint64_t decode_num_labels(
 	return crackle::lib::ctoi<uint64_t>(labels_binary, 0);
 }
 
+template <typename STORED_LABEL>
 std::vector<STORED_LABEL> decode_uniq(
 	const std::vector<unsigned char> &labels_binary
 ) {
-	const uint64_t num_labels = decode_num_labels(binary);
+	const uint64_t num_labels = decode_num_labels(labels_binary);
 	std::vector<STORED_LABEL> uniq(num_labels);
-	for (uint64_t i = 0, uint64_t idx = 8; i < num_labels; i++, idx += sizeof(STORED_LABEL)) {
-		uniq[i] = crackle::lib::ctoi<STORED_LABEL>(labels_binary, idx)
+	for (uint64_t i = 0, idx = 8; i < num_labels; i++, idx += sizeof(STORED_LABEL)) {
+		uniq[i] = crackle::lib::ctoi<STORED_LABEL>(labels_binary, idx);
 	}
 
 	return uniq;
@@ -42,7 +42,7 @@ std::vector<STORED_LABEL> decode_uniq(
 
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_flat(
-	const CrackleHeader &header,
+	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &binary
 ) {
   std::vector<unsigned char> labels_binary = raw_labels(binary);
@@ -54,7 +54,7 @@ std::vector<LABEL> decode_flat(
 
   uint64_t num_fields = (labels_binary.size() - offset) / cc_label_width;
   std::vector<LABEL> label_map(num_fields);
-  for (uint64_t i = 0, uint64_t j = offset; i < num_fields; i++, j += cc_label_width) {
+  for (uint64_t i = 0, j = offset; i < num_fields; i++, j += cc_label_width) {
   	if (cc_label_width == 1) {
 		label_map[i] = static_cast<LABEL>(
 			uniq[crackle::lib::ctoi<uint8_t>(labels_binary, j)]
@@ -79,7 +79,7 @@ std::vector<LABEL> decode_flat(
   return label_map;
 }
 
-template <LABEL, INDEX, DEPTH>
+template <typename LABEL, typename INDEX, typename DEPTH>
 struct Pin {
 	LABEL label;
 	INDEX index;
@@ -103,7 +103,7 @@ template <
 	typename DEPTH
 >
 std::vector<LABEL> decode_pins_helper3(
-	const CrackleHeader &header,
+	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &labels_binary,
 	const std::vector<STORED_LABEL> &uniq,
 	const uint32_t* cc_labels,
@@ -115,7 +115,7 @@ std::vector<LABEL> decode_pins_helper3(
 	uint64_t num_pins = (labels_binary.size() - offset) / sizeof(PinType);
 
 	std::vector<PinType> pins(num_pins);
-	for (uint64_t i = 0, uint64_t j = offset; i < num_pins; i++) {
+	for (uint64_t i = 0, j = offset; i < num_pins; i++) {
 		j += pins[i].decode_buffer(labels_binary, j);
 	}
 
@@ -125,7 +125,7 @@ std::vector<LABEL> decode_pins_helper3(
 
 	const uint64_t sxy = sx * sy;
 
-	std:vector<LABEL> label_map(N);
+	std::vector<LABEL> label_map(N);
 	for (uint64_t i = 0; i < num_pins; i++) {
 		PinType pin = pins[i];
 		for (uint64_t z = 0; z < pin.depth; z++) {
@@ -139,7 +139,7 @@ std::vector<LABEL> decode_pins_helper3(
 
 template <typename LABEL, typename STORED_LABEL, typename RENUM_LABEL, typename INDEX>
 std::vector<LABEL> decode_pins_helper2(
-	const CrackleHeader &header,
+	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &labels_binary,
 	const std::vector<STORED_LABEL> &uniq,
 	const uint32_t* cc_labels,
@@ -170,7 +170,7 @@ std::vector<LABEL> decode_pins_helper2(
 
 template <typename LABEL, typename STORED_LABEL, typename RENUM_LABEL>
 std::vector<LABEL> decode_pins_helper(
-	const CrackleHeader &header,
+	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &labels_binary,
 	const std::vector<STORED_LABEL> &uniq,
 	const uint32_t* cc_labels,
@@ -201,12 +201,12 @@ std::vector<LABEL> decode_pins_helper(
 
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_fixed_width_pins(
-	const CrackleHeader &header,
-	const std::vector<unsigned char> &binary
+	const crackle::CrackleHeader &header,
+	const std::vector<unsigned char> &binary,
 	const uint32_t* cc_labels,
 	const uint64_t N
 ) {
-  const uint64_t hb = CrackleHeader::HEADER_BYTES;
+  const uint64_t hb = crackle::CrackleHeader::header_size;
 
   std::vector<unsigned char> labels_binary = raw_labels(binary);
   const uint64_t num_labels = decode_num_labels(binary);
@@ -240,15 +240,15 @@ std::vector<LABEL> decode_fixed_width_pins(
 
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_label_map(
-	const CrackleHeader &header,
-	const std::vector<unsigned char> &binary
+	const crackle::CrackleHeader &header,
+	const std::vector<unsigned char> &binary,
 	const uint32_t* cc_labels,
 	const uint64_t N
 ) {
-	if (header.label_format == LABEL_FMT_FLAT) {
+	if (header.label_format == LabelFormat::FLAT) {
 		return decode_flat<LABEL, STORED_LABEL>(header, binary);
 	}
-	else if (header.label_format == LABEL_FMT_PINS_FIXED_WIDTH) {
+	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
 		return decode_fixed_width_pins<LABEL, STORED_LABEL>(
 			header, binary, cc_labels.get(), N
 		);

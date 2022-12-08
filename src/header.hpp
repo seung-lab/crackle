@@ -2,19 +2,20 @@
 #define __CRACKLE_LABELS_HXX__
 
 #include "lib.hpp"
+#include <cstdint>
 
 namespace crackle {
 
 enum LabelFormat {
-	LABEL_FMT_FLAT = 0,
-	LABEL_FMT_PINS_FIXED_WIDTH = 1,
-	LABEL_FMT_PINS_VARIABLE_WIDTH = 2
-}
+	FLAT = 0,
+	PINS_FIXED_WIDTH = 1,
+	PINS_VARIABLE_WIDTH = 2
+};
 
 enum CrackFormat {
-	CRACK_FMT_IMPERMISSIBLE = 0,
-	CRACK_FMT_PERMISSIBLE = 1
-}
+	IMPERMISSIBLE = 0,
+	PERMISSIBLE = 1
+};
 
 /* Header: 
  *   'crkl'            : magic number (4 bytes)
@@ -44,8 +45,8 @@ public:
 
 	CrackleHeader() :
 		format_version(0),
-		label_format(LABEL_FMT_FLAT),
-		crack_format(CRACK_FMT_IMPERMISSIBLE),
+		label_format(LabelFormat::FLAT),
+		crack_format(CrackFormat::IMPERMISSIBLE),
 		data_width(1), stored_data_width(1),
 		sx(1), sy(1), sz(1), 
 		num_label_bytes(0)
@@ -68,7 +69,7 @@ public:
 		num_label_bytes(_num_label_bytes)
 	{}
 
-	CrackleHeader(unsigned char* buf) {
+	void assign_from_buffer(const unsigned char* buf) {
 		bool valid_magic = (buf[0] == 'c' && buf[1] == 'r' && buf[2] == 'k' && buf[3] == 'l');
 		format_version = buf[4];
 
@@ -76,20 +77,24 @@ public:
 			throw std::runtime_error("crackle: Data stream is not valid. Unable to decompress.");
 		}
 
-		format_byte = ctoi<uint8_t>(buf, 5);
-		sx = ctoi<uint32_t>(buf, 6); 
-		sy = ctoi<uint32_t>(buf, 10); 
-		sz = ctoi<uint32_t>(buf, 14);
-		num_label_bytes = ctoi<uint32_t>(buf, 18);
+		uint8_t format_byte = lib::ctoi<uint8_t>(buf, 5);
+		sx = lib::ctoi<uint32_t>(buf, 6); 
+		sy = lib::ctoi<uint32_t>(buf, 10); 
+		sz = lib::ctoi<uint32_t>(buf, 14);
+		num_label_bytes = lib::ctoi<uint32_t>(buf, 18);
 
 		data_width = pow(2, (format_byte & 0b00000011));
 		stored_data_width = pow(2, (format_byte & 0b00001100) >> 2);
-		crack_format = (format_byte & 0b00010000) >> 4;
-		label_format = (label_format & 0b01100000) >> 5;
+		crack_format = static_cast<CrackFormat>((format_byte & 0b00010000) >> 4);
+		label_format = static_cast<LabelFormat>((label_format & 0b01100000) >> 5);		
+	}
+
+	CrackleHeader(const unsigned char* buf) {
+		assign_from_buffer(buf);
 	}
 
 	CrackleHeader(const std::vector<unsigned char> &buf) {
-		return CrackleHeader(buf.data());
+		assign_from_buffer(buf.data());
 	}
 
 	int z_index_width() const {
@@ -120,12 +125,12 @@ public:
 		format_byte |= static_cast<uint8_t>(crack_format) << 4;
 		format_byte |= static_cast<uint8_t>(label_format) << 5;
 
-		i += itoc(format_version, buf, i);
-		i += itoc(format_byte, buf, i);
-		i += itoc(sx, buf, i);
-		i += itoc(sy, buf, i);
-		i += itoc(sz, buf, i);
-		i += itoc(num_label_bytes, buf, i);
+		i += lib::itoc(format_version, buf, i);
+		i += lib::itoc(format_byte, buf, i);
+		i += lib::itoc(sx, buf, i);
+		i += lib::itoc(sy, buf, i);
+		i += lib::itoc(sz, buf, i);
+		i += lib::itoc(num_label_bytes, buf, i);
 
 		return i - idx;
 	}

@@ -6,8 +6,10 @@
 #include <stack>
 #include <cstdint>
 
+#include "lib.hpp"
+
 namespace crackle {
-namespace crackcode {
+namespace crackcodes {
 
 template <typename T>
 std::unordered_map<uint64_t, std::vector<unsigned char>> 
@@ -16,7 +18,7 @@ unpack_binary_helper(
 	const uint64_t sx, const uint64_t sy
 ) {
 	std::unordered_map<uint64_t, std::vector<unsigned char>> chains;
-	const std::vector<T> &int_code(code.begin(), code.end());
+	const std::vector<T> int_code(code.begin(), code.end());
 
 	std::vector<unsigned char> symbols;
 	symbols.reserve(code.size() * 4);
@@ -80,7 +82,7 @@ std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary(
 		return chains;
 	}
 
-	uint64_t byte_width = compute_byte_width((sx+1) * (sy+1));
+	uint64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
 	
 	if (byte_width == 1) {
 		return unpack_binary_helper<uint8_t>(code, sx, sy);
@@ -114,7 +116,7 @@ uint8_t* decode_permissible_crack_code(
 		uint64_t y = node / sxe;
 		uint64_t x = node - (sxe * y);
 
-		std::stack<std::pair<uint64_t>> revisit;
+		std::stack<uint64_t> revisit;
 		for (unsigned char symbol : symbols) {
 			uint64_t loc = x + sx * y;
 			if (symbol == 'u') {
@@ -154,7 +156,8 @@ uint8_t* decode_permissible_crack_code(
 			}
 			else if (symbol =='t') {
 				if (!revisit.empty()) {
-					loc = revisit.pop();
+					loc = revisit.top();
+					revisit.pop();
 					y = loc / sxe;
 					x = loc - (sxe * y);
 				}
@@ -186,7 +189,7 @@ uint8_t* decode_impermissible_crack_code(
 		uint64_t y = node / sxe;
 		uint64_t x = node - (sxe * y);
 
-		std::stack<std::pair<uint64_t>> revisit;
+		std::stack<uint64_t> revisit;
 		for (unsigned char symbol : symbols) {
 			uint64_t loc = x + sx * y;
 			if (symbol == 'u') {
@@ -226,7 +229,8 @@ uint8_t* decode_impermissible_crack_code(
 			}
 			else if (symbol =='t') {
 				if (!revisit.empty()) {
-					loc = revisit.pop();
+					loc = revisit.top();
+					revisit.pop();
 					y = loc / sxe;
 					x = loc - (sxe * y);
 				}

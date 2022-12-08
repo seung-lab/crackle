@@ -10,8 +10,10 @@
 #include <vector>
 
 #include "cc3d.hpp"
-#include "crackcodes.hpp"
+#include "header.hpp"
 #include "labels.hpp"
+#include "crackcodes.hpp"
+
 #include "lib.hpp"
 
 namespace crackle {
@@ -20,32 +22,34 @@ std::vector<uint64_t> get_crack_code_offsets(
 	const std::vector<unsigned char> &binary
 ) {
 	CrackleHeader header(binary);
-	uint64_t offset = CrackleHeader::HEADER_BYTES + header.num_label_bytes;
+	uint64_t offset = CrackleHeader::header_size + header.num_label_bytes;
 
 	const uint64_t z_width = header.z_index_width();
 	const uint64_t zindex_bytes = z_width * header.sz;
 
-	if (offset + zindex_bytes >= num_bytes) {
+	if (offset + zindex_bytes >= binary.size()) {
 		throw std::runtime_error("crackle: Unable to read past end of buffer.");
 	}
+
+	const unsigned char* buf = binary.data();
 
 	std::vector<uint64_t> z_index(header.sz + 1);
 	for (uint64_t i = 0; i < zindex_bytes; i++) {
 		if (z_width == 1) {
-			z_index[i+1] = lib::ctoi<uint8_t>(buf[offset + z_width * i]);
+			z_index[i+1] = lib::ctoi<uint8_t>(buf, offset + z_width * i);
 		}
 		else if (z_width == 2) {
-			z_index[i+1] = lib::ctoi<uint16_t>(buf[offset + z_width * i]);
+			z_index[i+1] = lib::ctoi<uint16_t>(buf, offset + z_width * i);
 		}
 		else if (z_width == 4) {
-			z_index[i+1] = lib::ctoi<uint32_t>(buf[offset + z_width * i]);
+			z_index[i+1] = lib::ctoi<uint32_t>(buf, offset + z_width * i);
 		}
 		else if (z_width == 8) {
-			z_index[i+1] = lib::ctoi<uint64_t>(buf[offset + z_width * i]);
+			z_index[i+1] = lib::ctoi<uint64_t>(buf, offset + z_width * i);
 		}
 	}
 	for (uint64_t z = 1; z < header.sz + 1; z++) {
-		z_index[z+1] += z_width[z];
+		z_index[z+1] += z_index[z];
 	}
 	for (uint64_t i = 0; i < header.sz + 1; i++) {
 		z_index[i] += offset + zindex_bytes;
@@ -65,9 +69,9 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 	std::vector<std::vector<unsigned char>> crack_codes(header.sz);
 
 	for (uint64_t z = 0; z < header.sz; z++) {
-		uint64_t code_size = z_width[z+1] - z_width[z];
+		uint64_t code_size = z_index[z+1] - z_index[z];
 		std::vector<unsigned char> code(code_size);
-		for (uint64_t i = z_width[z]; i < z_width[z+1]; i++) {
+		for (uint64_t i = z_index[z]; i < z_index[z+1]; i++) {
 			code.push_back(binary[i]);
 		}
 	}
@@ -98,29 +102,6 @@ CCL* crack_codes_to_cc_labels(
 	return crackle::cc3d::color_connectivity_graph<CCL>(
 		edges.get(), sx, sy, sz, N
 	);
-}
-
-template <typename LABEL, typename STORED_LABEL>
-decompress_helper(
-	const CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
-	uint32_t* cc_labels, uint64_t N
-) {
-
-	if (header.label_format == LABEL_FMT_FLAT) {
-		label_map = crackle::labels::decode_flat<LABEL>(binary);
-	}
-	else if (header.label_format == LABEL_FMT_PINS_FIXED_WIDTH) {
-		label_map = crackle::labels::decode_fixed_width_pins<LABEL>(
-			binary, cc_labels.get(), N
-		);
-	}
-	else {
-		std::string err = "crackle: Unsupported label format. Got: ";
-		err += std::to_string(header.label_format);
-		throw std::runtime_error(err);
-	}
-
 }
 
 template <typename LABEL>
@@ -158,8 +139,9 @@ LABEL* decompress(
 	uint64_t N = 0;
 	std::unique_ptr<uint32_t[]> cc_labels(
 		crack_codes_to_cc_labels<uint32_t>(
-			crack_codes, sx, sy, sz, 
-			permissible=(header.crack_format == CRACK_FMT_PERMISSIBLE), N
+			crack_codes, header.sx, header.sy, header.sz, 
+			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
+			/*N=*/N
 		)
 	);
 

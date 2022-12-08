@@ -38,10 +38,10 @@ inline size_t itoc(uint64_t x, std::vector<unsigned char> &buf, size_t idx) {
 }
 
 template <typename T>
-T ctoi(unsigned char* buf, size_t idx = 0);
+T ctoi(const unsigned char* buf, const size_t idx = 0);
 
 template <>
-uint64_t ctoi(unsigned char* buf, size_t idx) {
+uint64_t ctoi(const unsigned char* buf, const size_t idx) {
 	uint64_t x = 0;
 	x += static_cast<uint64_t>(buf[idx + 0]) << 0;
 	x += static_cast<uint64_t>(buf[idx + 1]) << 8;
@@ -55,7 +55,7 @@ uint64_t ctoi(unsigned char* buf, size_t idx) {
 }
 
 template <>
-uint32_t ctoi(unsigned char* buf, size_t idx) {
+uint32_t ctoi(const unsigned char* buf, const size_t idx) {
 	uint32_t x = 0;
 	x += static_cast<uint32_t>(buf[idx + 0]) << 0;
 	x += static_cast<uint32_t>(buf[idx + 1]) << 8;
@@ -65,7 +65,7 @@ uint32_t ctoi(unsigned char* buf, size_t idx) {
 }
 
 template <>
-uint16_t ctoi(unsigned char* buf, size_t idx) {
+uint16_t ctoi(const unsigned char* buf, const size_t idx) {
 	uint16_t x = 0;
 	x += static_cast<uint16_t>(buf[idx + 0]) << 0;
 	x += static_cast<uint16_t>(buf[idx + 1]) << 8;
@@ -73,19 +73,19 @@ uint16_t ctoi(unsigned char* buf, size_t idx) {
 }
 
 template <>
-uint8_t ctoi(unsigned char* buf, size_t idx) {
+uint8_t ctoi(const unsigned char* buf, const size_t idx) {
 	return static_cast<uint8_t>(buf[idx]);
 }
 
 
-int compute_byte_width(const uint64_t x) const {
-	if (x < std::numeric_limits<uint8_t>()::max) {
+int compute_byte_width(const uint64_t x) {
+	if (x < std::numeric_limits<uint8_t>::max()) {
 		return sizeof(uint8_t);
 	}
-	else if (x < std::numeric_limits<uint16_t>()::max) {
+	else if (x < std::numeric_limits<uint16_t>::max()) {
 		return sizeof(uint16_t);
 	}
-	else if (x < std::numeric_limits<uint32_t>()::max) {
+	else if (x < std::numeric_limits<uint32_t>::max()) {
 		return sizeof(uint32_t);
 	}
 	return sizeof(uint64_t);
