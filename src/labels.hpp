@@ -50,7 +50,7 @@ std::vector<LABEL> decode_flat(
   std::vector<unsigned char> labels_binary = raw_labels(binary);
   const unsigned char* buf = labels_binary.data();
 
-  const uint64_t num_labels = decode_num_labels(binary);
+  const uint64_t num_labels = decode_num_labels(labels_binary);
   std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(labels_binary);
 
   const int cc_label_width = crackle::lib::compute_byte_width(num_labels);
@@ -221,7 +221,7 @@ std::vector<LABEL> decode_fixed_width_pins(
   const uint64_t hb = crackle::CrackleHeader::header_size;
 
   std::vector<unsigned char> labels_binary = raw_labels(binary);
-  const uint64_t num_labels = decode_num_labels(binary);
+  const uint64_t num_labels = decode_num_labels(labels_binary);
   std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(labels_binary);
 
   // bgcolor, num labels (u64), N labels, pins
