@@ -32,22 +32,18 @@
 #include <cstdint>
 #include <stdexcept>
 
+namespace crackle {
 namespace cc3d {
 
-static size_t _dummy_N;
+static uint64_t _dummy_N;
 
 template <typename T>
 class DisjointSet {
 public:
   T *ids;
-  size_t length;
+  uint64_t length;
 
-  DisjointSet () {
-    length = 65536; // 2^16, some "reasonable" starting size
-    ids = new T[length]();
-  }
-
-  DisjointSet (size_t len) {
+  DisjointSet (uint64_t len) {
     length = len;
     ids = new T[length]();
   }
@@ -121,12 +117,12 @@ template <typename OUT = uint32_t>
 OUT* relabel(
     OUT* out_labels, const int64_t voxels,
     const int64_t num_labels, DisjointSet<uint32_t> &equivalences,
-    size_t &N = _dummy_N, OUT start_label = 1
+    uint64_t &N = _dummy_N
   ) {
 
   OUT label;
   std::unique_ptr<OUT[]> renumber(new OUT[num_labels + 1]());
-  OUT next_label = start_label;
+  OUT next_label = 1;
 
   for (int64_t i = 1; i <= num_labels; i++) {
     label = equivalences.root(i);
@@ -141,10 +137,10 @@ OUT* relabel(
   }
 
   // Raster Scan 2: Write final labels based on equivalences
-  N = next_label - start_label;
-  if (N < static_cast<size_t>(num_labels) || start_label != 1) {
+  N = next_label - 1;
+  if (N < static_cast<uint64_t>(num_labels)) {
     for (int64_t loc = 0; loc < voxels; loc++) {
-      out_labels[loc] = renumber[out_labels[loc]];
+      out_labels[loc] = renumber[out_labels[loc]] - 1; // first label is 0 not 1
     }
   }
 
@@ -155,71 +151,74 @@ template <typename OUT>
 OUT* color_connectivity_graph(
   uint8_t* vcg, // voxel connectivity graph
   const int64_t sx, const int64_t sy, const int64_t sz,
-  size_t max_labels, OUT *out_labels = NULL, 
-  size_t &N = _dummy_N, OUT start_label = 0
+  uint64_t &N = _dummy_N
 ) {
 
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  max_labels++;
-  max_labels = std::min(max_labels, static_cast<size_t>(voxels) + 1); // + 1L for an array with no zeros
-  max_labels = std::min(max_labels, static_cast<size_t>(std::numeric_limits<OUT>::max()));
+  uint64_t max_labels = std::min(max_labels, static_cast<uint64_t>(voxels) + 1); // + 1L for an array with no zeros
+  max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   DisjointSet<OUT> equivalences(max_labels);
+  OUT* out_labels = new OUT[voxels]();
 
   LABEL new_label = 0;
-  equivalences.add(new_label);
-  for (int64_t x = 0; x < sx; x++) {
-    if (x > 0 && (vcg[x] & 0b0010) == 0) {
-      new_label++;
-      equivalences.add(new_label);
-    }
-    out[x] = new_label;
-  }
+  for (int64_t z = 0; z < sz; z++) {
+    new_label++;
+    equivalences.add(new_label);
 
-  const int64_t B = -1;
-  const int64_t C = -sx;
-  const int64_t D = -1-sx;
-
-  for (int64_t y = 1; y < sy; y++) {
     for (int64_t x = 0; x < sx; x++) {
-      int64_t loc = x + sx * y;
-
-      if (x > 0 && (vcg[loc] & 0b0010)) {
-        out[loc] = out[loc+B];
-        if (y > 0 && (vcg[loc + C] & 0b0010) == 0 && (vcg[loc] & 0b1000)) {
-          equivalences.unify(out[loc], out[loc+C]);
-        }
-      }
-      else if (y > 0 && vcg[loc] & 0b1000) {
-        equivalences.unify(out[loc], out[loc+C]);
-      }
-      else {
+      if (x > 0 && (vcg[x + sxy * z] & 0b0010) == 0) {
         new_label++;
-        out[loc] = new_label;
         equivalences.add(new_label);
       }
+      out_labels[x] = new_label;
+    }
+
+    const int64_t B = -1;
+    const int64_t C = -sx;
+    const int64_t D = -1-sx;
+
+    for (int64_t y = 1; y < sy; y++) {
+      for (int64_t x = 0; x < sx; x++) {
+        int64_t loc = x + sx * y + sxy * z;
+
+        if (x > 0 && (vcg[loc] & 0b0010)) {
+          out_labels[loc] = out_labels[loc+B];
+          if (y > 0 && (vcg[loc + C] & 0b0010) == 0 && (vcg[loc] & 0b1000)) {
+            equivalences.unify(out_labels[loc], out_labels[loc+C]);
+          }
+        }
+        else if (y > 0 && vcg[loc] & 0b1000) {
+          equivalences.unify(out_labels[loc], out_labels[loc+C]);
+        }
+        else {
+          new_label++;
+          out_labels[loc] = new_label;
+          equivalences.add(new_label);
+        }
+      }
     }
   }
 
-  return relabel<OUT>(out_labels, voxels, next_label, equivalences, N, start_label);
+  return relabel<OUT>(out_labels, voxels, next_label, equivalences, N);
 }
 
 template <typename LABEL, typename OUT>
 OUT* connected_components2d_4(
     LABEL* in_labels, 
     const int64_t sx, const int64_t sy, const int64_t sz,
-    size_t max_labels, OUT *out_labels = NULL, 
-    size_t &N = _dummy_N, OUT start_label = 0
+    uint64_t max_labels, OUT *out_labels = NULL, 
+    uint64_t &N = _dummy_N
   ) {
 
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
   max_labels++;
-  max_labels = std::min(max_labels, static_cast<size_t>(voxels) + 1); // + 1L for an array with no zeros
-  max_labels = std::min(max_labels, static_cast<size_t>(std::numeric_limits<OUT>::max()));
+  max_labels = std::min(max_labels, static_cast<uint64_t>(voxels) + 1); // + 1L for an array with no zeros
+  max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
 
   DisjointSet<OUT> equivalences(max_labels);
@@ -268,7 +267,7 @@ OUT* connected_components2d_4(
     }
   }
 
-  return relabel<OUT>(out_labels, voxels, next_label, equivalences, N, start_label);
+  return relabel<OUT>(out_labels, voxels, next_label, equivalences, N);
 }
 
 template <typename LABEL, typename OUT = uint64_t>
@@ -276,18 +275,18 @@ OUT* connected_components(
   LABEL* in_labels, 
   const int64_t sx, const int64_t sy, const int64_t sz,
   std::vector<uint64_t> &num_components_per_slice,
-  size_t &N = _dummy_N
+  uint64_t &N = _dummy_N
 ) {
 
   const int64_t sxy = sx * sy;
   const int64_t voxels = sxy * sz;
 
-  size_t max_labels = voxels;
+  uint64_t max_labels = voxels;
   OUT* out_labels = new OUT[voxels]();
   N = 0;
 
   for (int64_t z = 0; z < sz; z++) {
-    size_t tmp_N = 0;
+    uint64_t tmp_N = 0;
     connected_components2d_4<LABEL, OUT>(
       (in_labels + sxy * z), sx, sy, 1, 
       max_labels, (out_labels + sxy * z),
@@ -301,6 +300,7 @@ OUT* connected_components(
 }
 
 
+};
 };
 
 #endif
