@@ -27,7 +27,7 @@ std::vector<uint64_t> get_crack_code_offsets(
 	const uint64_t zindex_bytes = z_width * header.sz;
 
 	if (offset + zindex_bytes >= binary.size()) {
-		throw std::runtime_error("crackle: Unable to read past end of buffer.");
+		throw std::runtime_error("crackle: get_crack_code_offsets: Unable to read past end of buffer.");
 	}
 
 	const unsigned char* buf = binary.data();
@@ -61,8 +61,9 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 	const std::vector<unsigned char> &binary
 ) {
 	std::vector<uint64_t> z_index = get_crack_code_offsets(header, binary);
-	if (z_index[z_index.size() - 1] >= binary.size()) {
-		throw std::runtime_error("crackle: Unable to read past end of buffer.");
+
+	if (z_index.back() > binary.size()) {
+		throw std::runtime_error("crackle: get_crack_codes: Unable to read past end of buffer.");
 	}
 
 	std::vector<std::vector<unsigned char>> crack_codes(header.sz);
