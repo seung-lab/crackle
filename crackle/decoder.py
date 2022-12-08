@@ -15,7 +15,7 @@ def labels(binary:bytes) -> np.ndarray:
 
   if head.label_format == LabelFormat.FLAT:
     return np.unique(
-      decode_flat_labels(binary, head.stored_dtype, head.dtype)
+      decode_flat_labels(binary, head.stored_dtype, head.dtype, head.sz)
     )
   else:
     hb = CrackleHeader.HEADER_BYTES
@@ -174,7 +174,7 @@ def crack_codes_to_cc_labels(
 
   return cc_labels, Ntotal
 
-def decode_flat_labels(binary:bytes, stored_dtype, dtype):
+def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
   labels_binary = raw_labels(binary)
   num_labels = int.from_bytes(labels_binary[:8], 'little')
   offset = 8
@@ -184,7 +184,7 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype):
   uniq = uniq.astype(dtype, copy=False)
 
   cc_label_dtype = compute_dtype(num_labels)
-  cc_map = np.frombuffer(labels_binary[8+uniq_bytes:], dtype=cc_label_dtype)
+  cc_map = np.frombuffer(labels_binary[8+uniq_bytes+4*sz:], dtype=cc_label_dtype)
   return uniq[cc_map]
 
 def decode_fixed_width_pins(
@@ -225,7 +225,7 @@ def decompress(binary:bytes) -> np.ndarray:
 
   if header.label_format == LabelFormat.FLAT:
     label_map = decode_flat_labels(
-      binary, stored_label_dtype, label_dtype
+      binary, stored_label_dtype, label_dtype, sz
     )
   elif header.label_format == LabelFormat.PINS_FIXED_WIDTH:
     label_map = decode_fixed_width_pins(binary, cc_labels, N, label_dtype)

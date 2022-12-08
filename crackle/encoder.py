@@ -11,6 +11,7 @@ from .ccl import connected_components
 def encode_flat_labels(labels, stored_data_dtype):
   sx,sy,sz = labels.shape
 
+  components = np.zeros((sz,), dtype=np.uint32)
   cc_labels = np.zeros((sx,sy,sz), dtype=np.uint32)
   N_total = 0
   for z in range(sz):
@@ -18,6 +19,7 @@ def encode_flat_labels(labels, stored_data_dtype):
     cc_slice += N_total
     cc_labels[:,:,z] = cc_slice
     N_total += N
+    components[z] = N
 
   mapping = fastremap.component_map(cc_labels, labels)
   
@@ -35,6 +37,7 @@ def encode_flat_labels(labels, stored_data_dtype):
   return b''.join([
     len(uniq).to_bytes(8, 'little'),
     uniq.tobytes(),
+    components.tobytes(),
     array.tobytes()
   ])
 
