@@ -92,7 +92,7 @@ std::vector<CCL> crack_codes_to_cc_labels(
 
 	for (uint64_t z = 0; z < crack_codes.size(); z++) {
 		auto code = crackle::crackcodes::unpack_binary(crack_codes[z], sx, sy);
-		uint8_t* slice_edges = crackle::crackcodes::decode_crack_code(
+		std::vector<uint8_t> slice_edges = crackle::crackcodes::decode_crack_code(
 			code, sx, sy, permissible
 		);
 		for (uint64_t i = 0; i < sxy; i++) {

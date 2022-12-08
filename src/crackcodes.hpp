@@ -98,16 +98,15 @@ std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary(
 	}
 }
 
-uint8_t* decode_permissible_crack_code(
+std::vector<uint8_t> decode_permissible_crack_code(
 	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
 	const uint64_t sx, const uint64_t sy
 	) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
-	uint8_t* edges = new uint8_t[sx * sy]();
+	std::vector<uint8_t> edges(sx * sy);
 
 	uint64_t sxe = sx + 1;
-	uint64_t sye = sy + 1;
 
 	// graph is of corners and edges
 	// origin is located at top left
@@ -168,19 +167,18 @@ uint8_t* decode_permissible_crack_code(
 	return edges;
 }
 
-uint8_t* decode_impermissible_crack_code(
+std::vector<uint8_t> decode_impermissible_crack_code(
 	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
 	const uint64_t sx, const uint64_t sy
 	) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
-	uint8_t* edges = new uint8_t[sx * sy]();
+	std::vector<uint8_t> edges(sx * sy);
 	for (uint64_t i = 0; i < sx * sy; i++) {
 		edges[i] = 0b1111;
 	}
 
 	uint64_t sxe = sx + 1;
-	uint64_t sye = sy + 1;
 
 	// graph is of corners and edges
 	// origin is located at top left
@@ -241,7 +239,7 @@ uint8_t* decode_impermissible_crack_code(
 	return edges;
 }
 
-uint8_t* decode_crack_code(
+std::vector<uint8_t> decode_crack_code(
 	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
 	const uint64_t sx, const uint64_t sy,
 	const bool permissible
