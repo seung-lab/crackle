@@ -48,7 +48,7 @@ std::vector<uint64_t> get_crack_code_offsets(
 			z_index[z+1] = lib::ctoi<uint64_t>(buf, offset + z_width * z);
 		}
 	}
-	for (uint64_t z = 1; z < header.sz + 1; z++) {
+	for (uint64_t z = 0; z < header.sz; z++) {
 		z_index[z+1] += z_index[z];
 	}
 	for (uint64_t i = 0; i < header.sz + 1; i++) {
