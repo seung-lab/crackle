@@ -86,7 +86,7 @@ public:
 		data_width = pow(2, (format_byte & 0b00000011));
 		stored_data_width = pow(2, (format_byte & 0b00001100) >> 2);
 		crack_format = static_cast<CrackFormat>((format_byte & 0b00010000) >> 4);
-		label_format = static_cast<LabelFormat>((label_format & 0b01100000) >> 5);		
+		label_format = static_cast<LabelFormat>((format_byte & 0b01100000) >> 5);		
 	}
 
 	CrackleHeader(const unsigned char* buf) {
