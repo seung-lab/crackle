@@ -23,8 +23,8 @@
  *  https://www.gnu.org/licenses/lgpl-3.0.en.html
  */
 
-#ifndef CC3D_SPECIAL_2_4_HPP
-#define CC3D_SPECIAL_2_4_HPP 
+#ifndef __CC3D_SPECIAL_2_4_HPP__
+#define __CC3D_SPECIAL_2_4_HPP__
 
 #include <algorithm>
 #include <cmath>

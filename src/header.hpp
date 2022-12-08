@@ -1,5 +1,5 @@
-#ifndef __CRACKLE_LABELS_HXX__
-#define __CRACKLE_LABELS_HXX__
+#ifndef __CRACKLE_HEADER_HXX__
+#define __CRACKLE_HEADER_HXX__
 
 #include "lib.hpp"
 #include <cstdint>
