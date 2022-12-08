@@ -101,7 +101,7 @@ std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary(
 std::vector<uint8_t> decode_permissible_crack_code(
 	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
 	const uint64_t sx, const uint64_t sy
-	) {
+) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
 	std::vector<uint8_t> edges(sx * sy);
@@ -170,7 +170,7 @@ std::vector<uint8_t> decode_permissible_crack_code(
 std::vector<uint8_t> decode_impermissible_crack_code(
 	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
 	const uint64_t sx, const uint64_t sy
-	) {
+) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
 	std::vector<uint8_t> edges(sx * sy);

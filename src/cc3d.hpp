@@ -171,7 +171,7 @@ std::vector<OUT> color_connectivity_graph(
         new_label++;
         equivalences.add(new_label);
       }
-      out_labels[x] = new_label;
+      out_labels[x + sxy * z] = new_label;
     }
 
     const int64_t B = -1;
