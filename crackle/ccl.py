@@ -102,7 +102,7 @@ def relabel(out, equivalences):
 
   if len(renumber):
     renumber = np.array(renumber)
-    out[:] = renumber[out.reshape((sx*sy,))].reshape((sy,sx), order='C')
+    out[:] = renumber[out.reshape((sx*sy,))].reshape((sx,sy), order='C')
 
   return out, next_label
 

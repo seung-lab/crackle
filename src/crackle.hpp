@@ -71,10 +71,12 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 
 	for (uint64_t z = 0; z < header.sz; z++) {
 		uint64_t code_size = z_index[z+1] - z_index[z];
-		std::vector<unsigned char> code(code_size);
+		std::vector<unsigned char> code;
+		code.reserve(code_size);
 		for (uint64_t i = z_index[z]; i < z_index[z+1]; i++) {
 			code.push_back(binary[i]);
 		}
+		crack_codes[z] = std::move(code);
 	}
 
 	return crack_codes;
