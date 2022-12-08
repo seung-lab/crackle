@@ -34,18 +34,18 @@ std::vector<uint64_t> get_crack_code_offsets(
 	const unsigned char* buf = binary.data();
 
 	std::vector<uint64_t> z_index(header.sz + 1);
-	for (uint64_t i = 0; i < zindex_bytes; i++) {
+	for (uint64_t z = 0; z < header.sz; z++) {
 		if (z_width == 1) {
-			z_index[i+1] = lib::ctoi<uint8_t>(buf, offset + z_width * i);
+			z_index[z+1] = lib::ctoi<uint8_t>(buf, offset + z_width * z);
 		}
 		else if (z_width == 2) {
-			z_index[i+1] = lib::ctoi<uint16_t>(buf, offset + z_width * i);
+			z_index[z+1] = lib::ctoi<uint16_t>(buf, offset + z_width * z);
 		}
 		else if (z_width == 4) {
-			z_index[i+1] = lib::ctoi<uint32_t>(buf, offset + z_width * i);
+			z_index[z+1] = lib::ctoi<uint32_t>(buf, offset + z_width * z);
 		}
 		else if (z_width == 8) {
-			z_index[i+1] = lib::ctoi<uint64_t>(buf, offset + z_width * i);
+			z_index[z+1] = lib::ctoi<uint64_t>(buf, offset + z_width * z);
 		}
 	}
 	for (uint64_t z = 1; z < header.sz + 1; z++) {
