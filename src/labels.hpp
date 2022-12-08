@@ -135,7 +135,7 @@ std::vector<LABEL> decode_pins_helper3(
 	typedef Pin<RENUM_LABEL, INDEX, DEPTH> PinType;
 	const unsigned char* buf = labels_binary.data();
 
-	uint64_t offset = 8 + sizeof(STORED_LABEL) * uniq.size();
+	uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1); // + bgcolor
 	uint64_t num_pins = (labels_binary.size() - offset) / sizeof(PinType);
 
 	std::vector<PinType> pins(num_pins);
