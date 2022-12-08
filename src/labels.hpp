@@ -24,7 +24,7 @@ std::vector<unsigned char> raw_labels(
 uint64_t decode_num_labels(
 	const std::vector<unsigned char> &labels_binary
 ) {
-	return crackle::lib::ctoi<uint64_t>(labels_binary, 0);
+	return crackle::lib::ctoi<uint64_t>(labels_binary.data(), 0);
 }
 
 template <typename STORED_LABEL>
@@ -33,8 +33,10 @@ std::vector<STORED_LABEL> decode_uniq(
 ) {
 	const uint64_t num_labels = decode_num_labels(labels_binary);
 	std::vector<STORED_LABEL> uniq(num_labels);
+
+	const unsigned char* buf = labels_binary.data();
 	for (uint64_t i = 0, idx = 8; i < num_labels; i++, idx += sizeof(STORED_LABEL)) {
-		uniq[i] = crackle::lib::ctoi<STORED_LABEL>(labels_binary, idx);
+		uniq[i] = crackle::lib::ctoi<STORED_LABEL>(buf, idx);
 	}
 
 	return uniq;
@@ -46,6 +48,8 @@ std::vector<LABEL> decode_flat(
 	const std::vector<unsigned char> &binary
 ) {
   std::vector<unsigned char> labels_binary = raw_labels(binary);
+  const unsigned char* buf = labels_binary.data();
+
   const uint64_t num_labels = decode_num_labels(binary);
   std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(labels_binary);
 
@@ -54,25 +58,26 @@ std::vector<LABEL> decode_flat(
 
   uint64_t num_fields = (labels_binary.size() - offset) / cc_label_width;
   std::vector<LABEL> label_map(num_fields);
+
   for (uint64_t i = 0, j = offset; i < num_fields; i++, j += cc_label_width) {
   	if (cc_label_width == 1) {
 		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint8_t>(labels_binary, j)]
+			uniq[crackle::lib::ctoi<uint8_t>(buf, j)]
 		);
 	}
 	else if (cc_label_width == 2) {
 		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint16_t>(labels_binary, j)]
+			uniq[crackle::lib::ctoi<uint16_t>(buf, j)]
 		);
 	}
 	else if (cc_label_width == 4) {
 		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint32_t>(labels_binary, j)]
+			uniq[crackle::lib::ctoi<uint32_t>(buf, j)]
 		);
 	}
 	else {
 		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint64_t>(labels_binary, j)]
+			uniq[crackle::lib::ctoi<uint64_t>(buf, j)]
 		);
 	}
   }
@@ -85,11 +90,17 @@ struct Pin {
 	INDEX index;
 	DEPTH depth;
 
+	Pin() {
+		label = 0;
+		index = 0;
+		depth = 0;
+	}
+
 	Pin(LABEL _lbl, INDEX _idx, DEPTH _depth) 
 		: label(_lbl), index(_idx), depth(_depth)
 	{} 
-
-	uint64_t decode_buffer(unsigned char* buf, const uint64_t idx) {
+	
+	uint64_t decode_buffer(const unsigned char* buf, const uint64_t idx) {
 		label = crackle::lib::ctoi<LABEL>(buf, idx);
 		index = crackle::lib::ctoi<INDEX>(buf, idx + sizeof(LABEL));
 		depth = crackle::lib::ctoi<DEPTH>(buf, idx + sizeof(LABEL) + sizeof(DEPTH));
@@ -110,13 +121,14 @@ std::vector<LABEL> decode_pins_helper3(
 	const uint64_t N
 ) {
 	typedef Pin<RENUM_LABEL, INDEX, DEPTH> PinType;
+	const unsigned char* buf = labels_binary.data();
 
 	uint64_t offset = 8 + sizeof(STORED_LABEL) * uniq.size();
 	uint64_t num_pins = (labels_binary.size() - offset) / sizeof(PinType);
 
 	std::vector<PinType> pins(num_pins);
 	for (uint64_t i = 0, j = offset; i < num_pins; i++) {
-		j += pins[i].decode_buffer(labels_binary, j);
+		j += pins[i].decode_buffer(buf, j);
 	}
 
 	const uint64_t sx = header.sx;
@@ -250,7 +262,7 @@ std::vector<LABEL> decode_label_map(
 	}
 	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
 		return decode_fixed_width_pins<LABEL, STORED_LABEL>(
-			header, binary, cc_labels.get(), N
+			header, binary, cc_labels, N
 		);
 	}
 	else {

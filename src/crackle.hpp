@@ -11,10 +11,9 @@
 
 #include "cc3d.hpp"
 #include "header.hpp"
-#include "labels.hpp"
 #include "crackcodes.hpp"
-
 #include "lib.hpp"
+#include "labels.hpp"
 
 namespace crackle {
 
