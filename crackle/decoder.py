@@ -49,6 +49,15 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
 
   offset = hb
   if head.label_format == LabelFormat.PINS_FIXED_WIDTH:
+    bgcolor = int.from_bytes(binary[offset:offset+head.stored_data_width], 'little')
+
+    try:
+      binary[offset:offset+head.stored_data_width] = \
+        mapping[bgcolor].to_bytes(head.stored_data_width, 'little')
+    except KeyError:
+      if not preserve_missing_labels:
+        raise
+
     offset += head.stored_data_width
 
   num_labels = int.from_bytes(binary[offset:offset+8], 'little')
