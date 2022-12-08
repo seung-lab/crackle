@@ -46,12 +46,17 @@ unpack_binary_helper(
 					|| (move == 2 && symbols.back() == 'r')
 				) {
 					symbols.back() = 't';
+					branches_taken--;
+					if (branches_taken == 0) {
+						break;
+					}
 				}
 				else if (
 					(move == 3 && symbols.back() == 'u')
 					|| (move == 1 && symbols.back() == 'l')
 				) {
 					symbols.back() = 'b';
+					branches_taken++;
 				}
 				else {
 					symbols.push_back(remap[move]);
@@ -65,6 +70,7 @@ unpack_binary_helper(
 		if (branches_taken == 0) {
 			auto vec = chains[node];
 			vec.insert(vec.end(), symbols.begin(), symbols.end());
+			chains[node] = vec;
 		}
 	}
 
