@@ -105,7 +105,7 @@ CCL* crack_codes_to_cc_labels(
 
 template <typename LABEL>
 LABEL* decompress(
-	unsigned char* buffer, 
+	const unsigned char* buffer, 
 	size_t num_bytes,
 	LABEL* output = NULL
 ) {
@@ -176,7 +176,7 @@ LABEL* decompress(
 template <typename LABEL>
 LABEL* decompress(const std::string &buffer) {
 	return decompress<LABEL>(
-		reinterpret_cast<unsigned char*>(const_cast<char*>(buffer.data())), 
+		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size()
 	);
 }
