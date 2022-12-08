@@ -18,9 +18,9 @@
 namespace crackle {
 
 std::vector<uint64_t> get_crack_code_offsets(
+	const CrackleHeader &header,
 	const std::vector<unsigned char> &binary
 ) {
-	CrackleHeader header(binary);
 	uint64_t offset = CrackleHeader::header_size + header.num_label_bytes;
 
 	const uint64_t z_width = header.z_index_width();
@@ -57,14 +57,14 @@ std::vector<uint64_t> get_crack_code_offsets(
 }
 
 std::vector<std::vector<unsigned char>> get_crack_codes(
+	const CrackleHeader &header,
 	const std::vector<unsigned char> &binary
 ) {
-	std::vector<uint64_t> z_index = get_crack_code_offsets(binary);
+	std::vector<uint64_t> z_index = get_crack_code_offsets(header, binary);
 	if (z_index[z_index.size() - 1] >= binary.size()) {
 		throw std::runtime_error("crackle: Unable to read past end of buffer.");
 	}
 
-	CrackleHeader header(binary);
 	std::vector<std::vector<unsigned char>> crack_codes(header.sz);
 
 	for (uint64_t z = 0; z < header.sz; z++) {
@@ -134,7 +134,7 @@ LABEL* decompress(
 
 	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
 
-	auto crack_codes = get_crack_codes(binary);
+	auto crack_codes = get_crack_codes(header, binary);
 	uint64_t N = 0;
 	std::unique_ptr<uint32_t[]> cc_labels(
 		crack_codes_to_cc_labels<uint32_t>(
