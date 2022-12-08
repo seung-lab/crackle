@@ -41,6 +41,12 @@ def test_compress_decompress_empty():
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
+def test_compress_decompress_random():
+  labels = np.random.randint(0,5,size=(4,4,1), dtype=np.uint32)
+  binary = crackle.compress(labels)
+  recovered = crackle.decompress(binary)
+  assert np.all(labels == recovered)
+
 @pytest.mark.parametrize('i', range(10))
 def test_compress_decompress(i):
   labels = compresso.load("connectomics.npy.cpso.gz")
