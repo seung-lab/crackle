@@ -163,7 +163,7 @@ OUT* color_connectivity_graph(
   DisjointSet<OUT> equivalences(max_labels);
   OUT* out_labels = new OUT[voxels]();
 
-  LABEL new_label = 0;
+  OUT new_label = 0;
   for (int64_t z = 0; z < sz; z++) {
     new_label++;
     equivalences.add(new_label);
@@ -202,7 +202,7 @@ OUT* color_connectivity_graph(
     }
   }
 
-  return relabel<OUT>(out_labels, voxels, next_label, equivalences, N);
+  return relabel<OUT>(out_labels, voxels, new_label, equivalences, N);
 }
 
 template <typename LABEL, typename OUT>

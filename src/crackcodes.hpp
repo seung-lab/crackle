@@ -4,12 +4,14 @@
 #include <vector>
 #include <unordered_map>
 #include <stack>
+#include <cstdint>
 
 namespace crackle {
 namespace crackcode {
 
 template <typename T>
-std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary_helper(
+std::unordered_map<uint64_t, std::vector<unsigned char>> 
+unpack_binary_helper(
 	const std::vector<unsigned char> &code, 
 	const uint64_t sx, const uint64_t sy
 ) {
@@ -23,6 +25,8 @@ std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary_helper(
 	T node = 0;
 
 	char remap[4] = { 'u', 'r', 'l', 'd' };
+
+	uint64_t num_moves = sizeof(T) * 8 / 2;
 
 	for (T moveset : int_code) {
 		if (branches_taken == 0) {
@@ -58,7 +62,7 @@ std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary_helper(
 
 		if (branches_taken == 0) {
 			auto vec = chains[node];
-			vec.insert(v.end(), symbols.begin(), symbols.end());
+			vec.insert(vec.end(), symbols.begin(), symbols.end());
 		}
 	}
 
@@ -70,14 +74,13 @@ std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary(
 	const std::vector<unsigned char> &code, 
 	const uint64_t sx, const uint64_t sy
 ) {
-	std::vector<std::vector<unsigned char>> chains;
+	std::unordered_map<uint64_t, std::vector<unsigned char>> chains;
 
 	if (code.size() == 0) {
 		return chains;
 	}
 
 	uint64_t byte_width = compute_byte_width((sx+1) * (sy+1));
-	uint64_t num_moves = byte_width * 8 / 2;
 	
 	if (byte_width == 1) {
 		return unpack_binary_helper<uint8_t>(code, sx, sy);

@@ -192,6 +192,13 @@ LABEL* decompress(
 	return output;
 }
 
+template <typename LABEL>
+LABEL* decompress(const std::string &buffer) {
+	return decompress<LABEL>(
+		reinterpret_cast<unsigned char*>(const_cast<char*>(buffer.data())), 
+		buffer.size()
+	);
+}
 
 };
 
