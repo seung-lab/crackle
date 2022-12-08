@@ -65,7 +65,7 @@ std::vector<LABEL> decode_flat(
   std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
 
   const int cc_label_width = crackle::lib::compute_byte_width(num_labels);
-  uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels;
+  uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels + 4 * header.sz;
 
   uint64_t num_fields = (labels_binary.size() - offset) / cc_label_width;
   std::vector<LABEL> label_map(num_fields);
@@ -128,7 +128,7 @@ std::vector<LABEL> decode_pins_helper3(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &labels_binary,
 	const std::vector<STORED_LABEL> &uniq,
-	const uint32_t* cc_labels,
+	const std::vector<uint32_t> &cc_labels,
 	const uint64_t N,
 	const LABEL bgcolor
 ) {
@@ -166,7 +166,7 @@ std::vector<LABEL> decode_pins_helper2(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &labels_binary,
 	const std::vector<STORED_LABEL> &uniq,
-	const uint32_t* cc_labels,
+	const std::vector<uint32_t> &cc_labels,
 	const uint64_t N,
 	const LABEL bgcolor
 ) {
@@ -198,7 +198,7 @@ std::vector<LABEL> decode_pins_helper(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &labels_binary,
 	const std::vector<STORED_LABEL> &uniq,
-	const uint32_t* cc_labels,
+	const std::vector<uint32_t> &cc_labels,
 	const uint64_t N,
 	const LABEL bgcolor
 ) {
@@ -229,7 +229,7 @@ template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_fixed_width_pins(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &binary,
-	const uint32_t* cc_labels,
+	const std::vector<uint32_t> &cc_labels,
 	const uint64_t N
 ) {
   const uint64_t hb = crackle::CrackleHeader::header_size;
@@ -273,7 +273,7 @@ template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_label_map(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &binary,
-	const uint32_t* cc_labels,
+	const std::vector<uint32_t> &cc_labels,
 	const uint64_t N
 ) {
 	if (header.label_format == LabelFormat::FLAT) {

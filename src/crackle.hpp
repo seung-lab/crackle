@@ -27,7 +27,7 @@ std::vector<uint64_t> get_crack_code_offsets(
 	const uint64_t z_width = header.z_index_width();
 	const uint64_t zindex_bytes = z_width * header.sz;
 
-	if (offset + zindex_bytes >= binary.size()) {
+	if (offset + zindex_bytes > binary.size()) {
 		throw std::runtime_error("crackle: get_crack_code_offsets: Unable to read past end of buffer.");
 	}
 
@@ -81,7 +81,7 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 }
 
 template <typename CCL>
-CCL* crack_codes_to_cc_labels(
+std::vector<CCL> crack_codes_to_cc_labels(
   const std::vector<std::vector<unsigned char>>& crack_codes,
   const uint64_t sx, const uint64_t sy, const uint64_t sz,
   const bool permissible, uint64_t &N
@@ -138,33 +138,31 @@ LABEL* decompress(
 
 	auto crack_codes = get_crack_codes(header, binary);
 	uint64_t N = 0;
-	std::unique_ptr<uint32_t[]> cc_labels(
-		crack_codes_to_cc_labels<uint32_t>(
-			crack_codes, header.sx, header.sy, header.sz, 
-			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
-			/*N=*/N
-		)
+	std::vector<uint32_t> cc_labels = crack_codes_to_cc_labels<uint32_t>(
+		crack_codes, header.sx, header.sy, header.sz, 
+		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
+		/*N=*/N
 	);
 
 	std::vector<LABEL> label_map;
 	if (header.stored_data_width == 1) {
 		label_map = crackle::labels::decode_label_map<LABEL, uint8_t>(
-			header, binary, cc_labels.get(), N
+			header, binary, cc_labels, N
 		);
 	}
 	else if (header.stored_data_width == 2) {
 		label_map = crackle::labels::decode_label_map<LABEL, uint16_t>(
-			header, binary, cc_labels.get(), N
+			header, binary, cc_labels, N
 		);
 	}
 	else if (header.stored_data_width == 4) {
 		label_map = crackle::labels::decode_label_map<LABEL, uint32_t>(
-			header, binary, cc_labels.get(), N
+			header, binary, cc_labels, N
 		);
 	}
 	else {
 		label_map = crackle::labels::decode_label_map<LABEL, uint64_t>(
-			header, binary, cc_labels.get(), N
+			header, binary, cc_labels, N
 		);
 	}
 

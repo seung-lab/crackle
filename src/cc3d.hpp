@@ -138,17 +138,15 @@ OUT* relabel(
 
   // Raster Scan 2: Write final labels based on equivalences
   N = next_label - 1;
-  if (N < static_cast<uint64_t>(num_labels)) {
-    for (int64_t loc = 0; loc < voxels; loc++) {
-      out_labels[loc] = renumber[out_labels[loc]] - 1; // first label is 0 not 1
-    }
+  for (int64_t loc = 0; loc < voxels; loc++) {
+    out_labels[loc] = renumber[out_labels[loc]] - 1; // first label is 0 not 1
   }
 
   return out_labels;
 }
 
 template <typename OUT>
-OUT* color_connectivity_graph(
+std::vector<OUT> color_connectivity_graph(
   uint8_t* vcg, // voxel connectivity graph
   const int64_t sx, const int64_t sy, const int64_t sz,
   uint64_t &N = _dummy_N
@@ -161,7 +159,7 @@ OUT* color_connectivity_graph(
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   DisjointSet<OUT> equivalences(max_labels);
-  OUT* out_labels = new OUT[voxels]();
+  std::vector<OUT> out_labels(voxels);
 
   OUT new_label = 0;
   for (int64_t z = 0; z < sz; z++) {
@@ -202,7 +200,8 @@ OUT* color_connectivity_graph(
     }
   }
 
-  return relabel<OUT>(out_labels, voxels, new_label, equivalences, N);
+  relabel<OUT>(out_labels.data(), voxels, new_label, equivalences, N);
+  return out_labels;
 }
 
 template <typename LABEL, typename OUT>
