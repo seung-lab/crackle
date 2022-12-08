@@ -152,7 +152,7 @@ std::vector<LABEL> decode_pins_helper3(
 	std::vector<LABEL> label_map(N, bgcolor);
 	for (uint64_t i = 0; i < num_pins; i++) {
 		PinType pin = pins[i];
-		for (uint64_t z = 0; z < pin.depth; z++) {
+		for (uint64_t z = 0; z <= pin.depth; z++) {
 			auto cc_id = cc_labels[pin.index + sxy * z];
 			label_map[cc_id] = uniq[pin.label];
 		}

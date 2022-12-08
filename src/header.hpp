@@ -93,8 +93,16 @@ public:
 		assign_from_buffer(buf);
 	}
 
+	CrackleHeader(const std::string &buf) {
+		assign_from_buffer(reinterpret_cast<const unsigned char*>(buf.c_str()));
+	}
+
 	CrackleHeader(const std::vector<unsigned char> &buf) {
 		assign_from_buffer(buf.data());
+	}
+
+	uint64_t voxels() const {
+		return static_cast<uint64_t>(sx) * static_cast<uint64_t>(sy) * static_cast<uint64_t>(sz);
 	}
 
 	int z_index_width() const {
