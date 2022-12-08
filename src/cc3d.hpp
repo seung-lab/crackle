@@ -157,7 +157,7 @@ OUT* color_connectivity_graph(
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = std::min(max_labels, static_cast<uint64_t>(voxels) + 1); // + 1L for an array with no zeros
+  uint64_t max_labels = static_cast<uint64_t>(voxels) + 1; // + 1L for an array with no zeros
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   DisjointSet<OUT> equivalences(max_labels);
