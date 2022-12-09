@@ -6,7 +6,7 @@ ext_modules = [
     Pybind11Extension(
         "fastcrackle",
         ["src/fastcrackle.cpp"],
-        extra_compile_args=["-std=c++11"],
+        extra_compile_args=["-std=c++17"],
     ),
 ]
 
