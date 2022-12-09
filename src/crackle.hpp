@@ -190,11 +190,16 @@ LABEL* decompress(
 }
 
 template <typename LABEL>
-LABEL* decompress(const std::string &buffer, const bool fortran_order = true) {
+LABEL* decompress(
+	const std::string &buffer, 
+	const bool fortran_order = true,
+	LABEL* output = NULL
+) {
 	return decompress<LABEL>(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size(),
-		fortran_order
+		fortran_order,
+		output
 	);
 }
 
