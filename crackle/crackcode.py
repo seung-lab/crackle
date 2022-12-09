@@ -275,28 +275,26 @@ def decode_impermissible_crack_code(chains, sx, sy):
     revisit = []
     for symbol in symbols:
       if symbol == up:
-        if (x-1) < sx and (y-1) < sy:
+        if x > 0 and y > 0:
           edges[x-1,y-1] = edges[x-1,y-1] & 0b1110
-        if x < sx and (y-1) < sy:
+        if y > 0:
           edges[x,y-1] = edges[x,y-1] & 0b1101
         y -= 1
       elif symbol == down:
-        if (x-1) < sx and y < sy:
+        if x > 0:
           edges[x-1,y] = edges[x-1,y] & 0b1110
-        if x < sx and y < sy:
-          edges[x,y] = edges[x,y] & 0b1101
+        edges[x,y] = edges[x,y] & 0b1101
         y += 1
       elif symbol == left:
-        if (x-1) < sx and (y-1) < sy:
+        if x > 0 and y > 0:
           edges[x-1,y-1] = edges[x-1,y-1] & 0b1011
-        if (x-1) < sx and y < sy:
+        if x > 0:
           edges[x-1,y] = edges[x-1,y] & 0b0111
         x -= 1
       elif symbol == right:
-        if x < sx and (y-1) < sy:
+        if y > 0:
           edges[x,y-1] = edges[x,y-1] & 0b1011
-        if x < sx and y < sy:
-          edges[x,y] = edges[x,y] & 0b0111
+        edges[x,y] = edges[x,y] & 0b0111
         x += 1
       elif symbol == 'b':
         revisit.append((x,y))
