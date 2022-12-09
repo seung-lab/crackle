@@ -44,7 +44,7 @@ def test_remove_initial_branch():
 
   code = [10, 'b', 'd', 'r', 't']
   revised = crackle.crackcode.remove_initial_branch(code, 5, 5)
-  assert revised == [17, 's', 'u', 'l', 's']
+  assert revised == [17, 's', 's', 'l', 'u']
 
   code = [10, 'b', 'd', 'b', 'r', 't']
   revised = crackle.crackcode.remove_initial_branch(code, 5, 5)

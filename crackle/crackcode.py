@@ -121,6 +121,7 @@ def remove_initial_branch(code, sx, sy):
     code[i] = flip[code[i]]
     i += 1
   code[i] = 's'
+  code[2:i+1] = reversed(code[2:i+1])
 
   # swap start and terminal nodes
   node = pos[0] + sxe * pos[1] 
