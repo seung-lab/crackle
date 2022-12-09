@@ -223,28 +223,26 @@ def decode_permissible_crack_code(chains, sx, sy):
     revisit = []
     for symbol in symbols:
       if symbol == up:
-        if (x-1) < sx and (y-1) < sy:
+        if x > 0 and y > 0:
           edges[x-1,y-1] |= 0b0001
-        if x < sx and (y-1) < sy:
+        if y > 0:
           edges[x,y-1] |= 0b0010
         y -= 1
       elif symbol == down:
-        if (x-1) < sx and y < sy:
+        if x > 0:
           edges[x-1,y] |= 0b0001
-        if x < sx and y < sy:
-          edges[x,y] |= 0b0010
+        edges[x,y] |= 0b0010
         y += 1
       elif symbol == left:
-        if (x-1) < sx and (y-1) < sy:
+        if x > 0 and y > 0:
           edges[x-1,y-1] |= 0b0100
-        if (x-1) < sx and y < sy:
+        if x > 0:
           edges[x-1,y] |= 0b1000
         x -= 1
       elif symbol == right:
-        if x < sx and (y-1) < sy:
+        if y > 0:
           edges[x,y-1] |= 0b0100
-        if x < sx and y < sy:
-          edges[x,y] |= 0b1000
+        edges[x,y] |= 0b1000
         x += 1
       elif symbol == 'b':
         revisit.append((x,y))
