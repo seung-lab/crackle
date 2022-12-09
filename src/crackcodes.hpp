@@ -168,8 +168,8 @@ std::vector<uint8_t> decode_permissible_crack_code(
 				if (!revisit.empty()) {
 					loc = revisit.top();
 					revisit.pop();
-					y = loc / sxe;
-					x = loc - (sxe * y);
+					y = loc / sx;
+					x = loc - (sx * y);
 				}
 			}
 		}
@@ -245,8 +245,8 @@ std::vector<uint8_t> decode_impermissible_crack_code(
 				if (!revisit.empty()) {
 					loc = revisit.top();
 					revisit.pop();
-					y = loc / sxe;
-					x = loc - (sxe * y);
+					y = loc / sx;
+					x = loc - (sx * y);
 				}
 			}
 		}
