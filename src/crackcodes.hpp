@@ -106,24 +106,28 @@ std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary(
 
 std::vector<uint8_t> decode_permissible_crack_code(
 	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
-	const uint64_t sx, const uint64_t sy
+	const int64_t sx, const int64_t sy
 ) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
 	std::vector<uint8_t> edges(sx * sy);
 
-	uint64_t sxe = sx + 1;
+	int64_t sxe = sx + 1;
 
 	// graph is of corners and edges
 	// origin is located at top left
 	// corner of the image
 	for (auto& [node, symbols]: chains) {
-		uint64_t y = node / sxe;
-		uint64_t x = node - (sxe * y);
+		int64_t y = node / sxe;
+		int64_t x = node - (sxe * y);
 
-		std::stack<uint64_t> revisit;
+		std::stack<int64_t> revisit;
 		for (unsigned char symbol : symbols) {
-			uint64_t loc = x + sx * y;
+			int64_t loc = x + sx * y;
+			if (loc < 0 || loc >= (sx+1) * (sy+1)) {
+				throw std::runtime_error("crackle: decode_permissible_crack_code: index out of range.");
+			}
+
 			if (symbol == 'u') {
 				if ((x-1) < sx && (y-1) < sy) {
 					edges[loc - 1 - sx] |= 0b0001;
@@ -175,27 +179,32 @@ std::vector<uint8_t> decode_permissible_crack_code(
 
 std::vector<uint8_t> decode_impermissible_crack_code(
 	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
-	const uint64_t sx, const uint64_t sy
+	const int64_t sx, const int64_t sy
 ) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
 	std::vector<uint8_t> edges(sx * sy);
-	for (uint64_t i = 0; i < sx * sy; i++) {
+	for (int64_t i = 0; i < sx * sy; i++) {
 		edges[i] = 0b1111;
 	}
 
-	uint64_t sxe = sx + 1;
+	int64_t sxe = sx + 1;
 
 	// graph is of corners and edges
 	// origin is located at top left
 	// corner of the image
 	for (auto& [node, symbols]: chains) {
-		uint64_t y = node / sxe;
-		uint64_t x = node - (sxe * y);
+		int64_t y = node / sxe;
+		int64_t x = node - (sxe * y);
 
-		std::stack<uint64_t> revisit;
+		std::stack<int64_t> revisit;
 		for (unsigned char symbol : symbols) {
-			uint64_t loc = x + sx * y;
+			int64_t loc = x + sx * y;
+
+			if (loc < 0 || loc >= (sx+1) * (sy+1)) {
+				throw std::runtime_error("crackle: decode_impermissible_crack_code: index out of range.");
+			}
+
 			if (symbol == 'u') {
 				if ((x-1) < sx && (y-1) < sy) {
 					edges[loc - 1 - sx] &= 0b1110;
