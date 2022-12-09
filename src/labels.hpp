@@ -114,7 +114,7 @@ struct Pin {
 	uint64_t decode_buffer(const unsigned char* buf, const uint64_t idx) {
 		label = crackle::lib::ctoi<LABEL>(buf, idx);
 		index = crackle::lib::ctoi<INDEX>(buf, idx + sizeof(LABEL));
-		depth = crackle::lib::ctoi<DEPTH>(buf, idx + sizeof(LABEL) + sizeof(DEPTH));
+		depth = crackle::lib::ctoi<DEPTH>(buf, idx + sizeof(LABEL) + sizeof(INDEX));
 		return sizeof(LABEL) + sizeof(INDEX) + sizeof(DEPTH);
 	}
 };
@@ -135,8 +135,10 @@ std::vector<LABEL> decode_pins_helper3(
 	typedef Pin<RENUM_LABEL, INDEX, DEPTH> PinType;
 	const unsigned char* buf = labels_binary.data();
 
-	uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1); // + bgcolor
-	uint64_t num_pins = (labels_binary.size() - offset) / sizeof(PinType);
+	const uint64_t pin_size = sizeof(RENUM_LABEL) + sizeof(INDEX) + sizeof(DEPTH);
+
+	uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1);
+	const uint64_t num_pins = (labels_binary.size() - offset) / pin_size;
 
 	std::vector<PinType> pins(num_pins);
 	for (uint64_t i = 0, j = offset; i < num_pins; i++) {
@@ -244,24 +246,24 @@ std::vector<LABEL> decode_fixed_width_pins(
   const int renum_width = crackle::lib::compute_byte_width(num_labels);
 
   if (renum_width == 1) {
-	return decode_pins_helper<LABEL, STORED_LABEL, uint8_t>(
-		header, labels_binary, uniq, cc_labels, N, bgcolor
-	);
+		return decode_pins_helper<LABEL, STORED_LABEL, uint8_t>(
+			header, labels_binary, uniq, cc_labels, N, bgcolor
+		);
   }
   else if (renum_width == 2) {
-	return decode_pins_helper<LABEL, STORED_LABEL, uint16_t>(
-		header, labels_binary, uniq, cc_labels, N, bgcolor
-	);
+		return decode_pins_helper<LABEL, STORED_LABEL, uint16_t>(
+			header, labels_binary, uniq, cc_labels, N, bgcolor
+		);
   }
   else if (renum_width == 4) {
-	return decode_pins_helper<LABEL, STORED_LABEL, uint32_t>(
-		header, labels_binary, uniq, cc_labels, N, bgcolor
-	);
+		return decode_pins_helper<LABEL, STORED_LABEL, uint32_t>(
+			header, labels_binary, uniq, cc_labels, N, bgcolor
+		);
   }
   else {
-	return decode_pins_helper<LABEL, STORED_LABEL, uint64_t>(
-		header, labels_binary, uniq, cc_labels, N, bgcolor
-	);
+		return decode_pins_helper<LABEL, STORED_LABEL, uint64_t>(
+			header, labels_binary, uniq, cc_labels, N, bgcolor
+		);
   }
 }
 
