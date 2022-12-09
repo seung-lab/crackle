@@ -110,7 +110,8 @@ std::vector<CCL> crack_codes_to_cc_labels(
 template <typename LABEL>
 LABEL* decompress(
 	const unsigned char* buffer, 
-	size_t num_bytes,
+	const size_t num_bytes,
+	const bool fortran_order = true,
 	LABEL* output = NULL
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
@@ -132,9 +133,6 @@ LABEL* decompress(
 		* static_cast<uint64_t>(header.sy) 
 		* static_cast<uint64_t>(header.sz)
 	);
-	if (output == NULL) {
-		output = new LABEL[voxels]();
-	}
 
 	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
 
@@ -168,18 +166,35 @@ LABEL* decompress(
 		);
 	}
 
-	for (uint64_t i = 0; i < voxels; i++) {
-		output[i] = label_map[cc_labels[i]];
+	if (output == NULL) {
+		output = new LABEL[voxels]();
+	}
+
+	if (fortran_order) {
+		for (uint64_t i = 0; i < voxels; i++) {
+			output[i] = label_map[cc_labels[i]];
+		}
+	}
+	else { // cc_labels is in fortran order so transpose it
+		uint64_t i = 0;
+		for (uint64_t z = 0; z < header.sz; z++) {
+			for (uint64_t y = 0; y < header.sy; y++) {
+				for (uint64_t x = 0; x < header.sx; x++, i++) {
+					output[z + header.sz * (y + header.sy * x)] = label_map[cc_labels[i]];
+				}
+			}
+		}
 	}
 
 	return output;
 }
 
 template <typename LABEL>
-LABEL* decompress(const std::string &buffer) {
+LABEL* decompress(const std::string &buffer, const bool fortran_order = true) {
 	return decompress<LABEL>(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
-		buffer.size()
+		buffer.size(),
+		fortran_order
 	);
 }
 
