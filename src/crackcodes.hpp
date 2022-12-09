@@ -71,6 +71,7 @@ unpack_binary_helper(
 			auto vec = chains[node];
 			vec.insert(vec.end(), symbols.begin(), symbols.end());
 			chains[node] = vec;
+			symbols.clear();
 		}
 	}
 
