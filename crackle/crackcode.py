@@ -81,6 +81,52 @@ def print_graph(G, sx, sy):
   print()
   print(img)
 
+def remove_initial_branch(code, sx, sy):
+  if len(code) == 0:
+    return code
+  elif code[1] != 'b':
+    return code
+
+  i = 2
+  while code[i] != 't':
+    if code[i] == 'b':
+      return code
+    i += 1
+
+  node = code[0]
+  sxe = sx + 1
+  y = node // sxe
+  x = node - (sxe * y)
+  pos = np.array([x,y])
+
+  flip = {
+    'u': 'd',
+    'd': 'u',
+    'l': 'r',
+    'r': 'l',
+    's': 's',
+  }
+  mvmt = {
+    'u': np.array([0,-1]),
+    'd': np.array([0,+1]),
+    'l': np.array([-1,0]),
+    'r': np.array([+1,0]),
+    's': np.array([0,0]),
+  }
+
+  code[1] = 's'
+  i = 2
+  while code[i] != 't':
+    pos += mvmt[code[i]]
+    code[i] = flip[code[i]]
+    i += 1
+  code[i] = 's'
+
+  # swap start and terminal nodes
+  node = pos[0] + sxe * pos[1] 
+  code[0] = node
+  return code
+
 def create_crack_codes(labels, permissible) -> List[List[int]]:
   sx, sy = labels.shape
   G = create_graph(labels, permissible=permissible)
@@ -148,6 +194,7 @@ def create_crack_codes(labels, permissible) -> List[List[int]]:
       code.append('t')
       branches_taken -= 1
 
+    code = remove_initial_branch(code, sx, sy)
     chains.append(code)
 
   return symbols_to_integers(chains)

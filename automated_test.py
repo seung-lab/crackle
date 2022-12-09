@@ -35,6 +35,22 @@ def test_packed_encoding(size):
 
   assert ans == recovered
 
+def test_remove_initial_branch():
+  code = []
+  assert crackle.crackcode.remove_initial_branch(code, 5, 5) == []
+
+  code = [10, 'd','u','t']
+  assert crackle.crackcode.remove_initial_branch(code, 5, 5) == code
+
+  code = [10, 'b', 'd', 'r', 't']
+  revised = crackle.crackcode.remove_initial_branch(code, 5, 5)
+  assert revised == [17, 's', 'u', 'l', 's']
+
+  code = [10, 'b', 'd', 'b', 'r', 't']
+  revised = crackle.crackcode.remove_initial_branch(code, 5, 5)
+  assert revised == [10, 'b', 'd', 'b', 'r', 't']
+
+
 def test_compress_decompress_empty():
   labels = np.zeros((100,100,32), dtype=np.uint32)
   binary = crackle.compress(labels)
