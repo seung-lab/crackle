@@ -130,32 +130,32 @@ std::vector<uint8_t> decode_permissible_crack_code(
 			}
 
 			if (symbol == 'u') {
-				if ((x-1) < sx && (y-1) < sy) {
+				if (x > 0 && y > 0) {
 					edges[loc - 1 - sx] |= 0b0001;
 				}
-				if (y-1 < sy) {
+				if (y > 0) {
 					edges[loc - sx] |= 0b0010;
 				}
 				y--;
 			}
 			else if (symbol == 'd') {
-				if ((x-1) < sx) {
-					edges[loc-1] |= 0b0001;
+				if (x > 0) {
+					edges[loc - 1] |= 0b0001;
 				}
 				edges[loc] |= 0b0010;
 				y++;
 			}
 			else if (symbol == 'l') {
-				if ((x-1) < sx && (y-1) < sy) {
+				if (x > 0 && y > 0) {
 					edges[loc-1-sx] |= 0b0100;
 				}
-				if (x-1 < sx) {
+				if (x > 0) {
 					edges[loc-1] |= 0b1000;
 				}
 				x--;
 			}
 			else if (symbol == 'r') {
-				if (y-1 < sy) {
+				if (y > 0) {
 					edges[loc-sx] |= 0b0100;
 				}
 				edges[loc] |= 0b1000;
@@ -207,33 +207,33 @@ std::vector<uint8_t> decode_impermissible_crack_code(
 			}
 
 			if (symbol == 'u') {
-				if ((x-1) < sx && (y-1) < sy) {
+				if (x > 0 && y > 0) {
 					edges[loc - 1 - sx] &= 0b1110;
 				}
-				if (y-1 < sy) {
+				if (y > 0) {
 					edges[loc - sx] &= 0b1101;
 				}
 				y--;
 			}
 			else if (symbol == 'd') {
-				if ((x-1) < sx) {
-					edges[loc-1] &= 0b1110;
+				if (x > 0) {
+					edges[loc - 1] &= 0b1110;
 				}
 				edges[loc] &= 0b1101;
 				y++;
 			}
 			else if (symbol == 'l') {
-				if ((x-1) < sx && (y-1) < sy) {
-					edges[loc-1-sx] &= 0b1011;
+				if (x > 0 && y > 0) {
+					edges[loc - 1 - sx] &= 0b1011;
 				}
-				if (x-1 < sx) {
+				if (x > 0) {
 					edges[loc-1] &= 0b0111;
 				}
 				x--;
 			}
 			else if (symbol == 'r') {
-				if (y-1 < sy) {
-					edges[loc-sx] &= 0b1011;
+				if (y > 0) {
+					edges[loc - sx] &= 0b1011;
 				}
 				edges[loc] &= 0b0111;
 				x++;
