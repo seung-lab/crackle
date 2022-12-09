@@ -188,7 +188,7 @@ std::vector<OUT> color_connectivity_graph(
           }
         }
         else if (y > 0 && vcg[loc] & 0b1000) {
-          equivalences.unify(out_labels[loc], out_labels[loc+C]);
+          out_labels[loc] = out_labels[loc+C];
         }
         else {
           new_label++;
