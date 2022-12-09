@@ -18,7 +18,11 @@ unpack_binary_helper(
 	const uint64_t sx, const uint64_t sy
 ) {
 	std::unordered_map<uint64_t, std::vector<unsigned char>> chains;
-	const std::vector<T> int_code(code.begin(), code.end());
+	uint64_t code_size = code.size() / sizeof(T);
+	std::vector<T> int_code(code_size);
+	for (uint64_t i = 0; i < code_size; i++) {
+		int_code[i] = crackle::lib::ctoi<T>(code.data(), i * sizeof(T));
+	}
 
 	std::vector<unsigned char> symbols;
 	symbols.reserve(code.size() * 4);
