@@ -10,8 +10,6 @@ ext_modules = [
     ),
 ]
 
-
-
 setuptools.setup(
   setup_requires=['pbr'],
   cmdclass={"build_ext": build_ext},

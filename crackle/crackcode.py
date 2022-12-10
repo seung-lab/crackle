@@ -418,7 +418,9 @@ def pack_codes(
 
   return binary
 
-def encode_boundaries(labels, permissible:bool = False):
+def encode_boundaries(
+  labels:np.ndarray, permissible:bool = False
+) -> List[bytes]:
   sx, sy, sz = labels.shape
 
   binary_components = []

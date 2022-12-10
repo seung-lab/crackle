@@ -91,6 +91,22 @@ int compute_byte_width(const uint64_t x) {
 	return sizeof(uint64_t);
 }
 
+template <typename LABEL>
+uint64_t pixel_pairs (const LABEL* labels, const uint64_t voxels) {
+	uint64_t pairs = 0;
+	LABEL label = labels[0];
+
+	for (uint64_t i = 1; i < voxels; i++) {
+		if (label == labels[i]) {
+			pairs++;
+		}
+		else {
+			label = labels[i];
+		}
+	}
+	return pairs;
+}
+
 };
 };
 
