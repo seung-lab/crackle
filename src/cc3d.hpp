@@ -117,12 +117,12 @@ template <typename OUT = uint32_t>
 OUT* relabel(
     OUT* out_labels, const int64_t voxels,
     const int64_t num_labels, DisjointSet<uint32_t> &equivalences,
-    uint64_t &N = _dummy_N
+    uint64_t &N = _dummy_N, uint64_t start_label = 0
   ) {
 
   OUT label;
   std::unique_ptr<OUT[]> renumber(new OUT[num_labels + 1]());
-  OUT next_label = 1;
+  OUT next_label = start_label + 1;
 
   for (int64_t i = 1; i <= num_labels; i++) {
     label = equivalences.root(i);
@@ -207,17 +207,15 @@ template <typename LABEL, typename OUT>
 OUT* connected_components2d_4(
     LABEL* in_labels, 
     const int64_t sx, const int64_t sy, const int64_t sz,
-    uint64_t max_labels, OUT *out_labels = NULL, 
-    uint64_t &N = _dummy_N
+    OUT *out_labels = NULL, 
+    const uint64_t start_label = 0, uint64_t &N = _dummy_N
   ) {
 
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  max_labels++;
-  max_labels = std::min(max_labels, static_cast<uint64_t>(voxels) + 1); // + 1L for an array with no zeros
+  uint64_t max_labels = static_cast<uint64_t>(voxels) + 1; // + 1L for an array with no zeros
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
-
 
   DisjointSet<OUT> equivalences(max_labels);
 
@@ -265,7 +263,7 @@ OUT* connected_components2d_4(
     }
   }
 
-  return relabel<OUT>(out_labels, voxels, next_label, equivalences, N);
+  return relabel<OUT>(out_labels, voxels, next_label, equivalences, N, start_label);
 }
 
 template <typename LABEL, typename OUT = uint64_t>
@@ -273,21 +271,19 @@ OUT* connected_components(
   LABEL* in_labels, 
   const int64_t sx, const int64_t sy, const int64_t sz,
   std::vector<uint64_t> &num_components_per_slice,
+  OUT* out_labels,
   uint64_t &N = _dummy_N
 ) {
 
   const int64_t sxy = sx * sy;
-  const int64_t voxels = sxy * sz;
-
-  uint64_t max_labels = voxels;
-  OUT* out_labels = new OUT[voxels]();
   N = 0;
 
   for (int64_t z = 0; z < sz; z++) {
     uint64_t tmp_N = 0;
     connected_components2d_4<LABEL, OUT>(
-      (in_labels + sxy * z), sx, sy, 1, 
-      max_labels, (out_labels + sxy * z),
+      (in_labels + sxy * z), 
+      sx, sy, 1, 
+      (out_labels + sxy * z),
       tmp_N, N
     );
     num_components_per_slice[z] = tmp_N;
