@@ -18,26 +18,30 @@ def extract_columns(labels:np.ndarray):
     N_total += N
 
   pinsets = defaultdict(list)
-
-  for x in range(sx):
-    for y in range(sy):
+    
+  for y in range(sy):
+    for x in range(sx):
       label = labels[x,y,0]
-      label_set = set([ cc_labels[x,y,0] ])
       z_start = 0
       for z in range(1, sz):
         cur = labels[x,y,z]
         if label != cur:
           pinsets[label].append(
-            ((x,y,z_start), (x,y,z-1), label_set)
+            ((x,y,z_start), (x,y,z-1), set(cc_labels[x,y,z_start:z]))
           )
           label = cur
           z_start = z
-          label_set = set()
-        label_set |= set([ cc_labels[x,y,z] ])
 
-      pinsets[label].append(
-        ((x,y,z_start), (x,y,z), label_set)
-      )
+      if not (
+        len(pinsets[label])
+        and pinsets[label][-1][0][0] == x-1
+        and pinsets[label][-1][0][1] == y
+        and pinsets[label][-1][0][2] <= z_start
+        and pinsets[label][-1][1][2] >= z
+      ):
+        pinsets[label].append(
+          ((x,y,z_start), (x,y,z), set(cc_labels[x,y,z_start:]))
+        )
 
   return pinsets
 
