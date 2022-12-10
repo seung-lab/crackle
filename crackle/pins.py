@@ -55,6 +55,7 @@ def find_optimal_pins(pinset):
     universe -= cur
     for j, otherset in isets:
       otherset -= cur
+    isets = [ x for x in isets if len(x[1]) > 0 ]
     final_pins.append(pinset[i][:2])
 
   return final_pins
