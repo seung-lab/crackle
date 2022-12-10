@@ -94,4 +94,9 @@ py::tuple connected_components(const py::array &labels) {
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
+	m.def(
+		"connected_components", 
+		&connected_components,
+		"Perform 4-connected components in layers on a 3D array."
+	);
 }
