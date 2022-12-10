@@ -5,6 +5,7 @@
 
 #include "header.hpp"
 #include "lib.hpp"
+#include "pins.hpp"
 
 namespace crackle {
 namespace labels {
@@ -95,30 +96,6 @@ std::vector<LABEL> decode_flat(
   return label_map;
 }
 
-template <typename LABEL, typename INDEX, typename DEPTH>
-struct Pin {
-	LABEL label;
-	INDEX index;
-	DEPTH depth;
-
-	Pin() {
-		label = 0;
-		index = 0;
-		depth = 0;
-	}
-
-	Pin(LABEL _lbl, INDEX _idx, DEPTH _depth) 
-		: label(_lbl), index(_idx), depth(_depth)
-	{} 
-	
-	uint64_t decode_buffer(const unsigned char* buf, const uint64_t idx) {
-		label = crackle::lib::ctoi<LABEL>(buf, idx);
-		index = crackle::lib::ctoi<INDEX>(buf, idx + sizeof(LABEL));
-		depth = crackle::lib::ctoi<DEPTH>(buf, idx + sizeof(LABEL) + sizeof(INDEX));
-		return sizeof(LABEL) + sizeof(INDEX) + sizeof(DEPTH);
-	}
-};
-
 template <
 	typename LABEL, typename STORED_LABEL, 
 	typename RENUM_LABEL, typename INDEX, 
@@ -132,7 +109,7 @@ std::vector<LABEL> decode_pins_helper3(
 	const uint64_t N,
 	const LABEL bgcolor
 ) {
-	typedef Pin<RENUM_LABEL, INDEX, DEPTH> PinType;
+	typedef crackle::pins::Pin<RENUM_LABEL, INDEX, DEPTH> PinType;
 	const unsigned char* buf = labels_binary.data();
 
 	const uint64_t pin_size = sizeof(RENUM_LABEL) + sizeof(INDEX) + sizeof(DEPTH);
