@@ -3,19 +3,16 @@ from collections import defaultdict
 import numpy as np
 from tqdm import tqdm
 
+import fastcrackle
+
 from .ccl import connected_components
 from .lib import compute_byte_width
 
 def extract_columns(labels:np.ndarray):
   sx,sy,sz = labels.shape
 
-  cc_labels = np.zeros((sx,sy,sz), dtype=np.uint32)
-  N_total = 0
-  for z in range(sz):
-    cc_slice, N = connected_components(labels[:,:,z])
-    cc_slice += N_total
-    cc_labels[:,:,z] = cc_slice
-    N_total += N
+  cc_labels, components, N_total = fastcrackle.connected_components(labels)
+  cc_labels = cc_labels.reshape(labels.shape, order='F')
 
   pinsets = defaultdict(list)
     
