@@ -198,7 +198,97 @@ def create_crack_codes(labels, permissible) -> List[List[int]]:
     code = remove_initial_branch(code, sx, sy)
     chains.append(code)
 
-  return symbols_to_integers(chains)
+  frequency_table(chains)
+
+  return symbols_to_integers(
+    # chains
+    relative_code_directions(chains)
+  )
+
+def relative_code_directions(chains):
+  encoded_chains = []
+
+  relative_map = {
+    'u': {
+      'u': 'u',
+      'd': 'd',
+      'l': 'l',
+      'r': 'r',
+      'b': 'b',
+      't': 't',
+    },
+    'l': {
+      'u': 'r',
+      'd': 'l',
+      'l': 'd',
+      'r': 'u',
+      'b': 'b',
+      't': 't',
+    },
+    'd': {
+      'u': 'd',
+      'd': 'u',
+      'l': 'r',
+      'r': 'l',
+      'b': 'b',
+      't': 't',
+    },
+    'r': {
+      'u': 'l',
+      'd': 'r',
+      'l': 'd',
+      'r': 'u',
+      'b': 'b',
+      't': 't',
+    },
+  }
+
+  for chain in chains:
+    code = [ chain[0] ] # node
+
+    chain = [ codept for codept in chain if codept != 's' ]
+
+    i = 1
+    direction = chain[i]
+    while direction in ('s', 'b', 't'):
+      code.append(chain[i])
+      direction = chain[i]
+      i += 1
+
+    code.append(chain[1])
+    while i < len(chain[2:]):
+      move = chain[i]
+      # print(direction, move)
+      if move in ('s', 'b', 't'):
+        code.append(move)
+        i += 1
+        continue
+      code.append(
+        relative_map[direction][move]
+      )
+      while direction in ('s', 'b', 't'):
+        code.append(chain[i])
+        i += 1
+        direction = chain[i]
+        code.append(direction)
+      i += 1
+
+    encoded_chains.append(code)
+
+  frequency_table(encoded_chains)
+
+  return encoded_chains
+
+def frequency_table(chains):
+  counts = defaultdict(int)
+  for chain in chains:
+    for i, symbol in enumerate(chain[1:]):
+      counts[symbol] += 1
+      if i > 2:
+        counts[(chain[i-1], chain[i])] += 1
+
+
+  print(counts)
 
 def symbols_to_integers(chains):
   encoded_chains = []
