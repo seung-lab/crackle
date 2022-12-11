@@ -32,13 +32,31 @@ def extract_columns(labels:np.ndarray):
           label = cur
           z_start = z
 
-      if not (
+      # try to reduce candidate pins by filtering
+      # out ones that are strictly dominated by their
+      # neighboring pin
+      if (
         len(pinsets[label])
         and pinsets[label][-1][0][0] == x-1
         and pinsets[label][-1][0][1] == y
-        and pinsets[label][-1][0][2] <= z_start
-        and pinsets[label][-1][1][2] >= z
       ):
+        if (
+          pinsets[label][-1][0][2] <= z_start
+          and pinsets[label][-1][1][2] >= z
+        ):
+          pass
+        elif (
+          pinsets[label][-1][0][2] >= z_start
+          and pinsets[label][-1][1][2] <= z
+        ):
+          pinsets[label][-1] = (
+            (x,y,z_start), (x,y,z), set(cc_labels[x,y,z_start:])
+          )
+        else:
+          pinsets[label].append(
+            ((x,y,z_start), (x,y,z), set(cc_labels[x,y,z_start:]))
+          )
+      else:
         pinsets[label].append(
           ((x,y,z_start), (x,y,z), set(cc_labels[x,y,z_start:]))
         )
