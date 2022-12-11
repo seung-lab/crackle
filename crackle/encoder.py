@@ -14,6 +14,7 @@ def encode_flat_labels(labels, stored_data_dtype):
 
   cc_labels, components, N_total = fastcrackle.connected_components(labels)
   cc_labels = cc_labels.reshape(labels.shape, order='F')
+  components = np.array(components, dtype=np.uint32)
 
   mapping = fastremap.component_map(cc_labels, labels)
   

@@ -137,7 +137,7 @@ OUT* relabel(
   }
 
   // Raster Scan 2: Write final labels based on equivalences
-  N = next_label - 1;
+  N = next_label - start_label - 1;
   for (int64_t loc = 0; loc < voxels; loc++) {
     out_labels[loc] = renumber[out_labels[loc]] - 1; // first label is 0 not 1
   }
@@ -270,7 +270,7 @@ template <typename LABEL, typename OUT = uint64_t>
 OUT* connected_components(
   LABEL* in_labels, 
   const int64_t sx, const int64_t sy, const int64_t sz,
-  uint64_t* num_components_per_slice,
+  std::vector<uint64_t> &num_components_per_slice,
   OUT* out_labels,
   uint64_t &N = _dummy_N
 ) {

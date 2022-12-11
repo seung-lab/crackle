@@ -2,6 +2,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 
 #include <vector>
 
@@ -48,7 +49,7 @@ py::tuple connected_components(const py::array &labels) {
 	const uint64_t sy = labels.shape()[1];
 	const uint64_t sz = labels.shape()[2];
 
-	py::array num_components_per_slice = py::array_t<uint64_t>(sz);
+	std::vector<uint64_t> num_components_per_slice(sz);
 	py::array cc_labels = py::array_t<uint32_t>(sx * sy * sz);
 	uint64_t N = 0;
 
@@ -56,7 +57,7 @@ py::tuple connected_components(const py::array &labels) {
 		crackle::cc3d::connected_components<uint8_t, uint32_t>(
 			reinterpret_cast<uint8_t*>(const_cast<void*>(labels.data())),
 			sx, sy, sz, 
-			reinterpret_cast<uint64_t*>(const_cast<void*>(num_components_per_slice.data())),
+			num_components_per_slice,
 			reinterpret_cast<uint32_t*>(const_cast<void*>(cc_labels.data())), 
 			N 
 		);
@@ -65,7 +66,7 @@ py::tuple connected_components(const py::array &labels) {
 		crackle::cc3d::connected_components<uint16_t, uint32_t>(
 			reinterpret_cast<uint16_t*>(const_cast<void*>(labels.data())),
 			sx, sy, sz, 
-			reinterpret_cast<uint64_t*>(const_cast<void*>(num_components_per_slice.data())),
+			num_components_per_slice,
 			reinterpret_cast<uint32_t*>(const_cast<void*>(cc_labels.data())), 
 			N 
 		);
@@ -74,7 +75,7 @@ py::tuple connected_components(const py::array &labels) {
 		crackle::cc3d::connected_components<uint32_t, uint32_t>(
 			reinterpret_cast<uint32_t*>(const_cast<void*>(labels.data())),
 			sx, sy, sz, 
-			reinterpret_cast<uint64_t*>(const_cast<void*>(num_components_per_slice.data())),
+			num_components_per_slice,
 			reinterpret_cast<uint32_t*>(const_cast<void*>(cc_labels.data())), 
 			N 
 		);
@@ -83,7 +84,7 @@ py::tuple connected_components(const py::array &labels) {
 		crackle::cc3d::connected_components<uint64_t, uint32_t>(
 			reinterpret_cast<uint64_t*>(const_cast<void*>(labels.data())),
 			sx, sy, sz, 
-			reinterpret_cast<uint64_t*>(const_cast<void*>(num_components_per_slice.data())),
+			num_components_per_slice,
 			reinterpret_cast<uint32_t*>(const_cast<void*>(cc_labels.data())), 
 			N 
 		);
