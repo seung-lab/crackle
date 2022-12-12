@@ -6,8 +6,10 @@ import fastcrackle
 from . import crackcode
 from . import pins
 from .headers import CrackleHeader, LabelFormat, CrackFormat
-from .lib import compute_byte_width, width2dtype, compute_dtype
-from .ccl import connected_components
+from .lib import (
+  compute_byte_width, width2dtype, 
+  compute_dtype, eytzinger_sort
+)
 
 def encode_flat_labels(labels, stored_data_dtype):
   sx,sy,sz = labels.shape
@@ -20,6 +22,7 @@ def encode_flat_labels(labels, stored_data_dtype):
   
   uniq = np.array(list(mapping.values()), dtype=stored_data_dtype)
   uniq = np.unique(uniq)
+  uniq = np.array(eytzinger_sort(uniq), dtype=stored_data_dtype)
 
   remapping = { k:i for i,k in enumerate(uniq) }
   key_dtype = compute_dtype(len(uniq))

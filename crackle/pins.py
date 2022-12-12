@@ -5,8 +5,7 @@ from tqdm import tqdm
 
 import fastcrackle
 
-from .ccl import connected_components
-from .lib import compute_byte_width
+from .lib import compute_byte_width, eytzinger_sort
 
 def extract_columns(labels:np.ndarray):
   sx,sy,sz = labels.shape
@@ -120,7 +119,7 @@ def fixed_width_binary(
   linear = sorted(linear, key=lambda x: x[1])
   bgcolor = max_pins_label.to_bytes(stored_data_width, 'little')
 
-  all_labels = sorted(list(all_pins.keys()))
+  all_labels = eytzinger_sort(list(all_pins.keys()))
 
   bytestream = []
   bytestream.append(bgcolor) # bgcolor
@@ -173,7 +172,3 @@ def condensed_binary(
   del linear
 
   return b''.join(bytestream)
-
-
-
-

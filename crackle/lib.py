@@ -42,6 +42,27 @@ def unpack_bits(encoded, bits_per_value):
     offset += bits
   return unpacked
 
+def eytzinger_sort_helper(inpt, output, i = 0, k = 1):
+  """
+  Takes an ascendingly sorted input and 
+  an equal sized output buffer into which to 
+  rewrite the input in eytzinger order.
+
+  Modified from:
+  https://algorithmica.org/en/eytzinger
+  """
+  if k <= len(inpt):
+    i = eytzinger_sort_helper(inpt, output, i, 2 * k)
+    output[k - 1] = inpt[i]
+    i += 1
+    i = eytzinger_sort_helper(inpt, output,i, 2 * k + 1)
+  return i
+
+def eytzinger_sort(labels):
+  labels = sorted(labels)
+  out = [0] * len(labels)
+  eytzinger_sort_helper(labels, out)
+  return out
 
 
 
