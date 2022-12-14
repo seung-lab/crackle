@@ -255,12 +255,15 @@ def relative_code_directions(chains):
         code.append(move)
         continue
 
+      tmp = move
       move = relative_map[direction][move]
+      direction = tmp
       code.append(move)
     encoded_chains.append(code)
 
-  # frequency_table(chains)  
-  # frequency_table(encoded_chains)
+  print()
+  frequency_table(chains)  
+  frequency_table(encoded_chains)
 
   return encoded_chains
 
@@ -269,8 +272,8 @@ def frequency_table(chains):
   for chain in chains:
     for i, symbol in enumerate(chain[1:]):
       counts[symbol] += 1
-      if i > 2:
-        counts[(chain[i-1], chain[i])] += 1
+      # if i > 2:
+      #   counts[(chain[i-1], chain[i])] += 1
 
   import pprint
   pp = pprint.PrettyPrinter(width=60, compact=True)
