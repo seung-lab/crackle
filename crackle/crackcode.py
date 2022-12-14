@@ -246,7 +246,10 @@ def relative_code_directions(chains):
     
     direction = None
     for move in chain[1:]:
-      if move in ('s','b','t'):
+      if move == 's':
+        code.append(move)  
+        continue
+      if move in ('b','t'):
         code.append(move)
         direction = None
         continue
