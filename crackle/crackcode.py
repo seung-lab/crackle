@@ -198,8 +198,6 @@ def create_crack_codes(labels, permissible) -> List[List[int]]:
     code = remove_initial_branch(code, sx, sy)
     chains.append(code)
 
-  frequency_table(chains)
-
   return symbols_to_integers(
     # chains
     relative_code_directions(chains)
@@ -220,8 +218,8 @@ def relative_code_directions(chains):
     'l': {
       'u': 'r',
       'd': 'l',
-      'l': 'd',
-      'r': 'u',
+      'l': 'u',
+      'r': 'd',
       'b': 'b',
       't': 't',
     },
@@ -245,37 +243,24 @@ def relative_code_directions(chains):
 
   for chain in chains:
     code = [ chain[0] ] # node
-
-    chain = [ codept for codept in chain if codept != 's' ]
-
-    i = 1
-    direction = chain[i]
-    while direction in ('s', 'b', 't'):
-      code.append(chain[i])
-      direction = chain[i]
-      i += 1
-
-    code.append(chain[1])
-    while i < len(chain[2:]):
-      move = chain[i]
-      # print(direction, move)
-      if move in ('s', 'b', 't'):
+    
+    direction = None
+    for move in chain[1:]:
+      if move in ('s','b','t'):
         code.append(move)
-        i += 1
+        direction = None
         continue
-      code.append(
-        relative_map[direction][move]
-      )
-      while direction in ('s', 'b', 't'):
-        code.append(chain[i])
-        i += 1
-        direction = chain[i]
-        code.append(direction)
-      i += 1
+      if direction is None:
+        direction = move
+        code.append(move)
+        continue
 
+      move = relative_map[direction][move]
+      code.append(move)
     encoded_chains.append(code)
 
-  frequency_table(encoded_chains)
+  # frequency_table(chains)  
+  # frequency_table(encoded_chains)
 
   return encoded_chains
 
@@ -287,8 +272,9 @@ def frequency_table(chains):
       if i > 2:
         counts[(chain[i-1], chain[i])] += 1
 
-
-  print(counts)
+  import pprint
+  pp = pprint.PrettyPrinter(width=60, compact=True)
+  pp.pprint(counts)
 
 def symbols_to_integers(chains):
   encoded_chains = []
