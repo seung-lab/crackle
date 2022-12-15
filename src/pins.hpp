@@ -108,10 +108,12 @@ std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
 	std::vector<uint64_t> num_components_per_slice(sz);
 	uint64_t N_total = 0;
 
-	uint32_t* cc_labels = crackle::cc3d::connected_components<uint32_t>(
-		labels, sx, sy, sz, 
-		num_components_per_slice,
-		NULL, N_total
+	std::unique_ptr<uint32_t[]> cc_labels(
+		crackle::cc3d::connected_components<uint32_t>(
+			labels, sx, sy, sz, 
+			num_components_per_slice,
+			NULL, N_total
+		)
 	);
 
 	std::unordered_map<LABEL, std::vector<CandidatePin>> pinsets;
