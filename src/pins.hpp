@@ -101,7 +101,7 @@ void add_pin(
 }
 
 template <typename LABEL>
-std::vector<CandidatePin> extract_columns(
+std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
@@ -142,6 +142,83 @@ std::vector<CandidatePin> extract_columns(
 	return pinsets;
 }
 
+std::vector<CandidatePin> find_optimal_pins(
+	std::vector<CandidatePin> &pinsets,
+	const uint64_t sx, const uint64_t sy
+) {	
+	std::unordered_set<uint32_t> universe;
+	for (auto candidate : pinsets) {
+		universe.merge(candidate.ccids);
+	}
+
+	std::vector<CandidatePin> final_pins;
+	final_pins.reserve(final_pins.size() / 10);
+
+	std::unordered_set<uint64_t> isets(pinsets.size());
+	for (uint64_t i = 0; i < isets.size(); i++) {
+		isets.emplace(i);
+	}
+
+	std::vector<uint64_t> sizes;
+	sizes.reserve(pinsets.size());
+	while (universe.size()) {
+		uint64_t idx = 0;
+		uint64_t ct = 0;
+		for (auto i : isets) {
+			if (pinsets[i].ccids.size() > ct) {
+				ct = pinsets[i].size();
+				idx = i;
+			}
+		}
+		uint64_t j = *isets.begin();
+		isets.erase(j);
+
+		CandidatePin cur = pinsets[j];
+		for (uint32_t ccid : cur.ccids) {
+			universe.erase(ccid);
+		}
+
+		for (auto i : isets) {
+			auto& tmp = pinsets[i].ccids;
+			for (uint32_t ccid : cur.ccids) {
+				tmp.erase(ccid);
+			}
+
+			if (tmp.size() == 0) {
+				isets.erase(i);
+			}
+		}
+
+		final_pins.emplace_back(cur);
+	}
+
+	return final_pins;
+}
+
+template <typename LABEL, typename INDEX, typename DEPTH>
+std::vector<Pin<LABEL, INDEX, DEPTH>> compute(
+	LABEL* labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {
+	typedef Pin<LABEL, INDEX, DEPTH> PinType;
+
+	auto pinsets = extract_columns(labels, sx, sy, sz);
+	std::unordered_map<LABEL, std::vector<PinType>> all_pins;
+	for (auto [label, pins] : pinsets) {
+		std::vector<CandidatePin> solution = find_optimal_pins(pins, sx, sy);
+		std::vector<PinType> encoded_pins(solution.size());
+		for (auto pin : solution) {
+			encoded_pins.emplace_back(
+				label, 
+				pin.start_index(sx, sy),
+				pin.depth()
+			);
+		}
+		all_pins[label] = encoded_pins;
+	}
+
+	return all_pins;
+}
 
 };
 };
