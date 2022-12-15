@@ -7,6 +7,36 @@ import fastcrackle
 
 from .lib import compute_byte_width, eytzinger_sort
 
+def append_pin(pinsets, label, z_start, x, y, z, cc_set):
+  # try to reduce candidate pins by filtering
+  # out ones that are strictly dominated by their
+  # neighboring pin
+  if (
+    len(pinsets[label])
+    and pinsets[label][-1][0][0] == x-1
+    and pinsets[label][-1][0][1] == y
+  ):
+    if (
+      pinsets[label][-1][0][2] <= z_start
+      and pinsets[label][-1][1][2] >= z
+    ):
+      pass
+    elif (
+      pinsets[label][-1][0][2] >= z_start
+      and pinsets[label][-1][1][2] <= z
+    ):
+      pinsets[label][-1] = (
+        (x,y,z_start), (x,y,z), set(cc_set)
+      )
+    else:
+      pinsets[label].append(
+        ((x,y,z_start), (x,y,z), set(cc_set))
+      )
+  else:
+    pinsets[label].append(
+      ((x,y,z_start), (x,y,z), set(cc_set))
+    )
+
 def extract_columns(labels:np.ndarray):
   sx,sy,sz = labels.shape
 
@@ -22,40 +52,11 @@ def extract_columns(labels:np.ndarray):
       for z in range(1, sz):
         cur = labels[x,y,z]
         if label != cur:
-          pinsets[label].append(
-            ((x,y,z_start), (x,y,z-1), set(cc_labels[x,y,z_start:z]))
-          )
+          append_pin(pinsets, label, z_start, x, y, z-1, cc_labels[x,y,z_start:z])
           label = cur
           z_start = z
 
-      # try to reduce candidate pins by filtering
-      # out ones that are strictly dominated by their
-      # neighboring pin
-      if (
-        len(pinsets[label])
-        and pinsets[label][-1][0][0] == x-1
-        and pinsets[label][-1][0][1] == y
-      ):
-        if (
-          pinsets[label][-1][0][2] <= z_start
-          and pinsets[label][-1][1][2] >= z
-        ):
-          pass
-        elif (
-          pinsets[label][-1][0][2] >= z_start
-          and pinsets[label][-1][1][2] <= z
-        ):
-          pinsets[label][-1] = (
-            (x,y,z_start), (x,y,z), set(cc_labels[x,y,z_start:])
-          )
-        else:
-          pinsets[label].append(
-            ((x,y,z_start), (x,y,z), set(cc_labels[x,y,z_start:]))
-          )
-      else:
-        pinsets[label].append(
-          ((x,y,z_start), (x,y,z), set(cc_labels[x,y,z_start:]))
-        )
+      append_pin(pinsets, label, z_start, x, y, z, cc_labels[x,y,z_start:])
 
   return pinsets
 
