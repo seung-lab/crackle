@@ -211,14 +211,14 @@ std::vector<CandidatePin> find_optimal_pins(
 }
 
 template <typename LABEL>
-std::unordered_map<LABEL, std::vector<Pin<LABEL, uint64_t, uint64_t>>> compute(
+std::unordered_map<uint64_t, std::vector<Pin<uint64_t, uint64_t, uint64_t>>> compute(
 	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
-	typedef Pin<LABEL, uint64_t, uint64_t> PinType;
+	typedef Pin<uint64_t, uint64_t, uint64_t> PinType;
 
 	auto pinsets = extract_columns(labels, sx, sy, sz);
-	std::unordered_map<LABEL, std::vector<PinType>> all_pins;
+	std::unordered_map<uint64_t, std::vector<PinType>> all_pins;
 	all_pins.reserve(128);
 
 	for (auto [label, pins] : pinsets) {
