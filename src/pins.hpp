@@ -145,7 +145,7 @@ robin_hood::unordered_node_map<LABEL, std::vector<CandidatePin>> extract_columns
 			if (sz == 1) {
 				z = 0;
 			}
-			add_pin(pinsets, label, z_start, x, y, z, label_set);
+			add_pin(pinsets, label, z_start, x, y, z-1, label_set);
 		}
 	}
 
