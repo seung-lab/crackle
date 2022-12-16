@@ -205,7 +205,7 @@ std::vector<OUT> color_connectivity_graph(
 
 template <typename LABEL, typename OUT>
 OUT* connected_components2d_4(
-    LABEL* in_labels, 
+    const LABEL* in_labels, 
     const int64_t sx, const int64_t sy, const int64_t sz,
     OUT *out_labels = NULL, 
     const uint64_t start_label = 0, uint64_t &N = _dummy_N
@@ -268,7 +268,7 @@ OUT* connected_components2d_4(
 
 template <typename LABEL, typename OUT = uint64_t>
 OUT* connected_components(
-  LABEL* in_labels, 
+  const LABEL* in_labels, 
   const int64_t sx, const int64_t sy, const int64_t sz,
   std::vector<uint64_t> &num_components_per_slice,
   OUT* out_labels,
@@ -277,6 +277,10 @@ OUT* connected_components(
 
   const int64_t sxy = sx * sy;
   N = 0;
+
+  if (out_labels == NULL) {
+    out_labels = new OUT[sx * sy * sz]();
+  }
 
   for (int64_t z = 0; z < sz; z++) {
     uint64_t tmp_N = 0;

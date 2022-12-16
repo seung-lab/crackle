@@ -74,7 +74,6 @@ void add_pin(
 	LABEL label,
 	const uint64_t z_start,
 	const uint64_t x, const uint64_t y, const uint64_t z,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const std::unordered_set<uint32_t> &cc_set
 ) {
 	if (pinsets[label].size() == 0) {
@@ -89,7 +88,7 @@ void add_pin(
 			return;
 		}
 		else if (last_pin.z_s >= z_start && last_pin.z_e <= z) {
-			pinsets[label].back() = CandidatePin(x, y, z_start, cc_set);
+			pinsets[label].back() = CandidatePin(x, y, z_start, z, cc_set);
 		}
 		else {
 			pinsets[label].emplace_back(x, y, z_start, z, cc_set);
@@ -102,14 +101,14 @@ void add_pin(
 
 template <typename LABEL>
 std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
-	LABEL* labels,
+	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
 	std::vector<uint64_t> num_components_per_slice(sz);
 	uint64_t N_total = 0;
 
 	std::unique_ptr<uint32_t[]> cc_labels(
-		crackle::cc3d::connected_components<uint32_t>(
+		crackle::cc3d::connected_components<LABEL, uint32_t>(
 			labels, sx, sy, sz, 
 			num_components_per_slice,
 			NULL, N_total
@@ -126,7 +125,8 @@ std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
 			std::unordered_set<uint32_t> label_set;
 			label_set.insert(cc_labels[loc]);
 			uint64_t z_start = 0;
-			for (uint64_t z = 0; z < sz; z++) {
+			uint64_t z = 1;
+			for (; z < sz; z++) {
 				uint64_t zoff = sx * sy * z;
 				LABEL cur = labels[loc + zoff];
 				if (label != cur) {
@@ -136,6 +136,9 @@ std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
 					label_set.clear();
 				}
 				label_set.insert(cc_labels[loc + zoff]);
+			}
+			if (sz == 1) {
+				z = 0;
 			}
 			add_pin(pinsets, label, z_start, x, y, z, label_set);
 		}
@@ -168,14 +171,14 @@ std::vector<CandidatePin> find_optimal_pins(
 		uint64_t ct = 0;
 		for (auto i : isets) {
 			if (pinsets[i].ccids.size() > ct) {
-				ct = pinsets[i].size();
+				ct = pinsets[i].ccids.size();
 				idx = i;
 			}
 		}
-		uint64_t j = *isets.begin();
-		isets.erase(j);
 
-		CandidatePin cur = pinsets[j];
+		isets.erase(idx);
+
+		CandidatePin cur = pinsets[idx];
 		for (uint32_t ccid : cur.ccids) {
 			universe.erase(ccid);
 		}
@@ -197,12 +200,12 @@ std::vector<CandidatePin> find_optimal_pins(
 	return final_pins;
 }
 
-template <typename LABEL, typename INDEX, typename DEPTH>
-std::vector<Pin<LABEL, INDEX, DEPTH>> compute(
-	LABEL* labels,
+template <typename LABEL>
+std::unordered_map<LABEL, std::vector<Pin<LABEL, uint64_t, uint64_t>>> compute(
+	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
-	typedef Pin<LABEL, INDEX, DEPTH> PinType;
+	typedef Pin<LABEL, uint64_t, uint64_t> PinType;
 
 	auto pinsets = extract_columns(labels, sx, sy, sz);
 	std::unordered_map<LABEL, std::vector<PinType>> all_pins;
@@ -212,7 +215,7 @@ std::vector<Pin<LABEL, INDEX, DEPTH>> compute(
 		for (auto pin : solution) {
 			encoded_pins.emplace_back(
 				label, 
-				pin.start_index(sx, sy),
+				pin.start_idx(sx, sy),
 				pin.depth()
 			);
 		}
