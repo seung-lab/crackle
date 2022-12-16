@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "robin_hood.hpp"
+
 #include "cc3d.hpp"
 #include "lib.hpp"
 
@@ -40,7 +42,7 @@ struct CandidatePin {
 	uint32_t y;
 	uint32_t z_s;
 	uint32_t z_e;
-	std::unordered_set<uint32_t> ccids;
+	robin_hood::unordered_flat_set<uint32_t> ccids;
 
 	CandidatePin() {
 		x = 0;
@@ -54,10 +56,13 @@ struct CandidatePin {
 		const uint32_t _y,
 		const uint32_t _z_s,
 		const uint32_t _z_e,
-		std::unordered_set<uint32_t> _ccids) 
+		const std::vector<uint32_t> &_ccids) 
 		: x(_x), y(_y), z_s(_z_s), 
-		  z_e(_z_e), ccids(_ccids)
-	{}
+		  z_e(_z_e)
+	{
+		ccids.insert(_ccids.begin(), _ccids.end());
+
+	}
 
 	uint64_t start_idx(uint64_t sx, uint64_t sy) {
 		return static_cast<uint64_t>(x) + sx * (static_cast<uint64_t>(y) + sy * static_cast<uint64_t>(z_s));
@@ -67,17 +72,16 @@ struct CandidatePin {
 	}
 };
 
-
 template <typename LABEL>
 void add_pin(
-	std::unordered_map<LABEL, std::vector<CandidatePin>> &pinsets,
+	robin_hood::unordered_node_map<LABEL, std::vector<CandidatePin>> &pinsets,
 	LABEL label,
 	const uint64_t z_start,
 	const uint64_t x, const uint64_t y, const uint64_t z,
-	const std::unordered_set<uint32_t> &cc_set
+	const std::vector<uint32_t> &cc_set
 ) {
 	if (pinsets[label].size() == 0) {
-		pinsets[label].emplace_back(x, y, z_start, z, cc_set);
+		pinsets[label].emplace_back(x, y, z_start, z, cc_set );
 		return;
 	}
 
@@ -100,7 +104,7 @@ void add_pin(
 }
 
 template <typename LABEL>
-std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
+robin_hood::unordered_node_map<LABEL, std::vector<CandidatePin>> extract_columns(
 	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
@@ -115,15 +119,16 @@ std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
 		)
 	);
 
-	std::unordered_map<LABEL, std::vector<CandidatePin>> pinsets;
+	robin_hood::unordered_node_map<LABEL, std::vector<CandidatePin>> pinsets;
 
 	for (uint64_t y = 0; y < sy; y++) {
 		for (uint64_t x = 0; x < sx; x++) {
 			uint64_t loc = x + sx * y;
 			LABEL label = labels[loc];
 
-			std::unordered_set<uint32_t> label_set;
-			label_set.insert(cc_labels[loc]);
+			std::vector<uint32_t> label_set;
+			label_set.reserve(sz);
+			label_set.push_back(cc_labels[loc]);
 			uint64_t z_start = 0;
 			uint64_t z = 1;
 			for (; z < sz; z++) {
@@ -135,7 +140,7 @@ std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
 					z_start = z;
 					label_set.clear();
 				}
-				label_set.insert(cc_labels[loc + zoff]);
+				label_set.push_back(cc_labels[loc + zoff]);
 			}
 			if (sz == 1) {
 				z = 0;
@@ -151,9 +156,9 @@ std::vector<CandidatePin> find_optimal_pins(
 	std::vector<CandidatePin> &pinsets,
 	const uint64_t sx, const uint64_t sy
 ) {	
-	std::unordered_set<uint32_t> universe;
+	robin_hood::unordered_flat_set<uint32_t> universe;
 	for (auto candidate : pinsets) {
-		universe.merge(candidate.ccids);
+		universe.insert(candidate.ccids.begin(), candidate.ccids.end());
 	}
 
 	std::vector<CandidatePin> final_pins;
@@ -214,6 +219,8 @@ std::unordered_map<LABEL, std::vector<Pin<LABEL, uint64_t, uint64_t>>> compute(
 
 	auto pinsets = extract_columns(labels, sx, sy, sz);
 	std::unordered_map<LABEL, std::vector<PinType>> all_pins;
+	all_pins.reserve(128);
+
 	for (auto [label, pins] : pinsets) {
 		std::vector<CandidatePin> solution = find_optimal_pins(pins, sx, sy);
 		std::vector<PinType> encoded_pins;
