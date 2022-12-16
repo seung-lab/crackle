@@ -106,19 +106,9 @@ void add_pin(
 template <typename LABEL>
 robin_hood::unordered_node_map<LABEL, std::vector<CandidatePin>> extract_columns(
 	const LABEL* labels,
+	const uint32_t* cc_labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
-	std::vector<uint64_t> num_components_per_slice(sz);
-	uint64_t N_total = 0;
-
-	std::unique_ptr<uint32_t[]> cc_labels(
-		crackle::cc3d::connected_components<LABEL, uint32_t>(
-			labels, sx, sy, sz, 
-			num_components_per_slice,
-			/*out=*/NULL, N_total
-		)
-	);
-
 	robin_hood::unordered_node_map<LABEL, std::vector<CandidatePin>> pinsets;
 
 	for (uint64_t y = 0; y < sy; y++) {
@@ -152,15 +142,47 @@ robin_hood::unordered_node_map<LABEL, std::vector<CandidatePin>> extract_columns
 	return pinsets;
 }
 
-std::vector<CandidatePin> find_optimal_pins(
-	std::vector<CandidatePin> &pinsets,
-	const uint64_t sx, const uint64_t sy
-) {	
-	robin_hood::unordered_flat_set<uint32_t> universe;
-	for (auto candidate : pinsets) {
-		universe.insert(candidate.ccids.begin(), candidate.ccids.end());
+template <typename LABEL>
+std::unordered_map<LABEL, robin_hood::unordered_flat_set<uint32_t>> 
+compute_multiverse(
+	const LABEL* labels,
+	const uint32_t* cc_labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const uint64_t N
+) {
+
+	std::unordered_map<
+		LABEL, robin_hood::unordered_flat_set<uint32_t>
+	> multiverse;
+	multiverse.reserve(N);
+
+	const uint64_t voxels = sx * sy * sz;
+
+	if (voxels == 0) {
+		return multiverse;
 	}
 
+	uint32_t last = cc_labels[0];
+	multiverse[labels[0]].emplace(cc_labels[0]);
+
+	for (uint64_t i = 1; i < voxels; i++) {
+		if (labels[i-1] != last) {
+			multiverse[labels[i]].emplace(cc_labels[i]);
+			last = cc_labels[i];
+		}
+	}
+
+	multiverse[last].emplace(cc_labels[voxels - 1]);
+
+	return multiverse;
+}
+
+
+std::vector<CandidatePin> find_optimal_pins(
+	std::vector<CandidatePin> &pinsets,
+	robin_hood::unordered_flat_set<uint32_t> &universe,
+	const uint64_t sx, const uint64_t sy
+) {	
 	std::vector<CandidatePin> final_pins;
 	final_pins.reserve(final_pins.size() / 10);
 
@@ -216,18 +238,36 @@ std::vector<CandidatePin> find_optimal_pins(
 }
 
 template <typename LABEL>
-std::unordered_map<uint64_t, std::vector<Pin<uint64_t, uint64_t, uint64_t>>> compute(
+std::unordered_map<uint64_t, std::vector<Pin<uint64_t, uint64_t, uint64_t>>> 
+compute(
 	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
 	typedef Pin<uint64_t, uint64_t, uint64_t> PinType;
 
-	auto pinsets = extract_columns(labels, sx, sy, sz);
+	std::vector<uint64_t> num_components_per_slice(sz);
+	uint64_t N_total = 0;
+
+	std::unique_ptr<uint32_t[]> cc_labels(
+		crackle::cc3d::connected_components<LABEL, uint32_t>(
+			labels, sx, sy, sz,
+			num_components_per_slice,
+			/*out=*/NULL, N_total
+		)
+	);
+
+	auto pinsets = extract_columns(labels, cc_labels.get(), sx, sy, sz);
 	std::unordered_map<uint64_t, std::vector<PinType>> all_pins;
 	all_pins.reserve(128);
 
+	auto multiverse = compute_multiverse<LABEL>(
+		labels, cc_labels.get(), sx, sy, sz, N_total
+	);
+
 	for (auto [label, pins] : pinsets) {
-		std::vector<CandidatePin> solution = find_optimal_pins(pins, sx, sy);
+		std::vector<CandidatePin> solution = find_optimal_pins(
+			pins, multiverse[label], sx, sy
+		);
 		std::vector<PinType> encoded_pins;
 		encoded_pins.reserve(solution.size());
 		for (auto pin : solution) {

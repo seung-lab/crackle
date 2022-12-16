@@ -271,7 +271,7 @@ OUT* connected_components(
   const LABEL* in_labels, 
   const int64_t sx, const int64_t sy, const int64_t sz,
   std::vector<uint64_t> &num_components_per_slice,
-  OUT* out_labels,
+  OUT* out_labels = NULL,
   uint64_t &N = _dummy_N
 ) {
 
