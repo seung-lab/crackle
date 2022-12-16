@@ -111,7 +111,7 @@ std::unordered_map<LABEL, std::vector<CandidatePin>> extract_columns(
 		crackle::cc3d::connected_components<LABEL, uint32_t>(
 			labels, sx, sy, sz, 
 			num_components_per_slice,
-			NULL, N_total
+			/*out=*/NULL, N_total
 		)
 	);
 
@@ -216,7 +216,8 @@ std::unordered_map<LABEL, std::vector<Pin<LABEL, uint64_t, uint64_t>>> compute(
 	std::unordered_map<LABEL, std::vector<PinType>> all_pins;
 	for (auto [label, pins] : pinsets) {
 		std::vector<CandidatePin> solution = find_optimal_pins(pins, sx, sy);
-		std::vector<PinType> encoded_pins(solution.size());
+		std::vector<PinType> encoded_pins;
+		encoded_pins.reserve(solution.size());
 		for (auto pin : solution) {
 			encoded_pins.emplace_back(
 				label, 
