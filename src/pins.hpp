@@ -189,6 +189,11 @@ std::vector<CandidatePin> find_optimal_pins(
 			universe.erase(ccid);
 		}
 
+		if (universe.size() == 0) {
+			final_pins.emplace_back(cur);
+			break;
+		}
+
 		std::vector<uint64_t> to_erase;
 		for (auto i : isets) {
 			auto& tmp = pinsets[i].ccids;
