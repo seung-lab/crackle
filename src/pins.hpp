@@ -159,8 +159,9 @@ std::vector<CandidatePin> find_optimal_pins(
 	std::vector<CandidatePin> final_pins;
 	final_pins.reserve(final_pins.size() / 10);
 
-	std::unordered_set<uint64_t> isets(pinsets.size());
-	for (uint64_t i = 0; i < isets.size(); i++) {
+	std::unordered_set<uint64_t> isets;
+	isets.reserve(pinsets.size());
+	for (uint64_t i = 0; i < pinsets.size(); i++) {
 		isets.emplace(i);
 	}
 
@@ -183,6 +184,7 @@ std::vector<CandidatePin> find_optimal_pins(
 			universe.erase(ccid);
 		}
 
+		std::vector<uint64_t> to_erase;
 		for (auto i : isets) {
 			auto& tmp = pinsets[i].ccids;
 			for (uint32_t ccid : cur.ccids) {
@@ -190,8 +192,11 @@ std::vector<CandidatePin> find_optimal_pins(
 			}
 
 			if (tmp.size() == 0) {
-				isets.erase(i);
+				to_erase.push_back(i);
 			}
+		}
+		for (uint64_t i : to_erase) {
+			isets.erase(i);
 		}
 
 		final_pins.emplace_back(cur);
