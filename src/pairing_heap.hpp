@@ -27,18 +27,21 @@
 namespace crackle {
 namespace pairing_heap {
 
+template <typename KEY, typename VALUE>
 class PHNode {
+typedef PHNode<KEY, VALUE> PHNode_t;
+
 public:
-  PHNode *left;
-  PHNode *right;
-  float key; 
-  uint32_t value;
+  PHNode_t* left;
+  PHNode_t* right;
+  KEY key; 
+  VALUE value;
 
   // pp. 114: "In order to make "decrease key" and "delete"
   // more efficient, we must store with each node a third pointer, 
   // to its parent in the binary tree."
 
-  PHNode *parent; 
+  PHNode_t* parent; 
 
   PHNode() {
     left = NULL;
@@ -48,7 +51,7 @@ public:
     value = 0;
   }
 
-  PHNode(float k, uint32_t val) {
+  PHNode(KEY k, VALUE val) {
     left = NULL;
     right = NULL;
     parent = NULL;
@@ -56,7 +59,7 @@ public:
     value = val;
   }
 
-  PHNode(PHNode *lt, PHNode *rt, PHNode *p, float k, uint32_t val) {
+  PHNode(PHNode_t* lt, PHNode_t* rt, PHNode_t* p, KEY k, VALUE val) {
     left = lt;
     right = rt;
     parent = p;
@@ -64,7 +67,7 @@ public:
     value = val;
   }
 
-  PHNode (const PHNode &p) {
+  PHNode (const PHNode_t &p) {
     left = p.left;
     right = p.right;
     parent = p.parent;
@@ -79,7 +82,8 @@ public:
   }
 };
 
-void really_print_keys(PHNode *n, const int depth) {
+template <typename KEY, typename VALUE>
+void really_print_keys(PHNode<KEY,VALUE>* n, const int depth) {
   printf("(%d) %1.f \n", depth, n->key);
 
   if (depth > 20) {
@@ -98,7 +102,10 @@ void really_print_keys(PHNode *n, const int depth) {
 }
 
 // O(1)
-PHNode* meld(PHNode* h1, PHNode *h2) {
+template <typename KEY, typename VALUE>
+PHNode<KEY,VALUE>* meld(
+  PHNode<KEY,VALUE>* h1, PHNode<KEY,VALUE>* h2
+) {
   if (h1->key <= h2->key) {
     h2->right = h1->left;
     h1->left = h2;
@@ -114,15 +121,16 @@ PHNode* meld(PHNode* h1, PHNode *h2) {
 }
 
 // O(log n) amortized?
-PHNode* delmin (PHNode* root) {
-  PHNode *subtree = root->left;
+template <typename KEY, typename VALUE>
+PHNode<KEY,VALUE>* delmin (PHNode<KEY,VALUE>* root) {
+  PHNode<KEY,VALUE> *subtree = root->left;
   
   if (!subtree) {
     delete root;
     return NULL;
   }
 
-  std::vector<PHNode*> forest;
+  std::vector<PHNode<KEY,VALUE>*> forest;
   forest.reserve(16);
 
   while (subtree) {
@@ -130,9 +138,9 @@ PHNode* delmin (PHNode* root) {
     subtree = subtree->right;
   }
 
-  const size_t forest_size = forest.size();
+  const uint64_t forest_size = forest.size();
 
-  for (int i = 0; i < forest_size; i++) {
+  for (uint64_t i = 0; i < forest_size; i++) {
     forest[i]->parent = NULL;
     forest[i]->right = NULL;
   }
@@ -145,8 +153,8 @@ PHNode* delmin (PHNode* root) {
   // need to deal with lone subtrees?
 
   // forward pass
-  size_t last = forest_size & 0xfffffffe; // if odd, size - 1
-  for (size_t i = 0; i < last; i += 2) {
+  uint64_t last = forest_size & 0xfffffffe; // if odd, size - 1
+  for (uint64_t i = 0; i < last; i += 2) {
     forest[i >> 1] = meld(forest[i], forest[i + 1]); 
   }
   last >>= 1;
@@ -159,7 +167,7 @@ PHNode* delmin (PHNode* root) {
   }
 
   // backward pass
-  for (size_t i = last; i > 0; i--) {
+  for (uint64_t i = last; i > 0; i--) {
     forest[i-1] = meld(forest[i], forest[i - 1]);
   }
 
@@ -168,21 +176,23 @@ PHNode* delmin (PHNode* root) {
 }
 
 
-class MinPairingHeap {
+template <typename KEY, typename VALUE>
+class MinHeap {
+typedef PHNode<KEY, VALUE> PHNode_t;
 public:
-  PHNode *root;
+  PHNode_t* root;
 
-  MinPairingHeap() {}
+  MinHeap() {}
 
-  MinPairingHeap (float key, const uint32_t val) {
-    root = new PHNode(key, val);
+  MinHeap (KEY key, const VALUE val) {
+    root = new PHNode_t(key, val);
   }
 
-  // O(n)
-  ~MinPairingHeap() {
-    recursive_delete(root);
-    root = NULL;
-  }
+  // // O(n)
+  // ~MinHeap() {
+  //   recursive_delete(root);
+  //   root = NULL;
+  // }
 
   bool empty () {
     return root == NULL;
@@ -205,18 +215,18 @@ public:
   }
 
   // O(1)
-  PHNode* find_min () {
+  PHNode_t* find_min () {
     return root;
   }
 
   // O(1)
-  PHNode* insert(float key, const uint32_t val) {
-    PHNode *I = new PHNode(key, val);
+  PHNode_t* insert(KEY key, const uint32_t val) {
+    PHNode_t* I = new PHNode_t(key, val);
     return insert(I);
   }
 
   // O(1)
-  PHNode* insert(PHNode* I) {
+  PHNode_t* insert(PHNode_t* I) {
     if (!root) {
       root = I;
       return I;
@@ -237,15 +247,15 @@ public:
     return I;
   }
 
-  void decrease_key (float delta) {
+  void decrease_key (KEY delta) {
     if (root) {
       root->key -= delta;
     }
   }
 
   // O(1)
-  void decrease_key (float delta, PHNode* x) {
-    x->key -= delta;
+  void update_key (PHNode_t* x, KEY key) {
+    x->key = key;
 
     if (x == root) {
       return;
@@ -275,7 +285,7 @@ public:
     root = delmin(root);
   }
 
-  void delete_node (PHNode *x) {
+  void delete_node (PHNode_t* x) {
     if (x == root) {
       root = delmin(root);
       return;
@@ -301,7 +311,7 @@ public:
   }
 
 private:
-  void recursive_delete (PHNode *n) {
+  void recursive_delete (PHNode_t* n) {
     if (n == NULL) {
       return;
     }
