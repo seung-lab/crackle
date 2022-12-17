@@ -9,6 +9,7 @@
 
 #include "cc3d.hpp"
 #include "lib.hpp"
+#include "pairing_heap.hpp"
 
 namespace crackle {
 namespace pins {
@@ -186,24 +187,26 @@ std::vector<CandidatePin> find_optimal_pins(
 	std::vector<CandidatePin> final_pins;
 	final_pins.reserve(final_pins.size() / 10);
 
-	std::unordered_set<uint64_t> isets;
+	if (pinsets.size() == 0) {
+		return final_pins;
+	}
+
+	crackle::pairing_heap::MinHeap<int64_t, int64_t> heap;
+
+	std::vector<crackle::pairing_heap::PHNode<int64_t, int64_t>*> 
+		heap_ptrs(pinsets.size());
+
+	robin_hood::unordered_flat_set<int64_t> isets;
 	isets.reserve(pinsets.size());
-	for (uint64_t i = 0; i < pinsets.size(); i++) {
+
+	for (int64_t i = 0; i < pinsets.size(); i++) {
+		heap_ptrs[i] = heap.insert(-1 * pinsets[i].ccids.size(), i);
 		isets.emplace(i);
 	}
 
-	std::vector<uint64_t> sizes;
-	sizes.reserve(pinsets.size());
 	while (universe.size()) {
-		uint64_t idx = 0;
-		uint64_t ct = 0;
-		for (auto i : isets) {
-			if (pinsets[i].ccids.size() > ct) {
-				ct = pinsets[i].ccids.size();
-				idx = i;
-			}
-		}
-
+		int64_t idx = heap.min_value();
+		heap.delete_min();
 		isets.erase(idx);
 
 		CandidatePin cur = pinsets[idx];
@@ -225,6 +228,10 @@ std::vector<CandidatePin> find_optimal_pins(
 
 			if (tmp.size() == 0) {
 				to_erase.push_back(i);
+				heap.delete_node(heap_ptrs[i]);
+			}
+			else {
+				heap.update_key(heap_ptrs[i], tmp.size());
 			}
 		}
 		for (uint64_t i : to_erase) {
