@@ -20,9 +20,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <stdio.h>
 #include <vector>
-#include <unistd.h>
 
 namespace crackle {
 namespace pairing_heap {
@@ -76,30 +74,7 @@ public:
   }
 
   ~PHNode () {}
-
-  void print () {
-    printf("PHNode[%p](%.1f, %d, %p, %p, %p)\n", this, key, value, left, right, parent);
-  }
 };
-
-template <typename KEY, typename VALUE>
-void really_print_keys(PHNode<KEY,VALUE>* n, const int depth) {
-  printf("(%d) %d \n", depth, n->key);
-
-  if (depth > 20) {
-    return;
-  }
-
-  if (n->left != NULL) {
-    printf("L");
-    really_print_keys(n->left, depth+1);
-  }
-
-  if (n->right != NULL) {
-    printf("R");
-    really_print_keys(n->right, depth+1);
-  }    
-}
 
 // O(1)
 template <typename KEY, typename VALUE>
@@ -145,7 +120,6 @@ PHNode<KEY,VALUE>* popmin (PHNode<KEY,VALUE>* root) {
   }
 
   if (forest_size == 1) {
-
     return forest[0];
   }
 
@@ -249,7 +223,7 @@ public:
   }
 
   // O(1)
-  PHNode_t* find_min () {
+  PHNode_t* min () {
     return root;
   }
 
@@ -319,7 +293,7 @@ public:
   }
 
   // O(log n) amortized?
-  void delete_min () {
+  void pop () {
     if (!root) {
       return;
     }
@@ -328,7 +302,7 @@ public:
     root = delmin(root);
   }
 
-  void delete_node (PHNode_t* x) {
+  void erase (PHNode_t* x) {
     _size--;
 
     if (x == root) {
@@ -341,12 +315,6 @@ public:
     x = delmin(x);
     if (x != NULL) {
       root = meld(root, x);
-    }
-  }
-
-  void print_keys () {
-    if (root) {
-      really_print_keys(root, 0);
     }
   }
 

@@ -206,7 +206,7 @@ std::vector<CandidatePin> find_optimal_pins(
 
 	while (universe.size()) {
 		int64_t idx = heap.min_value();
-		heap.delete_min();
+		heap.pop();
 		isets.erase(idx);
 
 		CandidatePin cur = pinsets[idx];
@@ -232,7 +232,7 @@ std::vector<CandidatePin> find_optimal_pins(
 
 			if (tmp.size() == 0) {
 				to_erase.push_back(i);
-				heap.delete_node(heap_ptrs[i]);
+				heap.erase(heap_ptrs[i]);
 			}
 			else {
 				heap.update_key(heap_ptrs[i], tmp.size());
