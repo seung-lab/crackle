@@ -84,7 +84,7 @@ public:
 
 template <typename KEY, typename VALUE>
 void really_print_keys(PHNode<KEY,VALUE>* n, const int depth) {
-  printf("(%d) %1.f \n", depth, n->key);
+  printf("(%d) %d \n", depth, n->key);
 
   if (depth > 20) {
     return;
@@ -122,11 +122,10 @@ PHNode<KEY,VALUE>* meld(
 
 // O(log n) amortized?
 template <typename KEY, typename VALUE>
-PHNode<KEY,VALUE>* delmin (PHNode<KEY,VALUE>* root) {
+PHNode<KEY,VALUE>* popmin (PHNode<KEY,VALUE>* root) {
   PHNode<KEY,VALUE> *subtree = root->left;
   
   if (!subtree) {
-    delete root;
     return NULL;
   }
 
@@ -146,7 +145,7 @@ PHNode<KEY,VALUE>* delmin (PHNode<KEY,VALUE>* root) {
   }
 
   if (forest_size == 1) {
-    delete root;
+
     return forest[0];
   }
 
@@ -171,23 +170,32 @@ PHNode<KEY,VALUE>* delmin (PHNode<KEY,VALUE>* root) {
     forest[i-1] = meld(forest[i], forest[i - 1]);
   }
 
-  delete root;
   return forest[0];
 }
 
+template <typename KEY, typename VALUE>
+PHNode<KEY,VALUE>* delmin (PHNode<KEY,VALUE>* root) {
+  PHNode<KEY,VALUE>* tmp = popmin(root);
+  delete root;
+  return tmp;
+}
 
 template <typename KEY, typename VALUE>
 class MinHeap {
 typedef PHNode<KEY, VALUE> PHNode_t;
+private:
+  uint64_t _size;
 public:
   PHNode_t* root;
 
   MinHeap() {
     root = NULL;
+    _size = 0;
   }
 
   MinHeap (KEY key, const VALUE val) {
     root = new PHNode_t(key, val);
+    _size = 1;
   }
 
   // // O(n)
@@ -195,6 +203,10 @@ public:
   //   recursive_delete(root);
   //   root = NULL;
   // }
+
+  uint64_t size() {
+    return _size;
+  }
 
   bool empty () {
     return root == NULL;
@@ -233,6 +245,8 @@ public:
       return I;
     }
 
+    _size++;
+
     if (root == NULL) {
       root = I;
       return I;
@@ -253,17 +267,12 @@ public:
     return I;
   }
 
-  void decrease_key (KEY delta) {
-    if (root) {
-      root->key -= delta;
-    }
-  }
-
   // O(1)
-  void update_key (PHNode_t* x, KEY key) {
+  void update_key(PHNode_t* x, KEY key) {
+    KEY oldval = x->key;
     x->key = key;
 
-    if (x == root) {
+    if (x == root || oldval == key) {
       return;
     }
     
@@ -278,8 +287,23 @@ public:
     else {
       x->parent->right = NULL;
     }
+    x->parent = NULL;
 
-    insert(x);
+    if (oldval < key) {
+      PHNode_t* subtree = popmin(x);
+      x->left = NULL;
+      x->right = NULL;
+
+      if (subtree == NULL) {
+        root = meld(x, root);
+      }
+      else {
+        root = meld(x, meld(root, subtree));
+      }
+    }
+    else {
+      root = meld(x, root);
+    }
   }
 
   // O(log n) amortized?
@@ -287,11 +311,14 @@ public:
     if (!root) {
       return;
     }
-
+    _size--;
+    
     root = delmin(root);
   }
 
   void delete_node (PHNode_t* x) {
+    _size--;
+
     if (x == root) {
       root = delmin(root);
       return;
@@ -307,7 +334,10 @@ public:
     // probably unnecessary line
     x->parent = NULL;
 
-    insert(delmin(x));
+    x = delmin(x);
+    if (x != NULL) {
+      root = meld(root, x);
+    }
   }
 
   void print_keys () {
