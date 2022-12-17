@@ -181,6 +181,26 @@ PHNode<KEY,VALUE>* delmin (PHNode<KEY,VALUE>* root) {
 }
 
 template <typename KEY, typename VALUE>
+void unlink_parent(PHNode<KEY,VALUE>* node) {
+    if (node->parent == NULL) {
+      return;
+    }
+    
+    if (node->parent->left == node) {
+      node->parent->left = node->right;
+    }
+    else {
+      PHNode<KEY,VALUE>* sib = node->parent->left;
+      while (sib->right != node) {
+        sib = sib->right;
+      }
+      sib->right = node->right;
+    }
+    node->parent = NULL;
+    node->right = NULL;
+}
+
+template <typename KEY, typename VALUE>
 class MinHeap {
 typedef PHNode<KEY, VALUE> PHNode_t;
 private:
@@ -269,27 +289,16 @@ public:
 
   // O(1)
   void update_key(PHNode_t* x, KEY key) {
-    KEY oldval = x->key;
+    KEY oldkey = x->key;
     x->key = key;
 
-    if (x == root || oldval == key) {
+    if (x == root || oldkey == key) {
       return;
     }
     
-    // Assuming I do this right,
-    // x not being root should be sufficent
-    // to mean it has a parent.
-    // if (x->parent) {
+    unlink_parent<KEY,VALUE>(x);
 
-    if (x->parent->left == x) {
-      x->parent->left = NULL;
-    }
-    else {
-      x->parent->right = NULL;
-    }
-    x->parent = NULL;
-
-    if (oldval < key) {
+    if (oldkey < key) {
       PHNode_t* subtree = popmin(x);
       x->left = NULL;
       x->right = NULL;
@@ -324,15 +333,7 @@ public:
       return;
     } 
 
-    if (x->parent->left == x) {
-      x->parent->left = NULL;
-    }
-    else {
-      x->parent->right = NULL;
-    }
-
-    // probably unnecessary line
-    x->parent = NULL;
+    unlink_parent<KEY,VALUE>(x);
 
     x = delmin(x);
     if (x != NULL) {
