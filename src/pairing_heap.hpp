@@ -218,11 +218,11 @@ public:
     _size = 1;
   }
 
-  // // O(n)
-  // ~MinHeap() {
-  //   recursive_delete(root);
-  //   root = NULL;
-  // }
+  // O(n)
+  ~MinHeap() {
+    recursive_delete(root);
+    root = NULL;
+  }
 
   uint64_t size() {
     return _size;
