@@ -199,7 +199,7 @@ std::vector<CandidatePin> find_optimal_pins(
 	robin_hood::unordered_flat_set<int64_t> isets;
 	isets.reserve(pinsets.size());
 
-	for (int64_t i = 0; i < pinsets.size(); i++) {
+	for (int64_t i = 0; i < static_cast<uint64_t>(pinsets.size()); i++) {
 		heap_ptrs[i] = heap.insert(-1 * pinsets[i].ccids.size(), i);
 		isets.emplace(i);
 	}
