@@ -221,6 +221,10 @@ std::vector<CandidatePin> find_optimal_pins(
 
 		std::vector<uint64_t> to_erase;
 		for (auto i : isets) {
+			if (pinsets[i].z_s > cur.z_e || pinsets[i].z_e < cur.z_s) {
+				continue;
+			}
+
 			auto& tmp = pinsets[i].ccids;
 			for (uint32_t ccid : cur.ccids) {
 				tmp.erase(ccid);
