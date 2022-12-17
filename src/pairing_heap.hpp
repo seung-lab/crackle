@@ -295,6 +295,9 @@ public:
     if (x == root || oldkey == key) {
       return;
     }
+    else if (x->parent->key < key) {
+      return;
+    }
     
     unlink_parent<KEY,VALUE>(x);
 
