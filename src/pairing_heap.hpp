@@ -182,7 +182,9 @@ typedef PHNode<KEY, VALUE> PHNode_t;
 public:
   PHNode_t* root;
 
-  MinHeap() {}
+  MinHeap() {
+    root = NULL;
+  }
 
   MinHeap (KEY key, const VALUE val) {
     root = new PHNode_t(key, val);
@@ -203,7 +205,7 @@ public:
       return root->key;
     }
 
-    throw "No min key.";
+    throw std::runtime_error("No min key.");
   }
 
   uint32_t min_value () {
@@ -211,7 +213,7 @@ public:
       return root->value;
     }
 
-    throw "No min value.";
+    throw std::runtime_error("No min value.");
   }
 
   // O(1)
@@ -227,7 +229,11 @@ public:
 
   // O(1)
   PHNode_t* insert(PHNode_t* I) {
-    if (!root) {
+    if (I == NULL) {
+      return I;
+    }
+
+    if (root == NULL) {
       root = I;
       return I;
     }
