@@ -228,7 +228,7 @@ public:
   }
 
   // O(1)
-  PHNode_t* insert(KEY key, const uint32_t val) {
+  PHNode_t* emplace(KEY key, const uint32_t val) {
     PHNode_t* I = new PHNode_t(key, val);
     return insert(I);
   }

@@ -200,7 +200,7 @@ std::vector<CandidatePin> find_optimal_pins(
 	isets.reserve(pinsets.size());
 
 	for (int64_t i = 0; i < static_cast<uint64_t>(pinsets.size()); i++) {
-		heap_ptrs[i] = heap.insert(-1 * pinsets[i].ccids.size(), i);
+		heap_ptrs[i] = heap.emplace(-1 * pinsets[i].ccids.size(), i);
 		isets.emplace(i);
 	}
 
