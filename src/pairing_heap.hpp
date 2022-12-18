@@ -30,8 +30,9 @@ class PHNode {
 typedef PHNode<KEY, VALUE> PHNode_t;
 
 public:
-  PHNode_t* left;
-  PHNode_t* right;
+  PHNode_t* child;
+  PHNode_t* next_sib;
+  PHNode_t* prev_sib;
   KEY key; 
   VALUE value;
 
@@ -42,32 +43,26 @@ public:
   PHNode_t* parent; 
 
   PHNode() {
-    left = NULL;
-    right = NULL;
+    child = NULL;
+    next_sib = NULL;
+    prev_sib = NULL;
     parent = NULL;
     key = 0;
     value = 0;
   }
 
   PHNode(KEY k, VALUE val) {
-    left = NULL;
-    right = NULL;
+    child = NULL;
+    next_sib = NULL;
+    prev_sib = NULL;
     parent = NULL;
     key = k;
     value = val;
   }
 
-  PHNode(PHNode_t* lt, PHNode_t* rt, PHNode_t* p, KEY k, VALUE val) {
-    left = lt;
-    right = rt;
-    parent = p;
-    key = k;
-    value = val;
-  }
-
   PHNode (const PHNode_t &p) {
-    left = p.left;
-    right = p.right;
+    child = p.child;
+    next_sib = p.next_sib;
     parent = p.parent;
     key = p.key;
     value = p.value;
@@ -82,14 +77,20 @@ PHNode<KEY,VALUE>* meld(
   PHNode<KEY,VALUE>* h1, PHNode<KEY,VALUE>* h2
 ) {
   if (h1->key <= h2->key) {
-    h2->right = h1->left;
-    h1->left = h2;
+    h2->next_sib = h1->child;
+    if (h2->next_sib) {
+      h2->next_sib->prev_sib = h2;
+    }
+    h1->child = h2;
     h2->parent = h1;
     return h1;
   }
   
-  h1->right = h2->left;
-  h2->left = h1;
+  h1->next_sib = h2->child;
+  if (h1->next_sib) {
+    h1->next_sib->prev_sib = h1;
+  }
+  h2->child = h1;
   h1->parent = h2;
   
   return h2;
@@ -98,7 +99,7 @@ PHNode<KEY,VALUE>* meld(
 // O(log n) amortized?
 template <typename KEY, typename VALUE>
 PHNode<KEY,VALUE>* popmin (PHNode<KEY,VALUE>* root) {
-  PHNode<KEY,VALUE> *subtree = root->left;
+  PHNode<KEY,VALUE> *subtree = root->child;
   
   if (!subtree) {
     return NULL;
@@ -109,14 +110,15 @@ PHNode<KEY,VALUE>* popmin (PHNode<KEY,VALUE>* root) {
 
   while (subtree) {
     forest.push_back(subtree);
-    subtree = subtree->right;
+    subtree = subtree->next_sib;
   }
 
   const uint64_t forest_size = forest.size();
 
   for (uint64_t i = 0; i < forest_size; i++) {
     forest[i]->parent = NULL;
-    forest[i]->right = NULL;
+    forest[i]->next_sib = NULL;
+    forest[i]->prev_sib = NULL;
   }
 
   if (forest_size == 1) {
@@ -160,18 +162,23 @@ void unlink_parent(PHNode<KEY,VALUE>* node) {
       return;
     }
     
-    if (node->parent->left == node) {
-      node->parent->left = node->right;
+    if (node->parent->child == node) {
+      node->parent->child = node->next_sib;
+      if (node->next_sib) {
+        node->next_sib->prev_sib = NULL;
+      }
     }
     else {
-      PHNode<KEY,VALUE>* sib = node->parent->left;
-      while (sib->right != node) {
-        sib = sib->right;
+      PHNode<KEY,VALUE>* sib = node->prev_sib;
+      node->prev_sib = node->next_sib;
+      sib->next_sib = node->next_sib;
+      if (node->next_sib) {
+        node->next_sib->prev_sib = sib;
       }
-      sib->right = node->right;
     }
     node->parent = NULL;
-    node->right = NULL;
+    node->next_sib = NULL;
+    node->prev_sib = NULL;
 }
 
 template <typename KEY, typename VALUE>
@@ -246,18 +253,7 @@ public:
       return I;
     }
 
-    if (root->key <= I->key) {
-      I->right = root->left;
-      root->left = I;
-      I->parent = root;
-    }
-    else {
-      root->right = I->left;
-      I->left = root;
-      root->parent = I;
-      root = I;
-    }
-
+    root = meld(root, I);
     return I;
   }
 
@@ -277,8 +273,9 @@ public:
 
     if (oldkey < key) {
       PHNode_t* subtree = popmin(x);
-      x->left = NULL;
-      x->right = NULL;
+      x->child = NULL;
+      x->next_sib = NULL;
+      x->prev_sib = NULL;
 
       if (subtree == NULL) {
         root = meld(x, root);
@@ -324,20 +321,20 @@ private:
       return;
     }
 
-    if (n->left != NULL) {
-      recursive_delete(n->left);
+    if (n->child != NULL) {
+      recursive_delete(n->child);
     }
 
-    if (n->right != NULL) {
-      recursive_delete(n->right);
+    if (n->next_sib != NULL) {
+      recursive_delete(n->next_sib);
     }
 
     if (n->parent) {
-      if (n->parent->left == n) {
-        n->parent->left = NULL;
+      if (n->parent->child == n) {
+        n->parent->child = NULL;
       }
-      else if (n->parent->right == n) {
-        n->parent->right = NULL;
+      else if (n->parent->next_sib == n) {
+        n->parent->next_sib = NULL;
       }
     }
 
