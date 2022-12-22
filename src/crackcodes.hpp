@@ -129,16 +129,16 @@ struct Graph {
 	}
 };
 
-std::vector<std::vector<uint64_t>> 
+std::vector<std::vector<uint64_t>>
 symbols_to_integers(
 	std::vector<std::pair<int64_t, std::vector<char>>> &chains
 ) {
 	std::vector<std::vector<uint64_t>> encoded_chains;
 
-	const uint64_t BRANCH[2] = { DirectionCode.UP, DirectionCode.DOWN };
-	const uint64_t BRANCH2[2] = { DirectionCode.LEFT, DirectionCode.RIGHT };
-	const uint64_t TERM[2] = { DirectionCode.DOWN, DirectionCode.UP };
-	const uint64_t TERM2[2] = { DirectionCode.RIGHT, DirectionCode.LEFT };
+	const uint64_t BRANCH[2] = { DirectionCode::UP, DirectionCode::DOWN };
+	const uint64_t BRANCH2[2] = { DirectionCode::LEFT, DirectionCode::RIGHT };
+	const uint64_t TERM[2] = { DirectionCode::DOWN, DirectionCode::UP };
+	const uint64_t TERM2[2] = { DirectionCode::RIGHT, DirectionCode::LEFT };
 
 	for (auto [node, chain] : chains) {
 		std::vector<uint64_t> code;
@@ -150,16 +150,16 @@ symbols_to_integers(
 				continue;
 			}
 			else if (symbol == 'u') {
-				code.push_back(DirectionCode.UP);
+				code.push_back(DirectionCode::UP);
 			}
 			else if (symbol == 'd') {
-				code.push_back(DirectionCode.DOWN);
+				code.push_back(DirectionCode::DOWN);
 			}
 			else if (symbol == 'l') {
-				code.push_back(DirectionCode.LEFT);
+				code.push_back(DirectionCode::LEFT);
 			}
 			else if (symbol == 'r') {
-				code.push_back(DirectionCode.RIGHT);
+				code.push_back(DirectionCode::RIGHT);
 			}
 			else if (symbol == 'b') {
 				if (i > 0 && chain[i-1] != BRANCH[1]) {
@@ -197,16 +197,16 @@ void remove_initial_branch(
 	const int64_t sx, const int64_t sy
 ) {
 	if (code.empty()) {
-		return code;
+		return;
 	}
 	else if (code[0] != 'b') {
-		return code;
+		return;
 	}
 
 	int64_t i = 1;
 	while (code[i] != 't') {
 		if (code[i] == 'b') {
-			return code;
+			return;
 		}
 		i++;
 	}
@@ -216,14 +216,15 @@ void remove_initial_branch(
 	int64_t x = node - (sxe * y);
 	// int64_t pos 
 
-	robin_hood::unordered_flat_set<char,char> flip({
+	robin_hood::unordered_flat_map<char,char> flip({
 		{'u', 'd'},
 		{'d', 'u'},
 		{'l', 'r'},
 		{'r', 'l'},
 		{'s', 's'},
 	});
-	robin_hood::unordered_flat_set<char,std::pair<int,int>> mvmt({
+
+	robin_hood::unordered_flat_map<char,std::pair<int,int>> mvmt({
 		{'u', std::make_pair(0,-1)},
 		{'d', std::make_pair(0,+1)},
 		{'l', std::make_pair(-1,0)},
@@ -246,12 +247,11 @@ void remove_initial_branch(
 		std::swap(code[i], code[len - i]);
 	}
 
-	int64_t node = pos_x + sxe * pos_y;
-	return std::make_pair(node, code);
+	node = pos_x + sxe * pos_y;
 }
 
 template <typename LABEL>
-std::vector<std::vector<char>> 
+std::vector<std::vector<uint64_t>>
 create_crack_codes(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy,
@@ -262,11 +262,6 @@ create_crack_codes(
 
   const int64_t n_clusters = G.num_components();
 
-  if (n_clusters == 0) {
-    return crack_codes;
-  }
-
-  std::vector<std::vector<char>> crack_codes;
   std::unordered_map<int64_t, char> dirmap = {
     {1, 'r'},
     {-1, 'l'},
@@ -276,6 +271,10 @@ create_crack_codes(
 
   std::vector<std::pair<int64_t, std::vector<char>>> chains;
   std::vector<int64_t> revisit;
+
+  if (n_clusters == 0) {
+    return symbols_to_integers(chains);
+  }
 
   for (int64_t cluster = 0; cluster < n_clusters; cluster++) {
   	robin_hood::unordered_flat_set<std::pair<int64_t, int64_t>>
@@ -287,9 +286,10 @@ create_crack_codes(
   	std::pair<int64_t, int64_t> start_edge = *remaining.begin();
 
   	int64_t node = start_edge.first;
+  	int64_t start_node = start_edge.first;
   	remaining.erase(start_edge);
 
-    std::vector<std::pair<int64_t, std::vector<char>>> code;
+    std::vector<char> code;
     std::vector<int64_t> revisit;
     std::unordered_map<int64_t, std::vector<int64_t>> branch_nodes;
     int64_t branches_taken = 1;
@@ -301,7 +301,8 @@ create_crack_codes(
     		code.push_back('t');
     		branches_taken--;
     		if (!revisit.empty()) {
-    			node = revisit.pop_back();
+    			node = revisit.back();
+    			revisit.pop_back();
     		}
     		else if (!remaining.empty()) {
     			node = (*remaining.begin()).first;
@@ -321,7 +322,7 @@ create_crack_codes(
     	remaining.erase(mkedge(node, next_node));
     	node = next_node;
 
-    	if (revisit.contains(node)) {
+    	if (revisit.count(node)) {
     		int64_t pos = 0;
 				for (pos = revisit.size() - 1; pos >= 0; pos--) {
 					if (revisit[pos] == node) {
@@ -330,7 +331,8 @@ create_crack_codes(
 				}
 				revisit.erase(pos);
 				branches_taken--;
-				code[branch_nodes[node].pop_back()] = 's';
+				code[branch_nodes[node].back()] = 's';
+				branch_nodes[node].pop_back();
     	}
     }
 
@@ -339,7 +341,7 @@ create_crack_codes(
     	branches_taken--;
     }
 
-    code = remove_initial_branch(code, sx, sy);
+    remove_initial_branch(start_node, code, sx, sy);
     chains.push_back(
     	std::make_pair(start_node, code)
     );
