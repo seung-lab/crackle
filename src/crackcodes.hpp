@@ -250,6 +250,13 @@ void remove_initial_branch(
 	node = pos_x + sxe * pos_y;
 }
 
+struct pair_hash {
+	size_t operator()(const std::pair<int64_t, int64_t>& p) const {
+		return p.first + 31 * p.second;
+	}
+};
+
+
 template <typename LABEL>
 std::vector<std::vector<uint64_t>>
 create_crack_codes(
@@ -277,7 +284,7 @@ create_crack_codes(
   }
 
   for (int64_t cluster = 0; cluster < n_clusters; cluster++) {
-  	robin_hood::unordered_flat_set<std::pair<int64_t, int64_t>>
+  	robin_hood::unordered_flat_set<std::pair<int64_t, int64_t>, pair_hash>
   		remaining;
 
   	auto& cluster_edges = G.component_edge_list[cluster];
@@ -290,7 +297,6 @@ create_crack_codes(
   	remaining.erase(start_edge);
 
     std::vector<char> code;
-    std::vector<int64_t> revisit;
     std::unordered_map<int64_t, std::vector<int64_t>> branch_nodes;
     int64_t branches_taken = 1;
 
@@ -301,9 +307,14 @@ create_crack_codes(
     		code.push_back('t');
     		branches_taken--;
     		if (!revisit.empty()) {
-    			node = revisit.back();
-    			revisit.pop_back();
-    		}
+	    		while (!revisit.empty()) {
+	    			node = revisit.back();
+	    			revisit.pop_back();
+	    			if (node > -1) {
+	    				break;
+	    			}
+	    		}
+	    	}
     		else if (!remaining.empty()) {
     			node = (*remaining.begin()).first;
     		}
@@ -322,14 +333,18 @@ create_crack_codes(
     	remaining.erase(mkedge(node, next_node));
     	node = next_node;
 
-    	if (revisit.count(node)) {
-    		int64_t pos = 0;
-				for (pos = revisit.size() - 1; pos >= 0; pos--) {
-					if (revisit[pos] == node) {
-						break;
-					}
+
+    	// if we reencounter a node we've already visited,
+    	// remove it from revisit and replace the branch. 
+    	// with a skip.
+			int64_t pos = revisit.size() - 1;
+			for (; pos >= 0; pos--) {
+				if (revisit[pos] == node) {
+					break;
 				}
-				revisit.erase(pos);
+			}
+			if (pos > -1) {
+				revisit[pos] = -1;
 				branches_taken--;
 				code[branch_nodes[node].back()] = 's';
 				branch_nodes[node].pop_back();
