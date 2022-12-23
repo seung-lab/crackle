@@ -18,6 +18,89 @@
 
 namespace crackle {
 
+// COMPRESSION CODE STARTS HERE
+
+
+template <typename LABEL>
+int64_t pixel_pairs(
+	const LABEL* labels,
+	const int64_t sx, const int64_t sy, const int64_t sz
+) {
+	const int64_t voxels = sx * sy * sz;
+	if (voxels <= 1) {
+		return 0;
+	}
+
+	int64_t count = 0;
+	for (int64_t i = 1; i < voxels; i++) {
+		count += static_cast<int64_t>(labels[i] == labels[i-1]);
+	}
+
+	return count;
+}
+
+// note: labels expected to be in fortran order
+template <typename LABEL>
+std::vector<unsigned char> compress(
+	const LABEL* labels,
+	const int64_t sx, const int64_t sy, const int64_t sz
+) {
+	const int64_t voxels = sx * sy * sz;
+	const int64_t sxy = sx * sy;
+
+	int64_t num_pairs = pixel_pairs(labels, sx, sy, sz);
+
+	CrackFormat crack_format = CrackFormat::IMPERMISSIBLE;
+	LabelFormat label_format = LabelFormat::PINS_FIXED_WIDTH;
+	if (num_pairs < voxels / 2) {
+		crack_format = CrackFormat::PERMISSIBLE;
+		label_format = LabelFormat::FLAT;
+	}
+
+	if (sz == 1) {
+		label_format = LabelFormat::FLAT;
+	}
+
+	uint8_t stored_data_width = crackle::lib::compute_byte_width(
+		crackle::lib::max_label(labels, voxels)
+	);
+
+	CrackleHeader header(
+		/*format_version=*/0,
+		/*label_format=*/label_format,
+		/*crack_format=*/crack_format,
+		/*data_width=*/sizeof(LABEL),
+		/*stored_data_width=*/stored_data_width,
+		/*sx=*/sx,
+		/*sy=*/sy,
+		/*sz=*/sz,
+		/*num_label_bytes=*/0,
+	);
+	std::vector<std::vector<unsigned char>> 
+		crack_codes = crackle::crackcodes::encode_boundaries(
+			labels, sx, sy, sz, 
+			/*permissible=*/(crack_format == CrackFormat::PERMISSIBLE)
+		);
+	std::vector<int64_t> z_index;
+	z_index.reserve(sz);
+	for (auto& code : crack_codes) {
+		z_index.push_back(code.size());
+	}
+
+	if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
+		auto all_pins = crackle::pins::compute(labels, sx, sy, sz);
+		
+	}
+	else {
+		labels_binary = encode_flat_labels();
+	}
+
+
+}
+
+
+// DECOMPRESSION CODE STARTS HERE
+
 std::vector<uint64_t> get_crack_code_offsets(
 	const CrackleHeader &header,
 	const std::vector<unsigned char> &binary

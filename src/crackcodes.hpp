@@ -365,6 +365,66 @@ create_crack_codes(
   return symbols_to_integers(chains);
 }
 
+std::vector<unsigned char> pack_codes(
+	const std::vector<std::pair<int64_t, std::vector<char>>> &chains,
+	const int64_t sx, const int64_t sy
+) {
+	std::vector<unsigned char> binary;
+
+	int64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
+	int64_t num_moves = byte_width * 8 / 2;
+
+	for (auto chain : chains) {
+		// serialize node
+		for (int i = 0; i < byte_width; i++) {
+			binary.push_back((chain[0] >> (8*i)) & 0xff);
+		}
+
+		int64_t all_moves = chain.size() - 1;
+		all_moves -= (all_moves % 4);
+
+		int64_t i = 1;
+		uint8_t encoded = 0;
+		while (i < all_moves) {
+			encoded = 0;
+			for (int64_t j = 0; j < 4; j++, i++) {
+				encoded |= (chain[i] << (2*j));
+			}
+			binary.push_back(encoded);
+		}
+		if (i < chain.size()) {
+			encoded = 0;
+			for (int64_t j = 0; i < chain.size(); j++, i++) {
+				encoded |= (chain[i] << (2*j));
+			}
+			binary.push_back(encoded);
+		}
+	}
+
+	return binary;
+}
+
+template <typename LABEL>
+std::vector<std::vector<unsigned char>> 
+encode_boundaries(
+	const LABEL* labels,
+	const int64_t sx, const int64_t sy, const int64_t sz,
+	const bool permissible
+) {
+	std::vector<std::vector<unsigned char>> binary_components;
+
+	for (int64_t z = 0; z < sz; z++) {
+		binary_components.push_back(
+			pack_codes(
+				create_crack_codes(labels, sx, sy, permissible),
+				sx, sy
+			)
+		);
+	}
+
+	return binary_components;
+}
+
 template <typename T>
 std::unordered_map<uint64_t, std::vector<unsigned char>> 
 unpack_binary_helper(

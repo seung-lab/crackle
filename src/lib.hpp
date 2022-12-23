@@ -77,6 +77,17 @@ uint8_t ctoi(const unsigned char* buf, const size_t idx) {
 	return static_cast<uint8_t>(buf[idx]);
 }
 
+template <typename LABEL>
+LABEL max_label(const LABEL* labels, const uint64_t voxels) {
+	LABEL mx = 0;
+	if (voxels > 0) {
+		mx = labels[0];
+	}
+	for (uint64_t i = 1; i < voxels; i++) {
+		mx = std::max(mx, labels[i]);
+	}
+	return mx;
+}
 
 int compute_byte_width(const uint64_t x) {
 	if (x < std::numeric_limits<uint8_t>::max()) {
