@@ -84,7 +84,7 @@ std::vector<unsigned char> encode_flat(
 
 	for (auto val : stored_labels) {
 		i = crackle::lib::itocd(
-			val, binary, i, sizeof(STORED_LABEL), key_width
+			val, binary, i, key_width
 		);		
 	}
 
@@ -100,7 +100,7 @@ std::vector<unsigned char> encode_fixed_width_pins(
 
   // find bg color
   STORED_LABEL bgcolor = 0;
-  int64_t max_pins = 0;
+  uint64_t max_pins = 0;
   for (auto& [label, pins] : all_pins) {
   	if (pins.size() > max_pins) {
   		bgcolor = static_cast<STORED_LABEL>(label);
@@ -136,8 +136,8 @@ std::vector<unsigned char> encode_fixed_width_pins(
   std::sort(all_labels.begin(), all_labels.end());
 
   robin_hood::unordered_flat_map<STORED_LABEL, STORED_LABEL> renumbering;
-  for (int64_t i = 0; i < all_labels.size(); i++) {
-  	renumbering[all_labels[i]] = i;
+  for (uint64_t i = 0; i < all_labels.size(); i++) {
+  	renumbering[all_labels[i]] = static_cast<STORED_LABEL>(i);
   }
 
   int renum_data_width = crackle::lib::compute_byte_width(all_labels.size());

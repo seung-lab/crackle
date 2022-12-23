@@ -29,9 +29,8 @@ std::vector<unsigned char> compress_helper(
 	const int64_t sx, const int64_t sy, const int64_t sz
 ) {
 	const int64_t voxels = sx * sy * sz;
-	const int64_t sxy = sx * sy;
 
-	int64_t num_pairs = crackle::lib::pixel_pairs(labels, sx, sy, sz);
+	int64_t num_pairs = crackle::lib::pixel_pairs(labels, voxels);
 
 	CrackFormat crack_format = CrackFormat::IMPERMISSIBLE;
 	LabelFormat label_format = LabelFormat::PINS_FIXED_WIDTH;
@@ -63,7 +62,8 @@ std::vector<unsigned char> compress_helper(
 	
 	std::vector<unsigned char> labels_binary;
 	if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
-		auto all_pins = crackle::pins::compute(labels, sx, sy, sz);
+		std::unordered_map<LABEL, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>
+			all_pins = crackle::pins::compute(labels, sx, sy, sz);
 		labels_binary = crackle::labels::encode_fixed_width_pins<LABEL, STORED_LABEL>(
 			all_pins,
 			sx, sy, sz,

@@ -66,20 +66,20 @@ struct Graph {
 		adjacency.resize(sxe * sye);
 
 		crackle::cc3d::DisjointSet<uint32_t> equivalences(sxe * sye);
-		for (uint64_t i = 0; i < sxe * sye; i++) {
+		for (int64_t i = 0; i < sxe * sye; i++) {
 			equivalences.ids[i] = i;
 		}
 
 		std::vector<std::pair<int64_t, int64_t>> all_edges;
 
-		auto check = [](int a, int b) { return a != b; };
+		std::function<int(int,int)> check = [](int a, int b) { return a != b; };
 		if (permissible) {
 			check = [](int a, int b) { return a == b; };
 		}
 
 		// assign vertical edges
-		for (uint64_t y = 0; y < sy; y++) {
-			for (uint64_t x = 1; x < sx; x++) {
+		for (int64_t y = 0; y < sy; y++) {
+			for (int64_t x = 1; x < sx; x++) {
 				if (check(labels[x + sx * y], labels[(x-1) + sx * y])) {
 					int64_t node_up = x + sxe * y;
 					int64_t node_down = x + sxe * (y + 1);
@@ -92,8 +92,8 @@ struct Graph {
 		}
 
 		// assign horizontal edges
-		for (uint64_t y = 1; y < sy; y++) {
-			for (uint64_t x = 0; x < sx; x++) {
+		for (int64_t y = 1; y < sy; y++) {
+			for (int64_t x = 0; x < sx; x++) {
 				if (check(labels[x + sx * y], labels[x + sx * (y-1)])) {
 					int64_t node_left = x + sxe * y;
 					int64_t node_right = (x+1) + sxe * y;
@@ -144,7 +144,7 @@ symbols_to_integers(
 		std::vector<uint64_t> code;
 		code.reserve(chain.size());
 		code.push_back(node);
-		for (int64_t i = 0; i < chain.size(); i++) {
+		for (uint64_t i = 0; i < chain.size(); i++) {
 			char symbol = chain[i];
 			if (symbol == 's') {
 				continue;
@@ -366,35 +366,34 @@ create_crack_codes(
 }
 
 std::vector<unsigned char> pack_codes(
-	const std::vector<std::pair<int64_t, std::vector<char>>> &chains,
-	const int64_t sx, const int64_t sy
+	const std::vector<std::vector<uint64_t>>& chains,
+	const uint64_t sx, const uint64_t sy
 ) {
-	std::vector<unsigned char> binary;
+	uint64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
 
-	int64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
-	int64_t num_moves = byte_width * 8 / 2;
+	std::vector<unsigned char> binary(byte_width);
 
-	for (auto& [node, chain] : chains) {
+	for (auto& chain : chains) {
 		// serialize node
-		for (int i = 0; i < byte_width; i++) {
+		for (uint64_t i = 0; i < byte_width; i++) {
 			binary.push_back((chain[0] >> (8*i)) & 0xff);
 		}
 
-		int64_t all_moves = chain.size() - 1;
+		uint64_t all_moves = chain.size() - 1;
 		all_moves -= (all_moves % 4);
 
-		int64_t i = 1;
+		uint64_t i = 1;
 		uint8_t encoded = 0;
 		while (i < all_moves) {
 			encoded = 0;
-			for (int64_t j = 0; j < 4; j++, i++) {
+			for (uint64_t j = 0; j < 4; j++, i++) {
 				encoded |= (chain[i] << (2*j));
 			}
 			binary.push_back(encoded);
 		}
 		if (i < chain.size()) {
 			encoded = 0;
-			for (int64_t j = 0; i < chain.size(); j++, i++) {
+			for (uint64_t j = 0; i < chain.size(); j++, i++) {
 				encoded |= (chain[i] << (2*j));
 			}
 			binary.push_back(encoded);
