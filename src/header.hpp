@@ -143,6 +143,12 @@ public:
 		return i - idx;
 	}
 
+	std::vector<unsigned char> tobytes() const {
+		std::vector<unsigned char> buf(header_size);
+		tochars(buf);
+		return buf;
+	}
+
 	static bool valid_header(unsigned char* buf) {
 		bool valid_magic = (buf[0] == 'c' && buf[1] == 'r' && buf[2] == 'k' && buf[3] == 'l');
 		uint8_t format_version = buf[4];

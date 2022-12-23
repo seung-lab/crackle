@@ -17,89 +17,11 @@
 #include "crackcodes.hpp"
 #include "lib.hpp"
 #include "labels.hpp"
+#include "pins.hpp"
 
 namespace crackle {
 
 // COMPRESSION CODE STARTS HERE
-
-template <typename LABEL, typename STORED_LABEL>
-std::vector<unsigned char> encode_flat_labels(
-	const LABEL* labels,
-	const int64_t sx, const int64_t sy, const int64_t sz
-) {
-
-	const int64_t voxels = sx * sy * sz;
-
-	std::vector<uint64_t> num_components_per_slice(sz);
-	uint64_t N = 0;
-	std::unique_ptr<uint32_t[]> cc_labels(crackle::cc3d::connected_components<LABEL, uint32_t>(
-		labels, sx, sy, sz,
-		num_components_per_slice,
-		NULL, N
-	));
-
-	robin_hood::unordered_flat_map<uint32_t, LABEL> mapping;
-	LABEL last = cc_labels[0];
-	mapping[cc_labels[0]] = labels[0];
-	for (int64_t i = 1; i < voxels; i++) {
-		if (cc_labels[i] != last) {
-			mapping[cc_labels[i]] = labels[i];
-			last = cc_labels[i];
-		}
-	}
-
-	cc_labels.release();
-
-	robin_hood::unordered_flat_set<LABEL> uniq;
-	for (auto& pair : mapping) {
-		uniq.emplace(pair.second);
-	}
-
-	std::vector<LABEL> vecuniq(uniq.begin(), uniq.end());
-	std::sort(vecuniq.begin(), vecuniq.end());
-
-	robin_hood::unordered_flat_map<LABEL, STORED_LABEL> remapping;
-	for (STORED_LABEL i = 0; i < vecuniq.size(); i++) {
-		remapping[vecuniq[i]] = i;
-	}
-
-	std::vector<STORED_LABEL> stored_labels(N);
-
-	for (auto [ccid, label] : mapping) {
-		stored_labels[ccid] = remapping[label];
-	}
-
-	std::vector<unsigned char> binary(
-		8 + sizeof(LABEL) * vecuniq.size() 
-		  + sizeof(uint32_t) * num_components_per_slice.size()
-		  + sizeof(STORED_LABEL) * stored_labels.size()
-	);
-
-	int64_t i = 0;
-	i = crackle::lib::itoc(
-		static_cast<uint64_t>(stored_labels.size()), binary, i
-	);
-	for (auto val : vecuniq) {
-		i = crackle::lib::itoc(
-			static_cast<STORED_LABEL>(val), binary, i
-		);		
-	}
-	for (auto val : num_components_per_slice) {
-		i = crackle::lib::itoc(
-			static_cast<uint32_t>(val), binary, i
-		);		
-	}
-
-	int key_width = crackle::lib::compute_byte_width(uniq.size());
-
-	for (auto val : stored_labels) {
-		i = crackle::lib::itocd(
-			val, binary, i, sizeof(STORED_LABEL), key_width
-		);		
-	}
-
-	return binary;
-}
 
 template <typename LABEL, typename STORED_LABEL>
 std::vector<unsigned char> compress_helper(
@@ -138,20 +60,38 @@ std::vector<unsigned char> compress_helper(
 			labels, sx, sy, sz, 
 			/*permissible=*/(crack_format == CrackFormat::PERMISSIBLE)
 		);
-	std::vector<int64_t> z_index;
-	z_index.reserve(sz);
-	for (auto& code : crack_codes) {
-		z_index.push_back(code.size());
-	}
-
+	
+	std::vector<unsigned char> labels_binary;
 	if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
 		auto all_pins = crackle::pins::compute(labels, sx, sy, sz);
-
+		labels_binary = crackle::labels::encode_fixed_width_pins<LABEL>(
+			all_pins,
+			sx, sy, sz,
+			stored_data_width,
+			header.pin_index_width(),
+			header.depth_width()
+		);
 	}
 	else {
-		labels_binary = encode_flat_labels<LABEL, STORED_LABEL>(labels, sx, sy, sz);
+		labels_binary = crackle::labels::encode_flat<LABEL, STORED_LABEL>(labels, sx, sy, sz);
 	}
 
+	header.num_label_bytes = labels_binary.size();
+
+	std::vector<unsigned char> z_index_binary(header.z_index_width() * sz);
+	for (int64_t i = 0, z = 0; z < sz; z++) {
+		i += crackle::lib::itocd(crack_codes[z].size(), z_index_binary, i, header.z_index_width());
+	}
+
+	std::vector<unsigned char> final_binary;
+	std::vector<unsigned char> header_binary = header.tobytes();
+	final_binary.insert(header_binary.begin(), header_binary.end());
+	final_binary.insert(labels_binary.begin(), labels_binary.end());
+	final_binary.insert(z_index_binary.begin(), z_index_binary.end());
+	for (auto& code : crack_codes) {
+		final_binary.insert(code.begin(), code.end());
+	}
+	return final_binary;
 }
 
 // note: labels expected to be in fortran order
