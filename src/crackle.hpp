@@ -49,11 +49,11 @@ std::vector<unsigned char> compress_helper(
 		/*label_format=*/label_format,
 		/*crack_format=*/crack_format,
 		/*data_width=*/sizeof(LABEL),
-		/*stored_data_width=*/stored_data_width,
+		/*stored_data_width=*/sizeof(STORED_LABEL),
 		/*sx=*/sx,
 		/*sy=*/sy,
 		/*sz=*/sz,
-		/*num_label_bytes=*/0,
+		/*num_label_bytes=*/0
 	);
 	std::vector<std::vector<unsigned char>> 
 		crack_codes = crackle::crackcodes::encode_boundaries(
@@ -64,10 +64,9 @@ std::vector<unsigned char> compress_helper(
 	std::vector<unsigned char> labels_binary;
 	if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
 		auto all_pins = crackle::pins::compute(labels, sx, sy, sz);
-		labels_binary = crackle::labels::encode_fixed_width_pins<LABEL>(
+		labels_binary = crackle::labels::encode_fixed_width_pins<LABEL, STORED_LABEL>(
 			all_pins,
 			sx, sy, sz,
-			stored_data_width,
 			header.pin_index_width(),
 			header.depth_width()
 		);
@@ -85,11 +84,11 @@ std::vector<unsigned char> compress_helper(
 
 	std::vector<unsigned char> final_binary;
 	std::vector<unsigned char> header_binary = header.tobytes();
-	final_binary.insert(header_binary.begin(), header_binary.end());
-	final_binary.insert(labels_binary.begin(), labels_binary.end());
-	final_binary.insert(z_index_binary.begin(), z_index_binary.end());
+	final_binary.insert(final_binary.end(), header_binary.begin(), header_binary.end());
+	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
+	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
 	for (auto& code : crack_codes) {
-		final_binary.insert(code.begin(), code.end());
+		final_binary.insert(final_binary.end(), code.begin(), code.end());
 	}
 	return final_binary;
 }

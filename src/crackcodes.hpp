@@ -374,7 +374,7 @@ std::vector<unsigned char> pack_codes(
 	int64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
 	int64_t num_moves = byte_width * 8 / 2;
 
-	for (auto chain : chains) {
+	for (auto& [node, chain] : chains) {
 		// serialize node
 		for (int i = 0; i < byte_width; i++) {
 			binary.push_back((chain[0] >> (8*i)) & 0xff);
