@@ -4,20 +4,30 @@
 namespace crackle {
 namespace lib {
 
+// d is for dynamic
+inline uint64_t itocd(uint64_t x, std::vector<unsigned char> &buf, uint64_t idx, int byte_width) { 
+	for (int i = 0; i < byte_width; i++) {
+		buf[idx + i] = static_cast<unsigned char>(
+			(x >> (8*i)) & 0xFF
+		);
+	}
+	return byte_width;
+}
+
 // little endian serialization of integers to chars
 // returns bytes written
-inline size_t itoc(uint8_t x, std::vector<unsigned char> &buf, size_t idx) {
+inline uint64_t itoc(uint8_t x, std::vector<unsigned char> &buf, uint64_t idx) {
 	buf[idx] = x;
 	return 1;
 }
 
-inline size_t itoc(uint16_t x, std::vector<unsigned char> &buf, size_t idx) {
+inline uint64_t itoc(uint16_t x, std::vector<unsigned char> &buf, uint64_t idx) {
 	buf[idx + 0] = x & 0xFF;
 	buf[idx + 1] = (x >> 8) & 0xFF;
 	return 2;
 }
 
-inline size_t itoc(uint32_t x, std::vector<unsigned char> &buf, size_t idx) {
+inline uint64_t itoc(uint32_t x, std::vector<unsigned char> &buf, uint64_t idx) {
 	buf[idx + 0] = x & 0xFF;
 	buf[idx + 1] = (x >> 8) & 0xFF;
 	buf[idx + 2] = (x >> 16) & 0xFF;
@@ -25,7 +35,7 @@ inline size_t itoc(uint32_t x, std::vector<unsigned char> &buf, size_t idx) {
 	return 4;
 }
 
-inline size_t itoc(uint64_t x, std::vector<unsigned char> &buf, size_t idx) {
+inline uint64_t itoc(uint64_t x, std::vector<unsigned char> &buf, uint64_t idx) {
 	buf[idx + 0] = x & 0xFF;
 	buf[idx + 1] = (x >> 8) & 0xFF;
 	buf[idx + 2] = (x >> 16) & 0xFF;
@@ -38,10 +48,10 @@ inline size_t itoc(uint64_t x, std::vector<unsigned char> &buf, size_t idx) {
 }
 
 template <typename T>
-T ctoi(const unsigned char* buf, const size_t idx = 0);
+T ctoi(const unsigned char* buf, const uint64_t idx = 0);
 
 template <>
-uint64_t ctoi(const unsigned char* buf, const size_t idx) {
+uint64_t ctoi(const unsigned char* buf, const uint64_t idx) {
 	uint64_t x = 0;
 	x += static_cast<uint64_t>(buf[idx + 0]) << 0;
 	x += static_cast<uint64_t>(buf[idx + 1]) << 8;
@@ -55,7 +65,7 @@ uint64_t ctoi(const unsigned char* buf, const size_t idx) {
 }
 
 template <>
-uint32_t ctoi(const unsigned char* buf, const size_t idx) {
+uint32_t ctoi(const unsigned char* buf, const uint64_t idx) {
 	uint32_t x = 0;
 	x += static_cast<uint32_t>(buf[idx + 0]) << 0;
 	x += static_cast<uint32_t>(buf[idx + 1]) << 8;
@@ -65,7 +75,7 @@ uint32_t ctoi(const unsigned char* buf, const size_t idx) {
 }
 
 template <>
-uint16_t ctoi(const unsigned char* buf, const size_t idx) {
+uint16_t ctoi(const unsigned char* buf, const uint64_t idx) {
 	uint16_t x = 0;
 	x += static_cast<uint16_t>(buf[idx + 0]) << 0;
 	x += static_cast<uint16_t>(buf[idx + 1]) << 8;
@@ -73,7 +83,7 @@ uint16_t ctoi(const unsigned char* buf, const size_t idx) {
 }
 
 template <>
-uint8_t ctoi(const unsigned char* buf, const size_t idx) {
+uint8_t ctoi(const unsigned char* buf, const uint64_t idx) {
 	return static_cast<uint8_t>(buf[idx]);
 }
 

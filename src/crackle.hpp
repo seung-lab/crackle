@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "robin_hood.hpp"
+
 #include "cc3d.hpp"
 #include "header.hpp"
 #include "crackcodes.hpp"
@@ -20,35 +22,94 @@ namespace crackle {
 
 // COMPRESSION CODE STARTS HERE
 
-
-template <typename LABEL>
-int64_t pixel_pairs(
+template <typename LABEL, typename STORED_LABEL>
+std::vector<unsigned char> encode_flat_labels(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz
 ) {
+
 	const int64_t voxels = sx * sy * sz;
-	if (voxels <= 1) {
-		return 0;
-	}
 
-	int64_t count = 0;
+	std::vector<uint64_t> num_components_per_slice(sz);
+	uint64_t N = 0;
+	std::unique_ptr<uint32_t[]> cc_labels(crackle::cc3d::connected_components<LABEL, uint32_t>(
+		labels, sx, sy, sz,
+		num_components_per_slice,
+		NULL, N
+	));
+
+	robin_hood::unordered_flat_map<uint32_t, LABEL> mapping;
+	LABEL last = cc_labels[0];
+	mapping[cc_labels[0]] = labels[0];
 	for (int64_t i = 1; i < voxels; i++) {
-		count += static_cast<int64_t>(labels[i] == labels[i-1]);
+		if (cc_labels[i] != last) {
+			mapping[cc_labels[i]] = labels[i];
+			last = cc_labels[i];
+		}
 	}
 
-	return count;
+	cc_labels.release();
+
+	robin_hood::unordered_flat_set<LABEL> uniq;
+	for (auto& pair : mapping) {
+		uniq.emplace(pair.second);
+	}
+
+	std::vector<LABEL> vecuniq(uniq.begin(), uniq.end());
+	std::sort(vecuniq.begin(), vecuniq.end());
+
+	robin_hood::unordered_flat_map<LABEL, STORED_LABEL> remapping;
+	for (STORED_LABEL i = 0; i < vecuniq.size(); i++) {
+		remapping[vecuniq[i]] = i;
+	}
+
+	std::vector<STORED_LABEL> stored_labels(N);
+
+	for (auto [ccid, label] : mapping) {
+		stored_labels[ccid] = remapping[label];
+	}
+
+	std::vector<unsigned char> binary(
+		8 + sizeof(LABEL) * vecuniq.size() 
+		  + sizeof(uint32_t) * num_components_per_slice.size()
+		  + sizeof(STORED_LABEL) * stored_labels.size()
+	);
+
+	int64_t i = 0;
+	i = crackle::lib::itoc(
+		static_cast<uint64_t>(stored_labels.size()), binary, i
+	);
+	for (auto val : vecuniq) {
+		i = crackle::lib::itoc(
+			static_cast<STORED_LABEL>(val), binary, i
+		);		
+	}
+	for (auto val : num_components_per_slice) {
+		i = crackle::lib::itoc(
+			static_cast<uint32_t>(val), binary, i
+		);		
+	}
+
+	int key_width = crackle::lib::compute_byte_width(uniq.size());
+
+	for (auto val : stored_labels) {
+		i = crackle::lib::itocd(
+			val, binary, i, sizeof(STORED_LABEL), key_width
+		);		
+	}
+
+	return binary;
 }
 
-// note: labels expected to be in fortran order
-template <typename LABEL>
-std::vector<unsigned char> compress(
+template <typename LABEL, typename STORED_LABEL>
+std::vector<unsigned char> compress_helper(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz
 ) {
 	const int64_t voxels = sx * sy * sz;
 	const int64_t sxy = sx * sy;
 
-	int64_t num_pairs = pixel_pairs(labels, sx, sy, sz);
+	int64_t num_pairs = crackle::lib::pixel_pairs(labels, sx, sy, sz);
 
 	CrackFormat crack_format = CrackFormat::IMPERMISSIBLE;
 	LabelFormat label_format = LabelFormat::PINS_FIXED_WIDTH;
@@ -60,10 +121,6 @@ std::vector<unsigned char> compress(
 	if (sz == 1) {
 		label_format = LabelFormat::FLAT;
 	}
-
-	uint8_t stored_data_width = crackle::lib::compute_byte_width(
-		crackle::lib::max_label(labels, voxels)
-	);
 
 	CrackleHeader header(
 		/*format_version=*/0,
@@ -89,13 +146,37 @@ std::vector<unsigned char> compress(
 
 	if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
 		auto all_pins = crackle::pins::compute(labels, sx, sy, sz);
-		
+
 	}
 	else {
-		labels_binary = encode_flat_labels();
+		labels_binary = encode_flat_labels<LABEL, STORED_LABEL>(labels, sx, sy, sz);
 	}
 
+}
 
+// note: labels expected to be in fortran order
+template <typename LABEL>
+std::vector<unsigned char> compress(
+	const LABEL* labels,
+	const int64_t sx, const int64_t sy, const int64_t sz
+) {
+	const int64_t voxels = sx * sy * sz;
+	uint8_t stored_data_width = crackle::lib::compute_byte_width(
+		crackle::lib::max_label(labels, voxels)
+	);
+
+	if (stored_data_width == 1) {
+		return compress_helper<LABEL, uint8_t>(labels, sx, sy ,sz);
+	}
+	else if (stored_data_width == 2) {
+		return compress_helper<LABEL, uint16_t>(labels, sx, sy ,sz);
+	}
+	else if (stored_data_width == 4) {
+		return compress_helper<LABEL, uint32_t>(labels, sx, sy ,sz);
+	}
+	else {
+		return compress_helper<LABEL, uint64_t>(labels, sx, sy ,sz);
+	}
 }
 
 
