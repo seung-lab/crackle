@@ -50,6 +50,21 @@ struct Graph {
 		return nbrs;
 	}
 
+	void erase_edge(const std::pair<int64_t, int64_t> &edge) {
+		int dir = edge.second - edge.first;
+		// b/c second is always > first,
+		// the direction will either be pointing 
+		// right or down.
+		if (dir == 1) {
+			adjacency[edge.first] &= 0b1110;
+			adjacency[edge.second] &= 0b1101;
+		}
+		else {
+			adjacency[edge.first] &= 0b1011;
+			adjacency[edge.second] &= 0b0111;	
+		}
+	}
+
 	int64_t num_components() {
 		return component_edge_list.size();
 	}
@@ -122,10 +137,10 @@ struct Graph {
 				membership = renumber[label];
 			}
 
-			component_edge_list[membership].push_back(pair);
+			component_edge_list[membership - 1].push_back(mkedge(pair.first, pair.second));
 		}
 
-		component_edge_list.resize(next_label);
+		component_edge_list.resize(next_label - 1);
 	}
 };
 
@@ -330,9 +345,10 @@ create_crack_codes(
     	int64_t next_node = neighbors[0];
     	int64_t dir_taken = dirmap[next_node - node];
     	code.push_back(dir_taken);
-    	remaining.erase(mkedge(node, next_node));
+    	auto edge = mkedge(node, next_node);
+    	remaining.erase(edge);
+    	G.erase_edge(edge);
     	node = next_node;
-
 
     	// if we reencounter a node we've already visited,
     	// remove it from revisit and replace the branch. 
