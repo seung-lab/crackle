@@ -28,8 +28,8 @@ std::vector<unsigned char> encode_flat(
 		NULL, N
 	));
 
-	robin_hood::unordered_flat_map<uint32_t, LABEL> mapping;
-	LABEL last = cc_labels[0];
+	robin_hood::unordered_flat_map<uint32_t, STORED_LABEL> mapping;
+	uint32_t last = cc_labels[0];
 	mapping[cc_labels[0]] = labels[0];
 	for (int64_t i = 1; i < voxels; i++) {
 		if (cc_labels[i] != last) {
@@ -40,15 +40,15 @@ std::vector<unsigned char> encode_flat(
 
 	cc_labels.release();
 
-	robin_hood::unordered_flat_set<LABEL> uniq;
+	robin_hood::unordered_flat_set<STORED_LABEL> uniq;
 	for (auto& pair : mapping) {
 		uniq.emplace(pair.second);
 	}
 
-	std::vector<LABEL> vecuniq(uniq.begin(), uniq.end());
+	std::vector<STORED_LABEL> vecuniq(uniq.begin(), uniq.end());
 	std::sort(vecuniq.begin(), vecuniq.end());
 
-	robin_hood::unordered_flat_map<LABEL, STORED_LABEL> remapping;
+	robin_hood::unordered_flat_map<STORED_LABEL, STORED_LABEL> remapping;
 	for (STORED_LABEL i = 0; i < vecuniq.size(); i++) {
 		remapping[vecuniq[i]] = i;
 	}
@@ -68,8 +68,8 @@ std::vector<unsigned char> encode_flat(
 	);
 
 	int64_t i = 0;
-	i = crackle::lib::itoc(
-		static_cast<uint64_t>(stored_labels.size()), binary, i
+	i += crackle::lib::itoc(
+		static_cast<uint64_t>(vecuniq.size()), binary, i
 	);
 	for (auto val : vecuniq) {
 		i += crackle::lib::itoc(
