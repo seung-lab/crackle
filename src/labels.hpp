@@ -62,7 +62,7 @@ std::vector<unsigned char> encode_flat(
 	int key_width = crackle::lib::compute_byte_width(uniq.size());
 
 	std::vector<unsigned char> binary(
-		8 + sizeof(LABEL) * vecuniq.size() 
+		8 + sizeof(STORED_LABEL) * vecuniq.size() 
 		  + sizeof(uint32_t) * num_components_per_slice.size()
 		  + key_width * stored_labels.size()
 	);

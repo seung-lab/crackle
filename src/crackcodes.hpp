@@ -464,7 +464,7 @@ unpack_binary(
 	for (uint64_t i = 0; i < code.size(); i++) {
 		if (branches_taken == 0) {
 			node = crackle::lib::ctoid(code.data(), i, index_width);
-			i += index_width;
+			i += index_width - 1; // -1 b/c it will be incremented by for loop
 			branches_taken = 1;
 			continue;
 		}
