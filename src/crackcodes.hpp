@@ -309,7 +309,6 @@ create_crack_codes(
 
   	int64_t node = start_edge.first;
   	int64_t start_node = start_edge.first;
-  	remaining.erase(start_edge);
 
     std::vector<char> code;
     std::unordered_map<int64_t, std::vector<int64_t>> branch_nodes;
