@@ -249,7 +249,7 @@ std::vector<CandidatePin> find_optimal_pins(
 }
 
 template <typename LABEL>
-std::unordered_map<LABEL, std::vector<Pin<uint64_t, uint64_t, uint64_t>>> 
+std::unordered_map<uint64_t, std::vector<Pin<uint64_t, uint64_t, uint64_t>>> 
 compute(
 	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
@@ -268,7 +268,7 @@ compute(
 	);
 
 	auto pinsets = extract_columns(labels, cc_labels.get(), sx, sy, sz);
-	std::unordered_map<LABEL, std::vector<PinType>> all_pins;
+	std::unordered_map<uint64_t, std::vector<PinType>> all_pins;
 	all_pins.reserve(128);
 
 	auto multiverse = compute_multiverse<LABEL>(

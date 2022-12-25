@@ -59,10 +59,12 @@ std::vector<unsigned char> encode_flat(
 		stored_labels[ccid] = remapping[label];
 	}
 
+	int key_width = crackle::lib::compute_byte_width(uniq.size());
+
 	std::vector<unsigned char> binary(
 		8 + sizeof(LABEL) * vecuniq.size() 
 		  + sizeof(uint32_t) * num_components_per_slice.size()
-		  + sizeof(STORED_LABEL) * stored_labels.size()
+		  + key_width * stored_labels.size()
 	);
 
 	int64_t i = 0;
@@ -70,20 +72,18 @@ std::vector<unsigned char> encode_flat(
 		static_cast<uint64_t>(stored_labels.size()), binary, i
 	);
 	for (auto val : vecuniq) {
-		i = crackle::lib::itoc(
+		i += crackle::lib::itoc(
 			static_cast<STORED_LABEL>(val), binary, i
 		);		
 	}
 	for (auto val : num_components_per_slice) {
-		i = crackle::lib::itoc(
+		i += crackle::lib::itoc(
 			static_cast<uint32_t>(val), binary, i
 		);		
 	}
 
-	int key_width = crackle::lib::compute_byte_width(uniq.size());
-
 	for (auto val : stored_labels) {
-		i = crackle::lib::itocd(
+		i += crackle::lib::itocd(
 			val, binary, i, key_width
 		);		
 	}
@@ -93,7 +93,7 @@ std::vector<unsigned char> encode_flat(
 
 template <typename LABEL, typename STORED_LABEL>
 std::vector<unsigned char> encode_fixed_width_pins(
-	std::unordered_map<LABEL, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>& all_pins,
+	std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>& all_pins,
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const int64_t index_width, const int64_t z_width
 ) {

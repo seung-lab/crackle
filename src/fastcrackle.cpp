@@ -162,6 +162,7 @@ auto compute_pins(const py::array &labels) {
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
+	m.def("compress", &compress, "Compress a numpy array into a binary crackle file returned as bytes.");
 	m.def(
 		"connected_components", 
 		&connected_components,

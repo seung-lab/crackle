@@ -87,6 +87,16 @@ uint8_t ctoi(const unsigned char* buf, const uint64_t idx) {
 	return static_cast<uint8_t>(buf[idx]);
 }
 
+uint64_t ctoid(
+	const unsigned char* buf, const uint64_t idx, const int byte_width
+) {
+	uint64_t val = 0;
+	for (int i = 0; i < byte_width; i++) {
+		val |= (buf[idx + i] << (i*8));
+	}
+	return val;
+}
+
 template <typename LABEL>
 LABEL max_label(const LABEL* labels, const uint64_t voxels) {
 	LABEL mx = 0;

@@ -62,7 +62,7 @@ std::vector<unsigned char> compress_helper(
 	
 	std::vector<unsigned char> labels_binary;
 	if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
-		std::unordered_map<LABEL, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>
+		std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>
 			all_pins = crackle::pins::compute(labels, sx, sy, sz);
 		labels_binary = crackle::labels::encode_fixed_width_pins<LABEL, STORED_LABEL>(
 			all_pins,
@@ -290,6 +290,20 @@ LABEL* decompress(
 	}
 
 	return output;
+}
+
+template <typename LABEL>
+LABEL* decompress(
+	const std::vector<unsigned char>& buffer,
+	const bool fortran_order = true,
+	LABEL* output = NULL
+) {
+	return decompress<LABEL>(
+		buffer.data(),
+		buffer.size(),
+		fortran_order, 
+		output
+	);
 }
 
 template <typename LABEL>

@@ -387,7 +387,7 @@ std::vector<unsigned char> pack_codes(
 ) {
 	uint64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
 
-	std::vector<unsigned char> binary(byte_width);
+	std::vector<unsigned char> binary;
 
 	for (auto& chain : chains) {
 		// serialize node
@@ -440,38 +440,37 @@ encode_boundaries(
 	return binary_components;
 }
 
-template <typename T>
 std::unordered_map<uint64_t, std::vector<unsigned char>> 
-unpack_binary_helper(
+unpack_binary(
 	const std::vector<unsigned char> &code, 
 	const uint64_t sx, const uint64_t sy
 ) {
 	std::unordered_map<uint64_t, std::vector<unsigned char>> chains;
-	uint64_t code_size = code.size() / sizeof(T);
-	std::vector<T> int_code(code_size);
-	for (uint64_t i = 0; i < code_size; i++) {
-		int_code[i] = crackle::lib::ctoi<T>(code.data(), i * sizeof(T));
+
+	if (code.size() == 0) {
+		return chains;
 	}
 
+	uint64_t index_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
+
 	std::vector<unsigned char> symbols;
-	symbols.reserve(code.size() * 4);
+	symbols.reserve(code.size() * 4 * 2);
 
 	uint64_t branches_taken = 0;
-	T node = 0;
+	uint64_t node = 0;
 
 	char remap[4] = { 'u', 'r', 'l', 'd' };
 
-	uint64_t num_moves = sizeof(T) * 8 / 2;
-
-	for (T moveset : int_code) {
+	for (uint64_t i = 0; i < code.size(); i++) {
 		if (branches_taken == 0) {
-			node = moveset;
+			node = crackle::lib::ctoid(code.data(), i, index_width);
+			i += index_width;
 			branches_taken = 1;
 			continue;
 		}
 
-		for (uint64_t i = 0; i < num_moves; i++) {
-			uint8_t move = static_cast<uint8_t>((moveset >> (2*i)) & 0b11);
+		for (uint64_t j = 0; j < 4; j++) {
+			uint8_t move = static_cast<uint8_t>((code[i] >> (2*j)) & 0b11);
 
 			if (symbols.size()) {
 				if (
@@ -509,33 +508,6 @@ unpack_binary_helper(
 	}
 
 	return chains;
-}
-
-// decodes to symbols
-std::unordered_map<uint64_t, std::vector<unsigned char>> unpack_binary(
-	const std::vector<unsigned char> &code, 
-	const uint64_t sx, const uint64_t sy
-) {
-	std::unordered_map<uint64_t, std::vector<unsigned char>> chains;
-
-	if (code.size() == 0) {
-		return chains;
-	}
-
-	uint64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
-	
-	if (byte_width == 1) {
-		return unpack_binary_helper<uint8_t>(code, sx, sy);
-	}
-	else if (byte_width == 2) {
-		return unpack_binary_helper<uint16_t>(code, sx, sy);
-	}
-	else if (byte_width == 4) {
-		return unpack_binary_helper<uint32_t>(code, sx, sy);
-	}
-	else {
-		return unpack_binary_helper<uint64_t>(code, sx, sy);
-	}
 }
 
 std::vector<uint8_t> decode_permissible_crack_code(
