@@ -177,7 +177,7 @@ symbols_to_integers(
 				code.push_back(DirectionCode::RIGHT);
 			}
 			else if (symbol == 'b') {
-				if (i > 0 && chain[i-1] != BRANCH[1]) {
+				if (i > 0 && code.back() != BRANCH[1]) {
 					code.push_back(BRANCH[0]);
 					code.push_back(BRANCH[1]);
 				}
@@ -187,7 +187,7 @@ symbols_to_integers(
 				}
 			}
 			else if (symbol == 't') {
-				if (i > 0 && chain[i-1] != TERM[1]) {
+				if (i > 0 && code.back() != TERM[1]) {
 					code.push_back(TERM[0]);
 					code.push_back(TERM[1]);
 				}
