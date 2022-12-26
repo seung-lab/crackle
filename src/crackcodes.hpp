@@ -588,10 +588,7 @@ std::vector<uint8_t> decode_impermissible_crack_code(
 ) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
-	std::vector<uint8_t> edges(sx * sy);
-	for (int64_t i = 0; i < sx * sy; i++) {
-		edges[i] = 0b1111;
-	}
+	std::vector<uint8_t> edges(sx * sy, 0b1111);
 
 	int64_t sxe = sx + 1;
 
