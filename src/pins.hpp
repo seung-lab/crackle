@@ -172,7 +172,7 @@ compute_multiverse(
 		}
 	}
 
-	multiverse[last].emplace(cc_labels[voxels - 1]);
+	multiverse[labels[voxels - 1]].emplace(cc_labels[voxels - 1]);
 
 	return multiverse;
 }
