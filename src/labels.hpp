@@ -63,8 +63,8 @@ std::vector<unsigned char> encode_flat(
 
 	std::vector<unsigned char> binary(
 		8 + sizeof(STORED_LABEL) * vecuniq.size() 
-		  + sizeof(uint32_t) * num_components_per_slice.size()
-		  + key_width * stored_labels.size()
+			+ sizeof(uint32_t) * num_components_per_slice.size()
+			+ key_width * stored_labels.size()
 	);
 
 	int64_t i = 0;
@@ -98,71 +98,88 @@ std::vector<unsigned char> encode_fixed_width_pins(
 	const int64_t index_width, const int64_t z_width
 ) {
 
-  // find bg color
-  STORED_LABEL bgcolor = 0;
-  uint64_t max_pins = 0;
-  for (auto& [label, pins] : all_pins) {
-  	if (pins.size() > max_pins) {
-  		bgcolor = static_cast<STORED_LABEL>(label);
-  		max_pins = pins.size();
-  	}
-  }
-  all_pins.erase(bgcolor);
+	// find bg color, pick the most pins
+	// first, and then the one with the most
+	// pin depth (so less decoding work later)
+	STORED_LABEL bgcolor = 0;
+	uint64_t max_pins = 0;
+	uint64_t max_pins_depth = sz;
+	for (auto& [label, pins] : all_pins) {
+		if (pins.size() > max_pins) {
+			bgcolor = static_cast<STORED_LABEL>(label);
+			max_pins = pins.size();
+			max_pins_depth = 0;
+			for (auto& pin : pins) {
+				max_pins_depth += pin.depth;
+			}
+		} 
+		else if (pins.size() == max_pins) {
+			uint64_t candidate_max_depth = 0;
+			for (auto& pin : pins) {
+				candidate_max_depth += pin.depth;
+			}
+			if (candidate_max_depth > max_pins_depth) {
+				bgcolor = static_cast<STORED_LABEL>(label);
+				max_pins_depth = candidate_max_depth;
+			}
+		}
+	}
+	all_pins.erase(bgcolor);
 
-  std::vector<std::tuple<uint64_t, uint64_t, uint64_t>> linear;
-  for (auto& [label, pins] : all_pins) {
-  	for (auto& pin : pins) {
-  		linear.emplace_back(
-  			pin.label, pin.index, pin.depth
-  		);
-  	}
-  }
+	std::vector<std::tuple<uint64_t, uint64_t, uint64_t>> linear;
+	for (auto& [label, pins] : all_pins) {
+		for (auto& pin : pins) {
+			linear.emplace_back(
+				pin.label, pin.index, pin.depth
+			);
+		}
+	}
 
-  struct {
-      bool operator()(
-      	std::tuple<uint64_t,uint64_t,uint64_t>& a, std::tuple<uint64_t,uint64_t,uint64_t>& b
-      ) const { 
-      	return std::get<1>(a) < std::get<1>(b); 
-     	}
-  } CmpIndex;
+	struct {
+			bool operator()(
+				std::tuple<uint64_t,uint64_t,uint64_t>& a, std::tuple<uint64_t,uint64_t,uint64_t>& b
+			) const { 
+				return std::get<1>(a) < std::get<1>(b); 
+			}
+	} CmpIndex;
 
-  std::sort(linear.begin(), linear.end(), CmpIndex);
+	std::sort(linear.begin(), linear.end(), CmpIndex);
 
-  std::vector<STORED_LABEL> all_labels;
-  all_labels.reserve(all_labels.size());
-  for (auto& [label, pins] : all_pins) {
-  	all_labels.push_back(label);
-  }
-  std::sort(all_labels.begin(), all_labels.end());
+	std::vector<STORED_LABEL> all_labels;
+	all_labels.reserve(all_labels.size());
+	for (auto& [label, pins] : all_pins) {
+		all_labels.push_back(label);
+	}
+	std::sort(all_labels.begin(), all_labels.end());
 
-  robin_hood::unordered_flat_map<STORED_LABEL, STORED_LABEL> renumbering;
-  for (uint64_t i = 0; i < all_labels.size(); i++) {
-  	renumbering[all_labels[i]] = static_cast<STORED_LABEL>(i);
-  }
+	robin_hood::unordered_flat_map<STORED_LABEL, STORED_LABEL> renumbering;
+	for (uint64_t i = 0; i < all_labels.size(); i++) {
+		renumbering[all_labels[i]] = static_cast<STORED_LABEL>(i);
+	}
 
-  int renum_data_width = crackle::lib::compute_byte_width(all_labels.size());
+	int renum_data_width = crackle::lib::compute_byte_width(all_labels.size());
 
-  std::vector<unsigned char> binary(
-  	sizeof(STORED_LABEL) // bgcolor
-  	+ 8 // num labels
-  	+ sizeof(STORED_LABEL) * all_labels.size()
-  	+ (renum_data_width + index_width + z_width) * linear.size()
-  );
+	std::vector<unsigned char> binary(
+		sizeof(STORED_LABEL) // bgcolor
+		+ 8 // num labels
+		+ sizeof(STORED_LABEL) * all_labels.size()
+		+ (renum_data_width + index_width + z_width) * linear.size()
+	);
 
-  int64_t i = 0;
-  i += crackle::lib::itoc(bgcolor, binary, i);
-  i += crackle::lib::itoc(static_cast<uint64_t>(all_labels.size()), binary, i);
-  for (auto label : all_labels) {
-  	i += crackle::lib::itoc(label, binary, i);
-  }
+	int64_t i = 0;
+	i += crackle::lib::itoc(bgcolor, binary, i);
+	i += crackle::lib::itoc(static_cast<uint64_t>(all_labels.size()), binary, i);
+	for (auto label : all_labels) {
+		i += crackle::lib::itoc(label, binary, i);
+	}
 
-  for (auto& pin : linear) {
-  	i += crackle::lib::itocd(renumbering[std::get<0>(pin)], binary, i, renum_data_width);
-  	i += crackle::lib::itocd(std::get<1>(pin), binary, i, index_width);
-  	i += crackle::lib::itocd(std::get<2>(pin), binary, i, z_width);
-  }
+	for (auto& pin : linear) {
+		i += crackle::lib::itocd(renumbering[std::get<0>(pin)], binary, i, renum_data_width);
+		i += crackle::lib::itocd(std::get<1>(pin), binary, i, index_width);
+		i += crackle::lib::itocd(std::get<2>(pin), binary, i, z_width);
+	}
 
-  return binary;
+	return binary;
 }
 
 
@@ -215,20 +232,20 @@ std::vector<LABEL> decode_flat(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &binary
 ) {
-  std::vector<unsigned char> labels_binary = raw_labels(binary);
-  const unsigned char* buf = labels_binary.data();
+	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	const unsigned char* buf = labels_binary.data();
 
-  const uint64_t num_labels = decode_num_labels(header, labels_binary);
-  std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
+	const uint64_t num_labels = decode_num_labels(header, labels_binary);
+	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
 
-  const int cc_label_width = crackle::lib::compute_byte_width(num_labels);
-  uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels + 4 * header.sz;
+	const int cc_label_width = crackle::lib::compute_byte_width(num_labels);
+	uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels + 4 * header.sz;
 
-  uint64_t num_fields = (labels_binary.size() - offset) / cc_label_width;
-  std::vector<LABEL> label_map(num_fields);
+	uint64_t num_fields = (labels_binary.size() - offset) / cc_label_width;
+	std::vector<LABEL> label_map(num_fields);
 
-  for (uint64_t i = 0, j = offset; i < num_fields; i++, j += cc_label_width) {
-  	if (cc_label_width == 1) {
+	for (uint64_t i = 0, j = offset; i < num_fields; i++, j += cc_label_width) {
+		if (cc_label_width == 1) {
 		label_map[i] = static_cast<LABEL>(
 			uniq[crackle::lib::ctoi<uint8_t>(buf, j)]
 		);
@@ -248,8 +265,8 @@ std::vector<LABEL> decode_flat(
 			uniq[crackle::lib::ctoi<uint64_t>(buf, j)]
 		);
 	}
-  }
-  return label_map;
+	}
+	return label_map;
 }
 
 template <
@@ -366,38 +383,38 @@ std::vector<LABEL> decode_fixed_width_pins(
 	const std::vector<uint32_t> &cc_labels,
 	const uint64_t N
 ) {
-  std::vector<unsigned char> labels_binary = raw_labels(binary);
-  const LABEL bgcolor = static_cast<LABEL>(
-  	crackle::lib::ctoi<STORED_LABEL>(
-  		labels_binary.data(), 0
-  	)
-  );
-  const uint64_t num_labels = decode_num_labels(header, labels_binary);
-  std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
+	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	const LABEL bgcolor = static_cast<LABEL>(
+		crackle::lib::ctoi<STORED_LABEL>(
+			labels_binary.data(), 0
+		)
+	);
+	const uint64_t num_labels = decode_num_labels(header, labels_binary);
+	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
 
-  // bgcolor, num labels (u64), N labels, pins
-  const int renum_width = crackle::lib::compute_byte_width(num_labels);
+	// bgcolor, num labels (u64), N labels, pins
+	const int renum_width = crackle::lib::compute_byte_width(num_labels);
 
-  if (renum_width == 1) {
+	if (renum_width == 1) {
 		return decode_pins_helper<LABEL, STORED_LABEL, uint8_t>(
 			header, labels_binary, uniq, cc_labels, N, bgcolor
 		);
-  }
-  else if (renum_width == 2) {
+	}
+	else if (renum_width == 2) {
 		return decode_pins_helper<LABEL, STORED_LABEL, uint16_t>(
 			header, labels_binary, uniq, cc_labels, N, bgcolor
 		);
-  }
-  else if (renum_width == 4) {
+	}
+	else if (renum_width == 4) {
 		return decode_pins_helper<LABEL, STORED_LABEL, uint32_t>(
 			header, labels_binary, uniq, cc_labels, N, bgcolor
 		);
-  }
-  else {
+	}
+	else {
 		return decode_pins_helper<LABEL, STORED_LABEL, uint64_t>(
 			header, labels_binary, uniq, cc_labels, N, bgcolor
 		);
-  }
+	}
 }
 
 template <typename LABEL, typename STORED_LABEL>
