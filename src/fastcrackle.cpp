@@ -43,6 +43,40 @@ py::array decompress(const py::bytes &buffer) {
 	}
 }
 
+template <typename LABEL>
+py::bytes compress_helper(const py::array &labels, const bool force_flat = false) {
+	const uint64_t sx = labels.shape()[0];
+	const uint64_t sy = labels.shape()[1];
+	const uint64_t sz = labels.shape()[2];
+
+	std::vector<unsigned char> buf = crackle::compress<LABEL>(
+		reinterpret_cast<LABEL*>(const_cast<void*>(labels.data())),
+		sx, sy, sz,
+		force_flat
+	);
+	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
+}
+
+py::bytes compress(
+	const py::array &labels, 
+	const bool force_flat = false
+) {
+	int width = labels.dtype().itemsize();
+
+	if (width == 1) {
+		return compress_helper<uint8_t>(labels, force_flat);
+	}
+	else if (width == 2) {
+		return compress_helper<uint16_t>(labels, force_flat);
+	}
+	else if (width == 4) {
+		return compress_helper<uint32_t>(labels, force_flat);
+	}
+	else {
+		return compress_helper<uint64_t>(labels, force_flat);
+	}
+}
+
 py::tuple connected_components(const py::array &labels) {
 	int width = labels.dtype().itemsize();
 
@@ -132,6 +166,7 @@ auto compute_pins(const py::array &labels) {
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
+	m.def("compress", &compress, "Compress a numpy array into a binary crackle file returned as bytes.");
 	m.def(
 		"connected_components", 
 		&connected_components,

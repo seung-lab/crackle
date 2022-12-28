@@ -4,19 +4,123 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <limits>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "robin_hood.hpp"
 
 #include "cc3d.hpp"
 #include "header.hpp"
 #include "crackcodes.hpp"
 #include "lib.hpp"
 #include "labels.hpp"
+#include "pins.hpp"
 
 namespace crackle {
+
+// COMPRESSION CODE STARTS HERE
+
+template <typename LABEL, typename STORED_LABEL>
+std::vector<unsigned char> compress_helper(
+	const LABEL* labels,
+	const int64_t sx, const int64_t sy, const int64_t sz,
+	const bool force_flat = false
+) {
+	const int64_t voxels = sx * sy * sz;
+
+	int64_t num_pairs = crackle::lib::pixel_pairs(labels, voxels);
+
+	CrackFormat crack_format = CrackFormat::IMPERMISSIBLE;
+	LabelFormat label_format = LabelFormat::PINS_FIXED_WIDTH;
+	if (num_pairs < voxels / 2) {
+		crack_format = CrackFormat::PERMISSIBLE;
+		label_format = LabelFormat::FLAT;
+	}
+
+	if (sz == 1 || force_flat) {
+		label_format = LabelFormat::FLAT;
+	}
+
+	CrackleHeader header(
+		/*format_version=*/0,
+		/*label_format=*/label_format,
+		/*crack_format=*/crack_format,
+		/*data_width=*/sizeof(LABEL),
+		/*stored_data_width=*/sizeof(STORED_LABEL),
+		/*sx=*/sx,
+		/*sy=*/sy,
+		/*sz=*/sz,
+		/*num_label_bytes=*/0
+	);
+	std::vector<std::vector<unsigned char>> 
+		crack_codes = crackle::crackcodes::encode_boundaries(
+			labels, sx, sy, sz, 
+			/*permissible=*/(crack_format == CrackFormat::PERMISSIBLE)
+		);
+	
+	std::vector<unsigned char> labels_binary;
+	if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
+		std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>
+			all_pins = crackle::pins::compute(labels, sx, sy, sz);
+		labels_binary = crackle::labels::encode_fixed_width_pins<LABEL, STORED_LABEL>(
+			all_pins,
+			sx, sy, sz,
+			header.pin_index_width(),
+			header.depth_width()
+		);
+	}
+	else {
+		labels_binary = crackle::labels::encode_flat<LABEL, STORED_LABEL>(labels, sx, sy, sz);
+	}
+
+	header.num_label_bytes = labels_binary.size();
+
+	std::vector<unsigned char> z_index_binary(header.z_index_width() * sz);
+	for (int64_t i = 0, z = 0; z < sz; z++) {
+		i += crackle::lib::itocd(crack_codes[z].size(), z_index_binary, i, header.z_index_width());
+	}
+
+	std::vector<unsigned char> final_binary;
+	std::vector<unsigned char> header_binary = header.tobytes();
+	final_binary.insert(final_binary.end(), header_binary.begin(), header_binary.end());
+	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
+	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
+	for (auto& code : crack_codes) {
+		final_binary.insert(final_binary.end(), code.begin(), code.end());
+	}
+	return final_binary;
+}
+
+// note: labels expected to be in fortran order
+template <typename LABEL>
+std::vector<unsigned char> compress(
+	const LABEL* labels,
+	const int64_t sx, const int64_t sy, const int64_t sz,
+	const bool force_flat = false
+) {
+	const int64_t voxels = sx * sy * sz;
+	uint8_t stored_data_width = crackle::lib::compute_byte_width(
+		crackle::lib::max_label(labels, voxels)
+	);
+
+	if (stored_data_width == 1) {
+		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, force_flat);
+	}
+	else if (stored_data_width == 2) {
+		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, force_flat);
+	}
+	else if (stored_data_width == 4) {
+		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, force_flat);
+	}
+	else {
+		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, force_flat);
+	}
+}
+
+
+// DECOMPRESSION CODE STARTS HERE
 
 std::vector<uint64_t> get_crack_code_offsets(
 	const CrackleHeader &header,
@@ -187,6 +291,20 @@ LABEL* decompress(
 	}
 
 	return output;
+}
+
+template <typename LABEL>
+LABEL* decompress(
+	const std::vector<unsigned char>& buffer,
+	const bool fortran_order = true,
+	LABEL* output = NULL
+) {
+	return decompress<LABEL>(
+		buffer.data(),
+		buffer.size(),
+		fortran_order, 
+		output
+	);
 }
 
 template <typename LABEL>

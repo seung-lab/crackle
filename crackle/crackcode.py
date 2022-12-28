@@ -128,7 +128,7 @@ def remove_initial_branch(code, sx, sy):
   code[0] = node
   return code
 
-def create_crack_codes(labels, permissible) -> List[List[int]]:
+def create_crack_codes(labels, permissible) -> List[List[chr]]:
   sx, sy = labels.shape
   G = create_graph(labels, permissible=permissible)
   Gcc = list(nx.connected_components(G))
