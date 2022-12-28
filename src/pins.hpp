@@ -167,7 +167,7 @@ compute_multiverse(
 	multiverse[labels[0]].emplace(cc_labels[0]);
 
 	for (uint64_t i = 1; i < voxels; i++) {
-		if (labels[i-1] != last) {
+		if (labels[i] != last) {
 			multiverse[labels[i]].emplace(cc_labels[i]);
 			last = cc_labels[i];
 		}
