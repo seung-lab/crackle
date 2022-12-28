@@ -114,7 +114,7 @@ public:
 	}
 
 	int depth_width() const {
-		return crackle::lib::compute_byte_width(sz);	
+		return crackle::lib::compute_byte_width(sz == 0 ? 0 : sz - 1);	
 	}
 
 	size_t tochars(std::vector<unsigned char> &buf, size_t idx = 0) const {
