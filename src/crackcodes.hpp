@@ -427,10 +427,12 @@ encode_boundaries(
 ) {
 	std::vector<std::vector<unsigned char>> binary_components;
 
+	const int64_t sxy = sx * sy;
+
 	for (int64_t z = 0; z < sz; z++) {
 		binary_components.push_back(
 			pack_codes(
-				create_crack_codes(labels, sx, sy, permissible),
+				create_crack_codes(labels + z * sxy, sx, sy, permissible),
 				sx, sy
 			)
 		);
