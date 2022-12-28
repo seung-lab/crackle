@@ -257,9 +257,10 @@ void remove_initial_branch(
 		code[i] = flip[code[i]];
 	}
 	code[i] = 's';
-	const int64_t len = i;
-	for (; i >= i/2; i--) {
-		std::swap(code[i], code[len - i]);
+	const int64_t last = i - 1;
+	i--;
+	for (; i > last/2; i--) {
+		std::swap(code[i], code[last - i + 1]);
 	}
 
 	node = pos_x + sxe * pos_y;
@@ -371,7 +372,7 @@ create_crack_codes(
     	branches_taken--;
     }
 
-    // remove_initial_branch(start_node, code, sx, sy);
+    remove_initial_branch(start_node, code, sx, sy);
     chains.push_back(
     	std::make_pair(start_node, code)
     );
