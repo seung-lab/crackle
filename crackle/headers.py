@@ -96,7 +96,7 @@ class CrackleHeader:
     return compute_byte_width(self.sx * self.sy * self.sz)
 
   def depth_width(self) -> int:
-    return compute_byte_width(self.sx * self.sy)
+    return compute_byte_width(self.sz)
 
   def z_index_width(self) -> int:
     return compute_byte_width(self.sx * self.sy * 2)

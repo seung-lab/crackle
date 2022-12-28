@@ -110,13 +110,13 @@ LABEL max_label(const LABEL* labels, const uint64_t voxels) {
 }
 
 int compute_byte_width(const uint64_t x) {
-	if (x < std::numeric_limits<uint8_t>::max()) {
+	if (x <= std::numeric_limits<uint8_t>::max()) {
 		return sizeof(uint8_t);
 	}
-	else if (x < std::numeric_limits<uint16_t>::max()) {
+	else if (x <= std::numeric_limits<uint16_t>::max()) {
 		return sizeof(uint16_t);
 	}
-	else if (x < std::numeric_limits<uint32_t>::max()) {
+	else if (x <= std::numeric_limits<uint32_t>::max()) {
 		return sizeof(uint32_t);
 	}
 	return sizeof(uint64_t);
