@@ -25,7 +25,8 @@ namespace crackle {
 template <typename LABEL, typename STORED_LABEL>
 std::vector<unsigned char> compress_helper(
 	const LABEL* labels,
-	const int64_t sx, const int64_t sy, const int64_t sz
+	const int64_t sx, const int64_t sy, const int64_t sz,
+	const bool force_flat = false
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -38,7 +39,7 @@ std::vector<unsigned char> compress_helper(
 		label_format = LabelFormat::FLAT;
 	}
 
-	if (sz == 1) {
+	if (sz == 1 || force_flat) {
 		label_format = LabelFormat::FLAT;
 	}
 
@@ -96,7 +97,8 @@ std::vector<unsigned char> compress_helper(
 template <typename LABEL>
 std::vector<unsigned char> compress(
 	const LABEL* labels,
-	const int64_t sx, const int64_t sy, const int64_t sz
+	const int64_t sx, const int64_t sy, const int64_t sz,
+	const bool force_flat = false
 ) {
 	const int64_t voxels = sx * sy * sz;
 	uint8_t stored_data_width = crackle::lib::compute_byte_width(
@@ -104,16 +106,16 @@ std::vector<unsigned char> compress(
 	);
 
 	if (stored_data_width == 1) {
-		return compress_helper<LABEL, uint8_t>(labels, sx, sy ,sz);
+		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, force_flat);
 	}
 	else if (stored_data_width == 2) {
-		return compress_helper<LABEL, uint16_t>(labels, sx, sy ,sz);
+		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, force_flat);
 	}
 	else if (stored_data_width == 4) {
-		return compress_helper<LABEL, uint32_t>(labels, sx, sy ,sz);
+		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, force_flat);
 	}
 	else {
-		return compress_helper<LABEL, uint64_t>(labels, sx, sy ,sz);
+		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, force_flat);
 	}
 }
 
