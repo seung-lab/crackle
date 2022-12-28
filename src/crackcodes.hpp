@@ -371,7 +371,7 @@ create_crack_codes(
     	branches_taken--;
     }
 
-    remove_initial_branch(start_node, code, sx, sy);
+    // remove_initial_branch(start_node, code, sx, sy);
     chains.push_back(
     	std::make_pair(start_node, code)
     );
