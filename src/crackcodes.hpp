@@ -229,7 +229,6 @@ void remove_initial_branch(
 	int64_t sxe = sx + 1;
 	int64_t y = node / sxe;
 	int64_t x = node - (sxe * y);
-	// int64_t pos 
 
 	robin_hood::unordered_flat_map<char,char> flip({
 		{'u', 'd'},
