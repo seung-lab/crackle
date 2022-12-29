@@ -33,8 +33,8 @@ def run_sample(labels, shape, N):
     mvxs = lambda t: cutout.size / t / 1e6
 
     print(f"""
-      compress     :  {mvxs(compress_time):.2f} MVx/sec
-      compress+gz  :  {mvxs(compress_time+gzip_time):.2f} MVx/sec
+      compress     :  {mvxs(compress_time):.2f} MVx/sec ({len(ckl_binary)} bytes, {len(ckl_binary)/cutout.nbytes*100:.1f}%)
+      compress+gz  :  {mvxs(compress_time+gzip_time):.2f} MVx/sec ({len(gzip_bin)} bytes, {len(gzip_bin)/len(ckl_binary)*100:.1f}%)
       decompress   :  {mvxs(decompress_time):.2f} MVx/sec
       decompress+gz:  {mvxs(decompress_time+gunzip_time):.2f} MVx/sec
     """, flush=True)
