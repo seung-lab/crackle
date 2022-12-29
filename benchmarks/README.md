@@ -75,6 +75,31 @@ RANDOM NOISE [0,2000) uint32
       cpso.gz    8024867  (84.64%)
       raw:.gz    8023793  (84.65%)
     
+BINARY NOISE [0,1] uint8 (pathological case)
+
+      ckl:       1843818    
+      cpso:      2900459  (63.57%) 
+      raw:       4194304  (43.96%)
+      ckl.gz:    1194228   
+      cpso.gz    1098294  (108.73%)
+      raw:.gz     667171  (179.00%)
+    
+
+      ckl:       1842842    
+      cpso:      2898730  (63.57%) 
+      raw:       4194304  (43.94%)
+      ckl.gz:    1194008   
+      cpso.gz    1099130  (108.63%)
+      raw:.gz     667111  (178.98%)
+    
+
+      ckl:       1844494    
+      cpso:      2899730  (63.61%) 
+      raw:       4194304  (43.98%)
+      ckl.gz:    1194865   
+      cpso.gz    1100276  (108.60%)
+      raw:.gz     666783  (179.20%)
+
 EMPTY
 
       ckl:           607    
@@ -153,30 +178,25 @@ RANDOM NOISE [0,2000) uint32
       decompress   :  70.71 MVx/sec
       decompress+gz:  47.17 MVx/sec
     
+
 BINARY NOISE [0,1] uint8 (pathological case)
 
-      ckl:       1843818    
-      cpso:      2900459  (63.57%) 
-      raw:       4194304  (43.96%)
-      ckl.gz:    1194228   
-      cpso.gz    1098294  (108.73%)
-      raw:.gz     667171  (179.00%)
+      compress     :  4.31 MVx/sec (1843317 bytes, 43.9%)
+      compress+gz  :  4.19 MVx/sec (1193619 bytes, 64.8%)
+      decompress   :  21.72 MVx/sec
+      decompress+gz:  21.17 MVx/sec
     
 
-      ckl:       1842842    
-      cpso:      2898730  (63.57%) 
-      raw:       4194304  (43.94%)
-      ckl.gz:    1194008   
-      cpso.gz    1099130  (108.63%)
-      raw:.gz     667111  (178.98%)
+      compress     :  4.33 MVx/sec (1844347 bytes, 44.0%)
+      compress+gz  :  4.21 MVx/sec (1194077 bytes, 64.7%)
+      decompress   :  21.51 MVx/sec
+      decompress+gz:  20.97 MVx/sec
     
 
-      ckl:       1844494    
-      cpso:      2899730  (63.61%) 
-      raw:       4194304  (43.98%)
-      ckl.gz:    1194865   
-      cpso.gz    1100276  (108.60%)
-      raw:.gz     666783  (179.20%)
+      compress     :  4.33 MVx/sec (1842973 bytes, 43.9%)
+      compress+gz  :  4.21 MVx/sec (1193080 bytes, 64.7%)
+      decompress   :  21.50 MVx/sec
+      decompress+gz:  20.96 MVx/sec
 
 EMPTY
 

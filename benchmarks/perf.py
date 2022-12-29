@@ -56,6 +56,10 @@ print("RANDOM NOISE [0,2000) uint32")
 labels = np.random.randint(0,2000, size=(512,512,512), dtype=np.uint32)
 run_sample(labels, shape, N)
 
+print("BINARY NOISE [0,1] uint8 (pathological case)")
+labels = np.random.randint(0,2, size=(512,512,512), dtype=np.uint8)
+run_sample(labels, shape, N)
+
 print("EMPTY")
 labels = np.zeros((512,512,512), dtype=np.uint32)
 run_sample(labels, shape, 1)
