@@ -19,8 +19,7 @@ py::array decompress_helper(
 ) {
 	py::array arr = py::array_t<LABEL>(head.voxels());
 	crackle::decompress<LABEL>(
-		buffer, 
-		/*fortran_order=*/true,
+		buffer,
 		reinterpret_cast<LABEL*>(const_cast<void*>(arr.data()))
 	);
 	return arr;
@@ -44,7 +43,11 @@ py::array decompress(const py::bytes &buffer) {
 }
 
 template <typename LABEL>
-py::bytes compress_helper(const py::array &labels, const bool force_flat = false) {
+py::bytes compress_helper(
+	const py::array &labels, 
+	const bool force_flat = false,
+	const bool fortran_order = true
+) {
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.shape()[1];
 	const uint64_t sz = labels.shape()[2];
@@ -52,28 +55,30 @@ py::bytes compress_helper(const py::array &labels, const bool force_flat = false
 	std::vector<unsigned char> buf = crackle::compress<LABEL>(
 		reinterpret_cast<LABEL*>(const_cast<void*>(labels.data())),
 		sx, sy, sz,
-		force_flat
+		force_flat,
+		fortran_order
 	);
 	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
 }
 
 py::bytes compress(
 	const py::array &labels, 
-	const bool force_flat = false
+	const bool force_flat = false,
+	const bool fortran_order = true
 ) {
 	int width = labels.dtype().itemsize();
 
 	if (width == 1) {
-		return compress_helper<uint8_t>(labels, force_flat);
+		return compress_helper<uint8_t>(labels, force_flat, fortran_order);
 	}
 	else if (width == 2) {
-		return compress_helper<uint16_t>(labels, force_flat);
+		return compress_helper<uint16_t>(labels, force_flat, fortran_order);
 	}
 	else if (width == 4) {
-		return compress_helper<uint32_t>(labels, force_flat);
+		return compress_helper<uint32_t>(labels, force_flat, fortran_order);
 	}
 	else {
-		return compress_helper<uint64_t>(labels, force_flat);
+		return compress_helper<uint64_t>(labels, force_flat, fortran_order);
 	}
 }
 

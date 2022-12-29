@@ -30,7 +30,8 @@ class CrackleHeader:
     crack_format:int,
     data_width:int, stored_data_width:int,
     sx:int, sy:int, sz:int,
-    num_label_bytes:int
+    num_label_bytes:int,
+    fortran_order:bool
   ):
     self.label_format = label_format
     self.crack_format = crack_format
@@ -40,6 +41,7 @@ class CrackleHeader:
     self.sy = int(sy)
     self.sz = int(sz)
     self.num_label_bytes = num_label_bytes
+    self.fortran_order = fortran_order
     # should we have a field that is y/n pins?
 
   @classmethod
@@ -52,7 +54,7 @@ class CrackleHeader:
     	raise FormatError(f"Wrong format version. Got: {buffer[4]} Expected: {CrackleHeader.FORMAT_VERSION}")
 
     values = unpack_bits(int(buffer[5]), [
-      2, 2, 1, 2
+      2, 2, 1, 2, 1
     ])
 
     return CrackleHeader(
@@ -64,6 +66,7 @@ class CrackleHeader:
     	sy=int.from_bytes(buffer[10:14], byteorder='little', signed=False),
     	sz=int.from_bytes(buffer[14:18], byteorder='little', signed=False),
     	num_label_bytes=int.from_bytes(buffer[18:22], byteorder='little', signed=False),
+      fortran_order=bool(values[4]),
     )
 
   def tobytes(self) -> bytes:
@@ -72,6 +75,7 @@ class CrackleHeader:
       (int(np.log2(self.stored_data_width)), 2),
       (self.crack_format, 1),
       (self.label_format, 2),
+      (self.fortran_order, 1),
     ])
 
     return b''.join([

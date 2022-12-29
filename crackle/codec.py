@@ -187,10 +187,12 @@ def decompress(binary:bytes) -> np.ndarray:
   sx, sy, sz = header.sx, header.sy, header.sz
 
   labels = fastcrackle.decompress(binary)
-  labels = labels.reshape((sx,sy,sz), order='F')
+  order = 'F' if header.fortran_order else 'C'
+  labels = labels.reshape((sx,sy,sz), order=order)
   return labels
 
 def compress(labels:np.ndarray, force_flat:bool = False) -> bytes:
+  f_order = labels.flags.f_contiguous
   labels = np.asfortranarray(labels)
-  return fastcrackle.compress(labels, force_flat)
+  return fastcrackle.compress(labels, force_flat, f_order)
 

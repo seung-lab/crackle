@@ -26,7 +26,8 @@ template <typename LABEL, typename STORED_LABEL>
 std::vector<unsigned char> compress_helper(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
-	const bool force_flat = false
+	const bool force_flat = false,
+	const bool fortran_order = true
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -52,7 +53,8 @@ std::vector<unsigned char> compress_helper(
 		/*sx=*/sx,
 		/*sy=*/sy,
 		/*sz=*/sz,
-		/*num_label_bytes=*/0
+		/*num_label_bytes=*/0,
+		/*fortran_order*/fortran_order
 	);
 	std::vector<std::vector<unsigned char>> 
 		crack_codes = crackle::crackcodes::encode_boundaries(
@@ -98,7 +100,8 @@ template <typename LABEL>
 std::vector<unsigned char> compress(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
-	const bool force_flat = false
+	const bool force_flat = false,
+	const bool fortran_order = true
 ) {
 	const int64_t voxels = sx * sy * sz;
 	uint8_t stored_data_width = crackle::lib::compute_byte_width(
@@ -106,16 +109,16 @@ std::vector<unsigned char> compress(
 	);
 
 	if (stored_data_width == 1) {
-		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, force_flat);
+		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, force_flat, fortran_order);
 	}
 	else if (stored_data_width == 2) {
-		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, force_flat);
+		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, force_flat, fortran_order);
 	}
 	else if (stored_data_width == 4) {
-		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, force_flat);
+		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, force_flat, fortran_order);
 	}
 	else {
-		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, force_flat);
+		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, force_flat, fortran_order);
 	}
 }
 
@@ -215,7 +218,6 @@ template <typename LABEL>
 LABEL* decompress(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
-	const bool fortran_order = true,
 	LABEL* output = NULL
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
@@ -274,7 +276,7 @@ LABEL* decompress(
 		output = new LABEL[voxels]();
 	}
 
-	if (fortran_order) {
+	if (header.fortran_order) {
 		for (uint64_t i = 0; i < voxels; i++) {
 			output[i] = label_map[cc_labels[i]];
 		}
@@ -296,27 +298,23 @@ LABEL* decompress(
 template <typename LABEL>
 LABEL* decompress(
 	const std::vector<unsigned char>& buffer,
-	const bool fortran_order = true,
 	LABEL* output = NULL
 ) {
 	return decompress<LABEL>(
 		buffer.data(),
 		buffer.size(),
-		fortran_order, 
 		output
 	);
 }
 
 template <typename LABEL>
 LABEL* decompress(
-	const std::string &buffer, 
-	const bool fortran_order = true,
+	const std::string &buffer,
 	LABEL* output = NULL
 ) {
 	return decompress<LABEL>(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size(),
-		fortran_order,
 		output
 	);
 }

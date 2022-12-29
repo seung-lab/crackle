@@ -42,6 +42,7 @@ public:
 	uint32_t sy;
 	uint32_t sz;
 	uint32_t num_label_bytes;
+	bool fortran_order;
 
 	CrackleHeader() :
 		format_version(0),
@@ -49,7 +50,7 @@ public:
 		crack_format(CrackFormat::IMPERMISSIBLE),
 		data_width(1), stored_data_width(1),
 		sx(1), sy(1), sz(1), 
-		num_label_bytes(0)
+		num_label_bytes(0), fortran_order(true)
 	{}
 
 	CrackleHeader(
@@ -59,14 +60,15 @@ public:
 		const uint8_t _data_width,
 		const uint8_t _stored_data_width,
 		const uint32_t _sx, const uint32_t _sy, const uint32_t _sz,
-		const uint32_t _num_label_bytes
+		const uint32_t _num_label_bytes,
+		const bool _fortran_order
 	) : 
 		format_version(_format_version),
 		label_format(_label_fmt),
 		crack_format(_crack_fmt),
 		data_width(_data_width), stored_data_width(_stored_data_width),
 		sx(_sx), sy(_sy), sz(_sz),
-		num_label_bytes(_num_label_bytes)
+		num_label_bytes(_num_label_bytes), fortran_order(_fortran_order)
 	{}
 
 	void assign_from_buffer(const unsigned char* buf) {
@@ -86,7 +88,8 @@ public:
 		data_width = pow(2, (format_byte & 0b00000011));
 		stored_data_width = pow(2, (format_byte & 0b00001100) >> 2);
 		crack_format = static_cast<CrackFormat>((format_byte & 0b00010000) >> 4);
-		label_format = static_cast<LabelFormat>((format_byte & 0b01100000) >> 5);		
+		label_format = static_cast<LabelFormat>((format_byte & 0b01100000) >> 5);
+		fortran_order = static_cast<bool>((format_byte & 0b10000000) >> 7);
 	}
 
 	CrackleHeader(const unsigned char* buf) {
@@ -132,6 +135,7 @@ public:
 		format_byte |= static_cast<uint8_t>(log2(stored_data_width)) << 2;
 		format_byte |= static_cast<uint8_t>(crack_format) << 4;
 		format_byte |= static_cast<uint8_t>(label_format) << 5;
+		format_byte |= static_cast<uint8_t>(fortran_order) << 7;
 
 		i += lib::itoc(format_version, buf, i);
 		i += lib::itoc(format_byte, buf, i);

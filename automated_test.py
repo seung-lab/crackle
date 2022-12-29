@@ -112,13 +112,5 @@ def test_remap():
 
   binary = crackle.remap(binary, { i:i+1 for i in range(1000) }, preserve_missing_labels=False)
   labels = crackle.labels(binary)
-  assert np.all(labels == np.arange(1,1001))  
-
-
-
-
-
-
-
-
+  assert np.all(labels == np.arange(1,1001))
 
