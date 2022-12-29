@@ -29,6 +29,10 @@ remapped = crackle.remap(
 # automatically gzipped (or ungzipped)
 crackle.save(labels, "example.ckl.gz")
 labels = crackle.load("example.ckl.gz")
+
+arr = crackle.CrackleArray(binary)
+res = arr[:10,:10,:10] # array slicing (not efficient yet)
+20 in arr # highly efficient search
 ```
 
 *This repository is currently highly experimental.*
