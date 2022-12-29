@@ -96,7 +96,7 @@ struct Graph {
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
-						equivalences.unify(node_up, node_down);
+						equivalences.ids[node_down] = node_up;
 						all_edges.push_back(mkedge(node_up, node_down));
 					}
 				}
@@ -125,7 +125,7 @@ struct Graph {
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
-						equivalences.unify(node_up, node_down);
+						equivalences.ids[node_down] = node_up;
 						all_edges.push_back(mkedge(node_up, node_down));
 					}
 				}
