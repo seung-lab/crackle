@@ -1,5 +1,10 @@
 # Crackle: Next gen. 3D segmentation compression codec.
 
+```bash
+crackle data.npy # creates data.ckl
+crackle -d data.ckl # recovers data.npy
+```
+
 ```python
 import crackle
 import numpy
