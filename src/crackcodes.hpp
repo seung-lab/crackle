@@ -87,37 +87,63 @@ struct Graph {
 
 		std::vector<std::pair<int64_t, int64_t>> all_edges;
 
-		std::function<int(int,int)> check = [](int a, int b) { return a != b; };
 		if (permissible) {
-			check = [](int a, int b) { return a == b; };
-		}
+			// assign vertical edges
+			for (int64_t y = 0; y < sy; y++) {
+				for (int64_t x = 1; x < sx; x++) {
+					if (labels[x + sx * y] == labels[(x-1) + sx * y]) {
+						int64_t node_up = x + sxe * y;
+						int64_t node_down = x + sxe * (y + 1);
+						adjacency[node_up] |= 0b0100;
+						adjacency[node_down] |= 0b1000;
+						equivalences.unify(node_up, node_down);
+						all_edges.push_back(mkedge(node_up, node_down));
+					}
+				}
+			}
 
-		// assign vertical edges
-		for (int64_t y = 0; y < sy; y++) {
-			for (int64_t x = 1; x < sx; x++) {
-				if (check(labels[x + sx * y], labels[(x-1) + sx * y])) {
-					int64_t node_up = x + sxe * y;
-					int64_t node_down = x + sxe * (y + 1);
-					adjacency[node_up] |= 0b0100;
-					adjacency[node_down] |= 0b1000;
-					equivalences.unify(node_up, node_down);
-					all_edges.push_back(mkedge(node_up, node_down));
+			// assign horizontal edges
+			for (int64_t y = 1; y < sy; y++) {
+				for (int64_t x = 0; x < sx; x++) {
+					if (labels[x + sx * y] == labels[x + sx * (y-1)]) {
+						int64_t node_left = x + sxe * y;
+						int64_t node_right = (x+1) + sxe * y;
+						adjacency[node_left] |= 0b0001;
+						adjacency[node_right] |= 0b0010;
+						equivalences.unify(node_left, node_right);
+						all_edges.push_back(mkedge(node_left, node_right));
+					}
 				}
 			}
 		}
-
-		// assign horizontal edges
-		for (int64_t y = 1; y < sy; y++) {
-			for (int64_t x = 0; x < sx; x++) {
-				if (check(labels[x + sx * y], labels[x + sx * (y-1)])) {
-					int64_t node_left = x + sxe * y;
-					int64_t node_right = (x+1) + sxe * y;
-					adjacency[node_left] |= 0b0001;
-					adjacency[node_right] |= 0b0010;
-					equivalences.unify(node_left, node_right);
-					all_edges.push_back(mkedge(node_left, node_right));
+		else {
+			// assign vertical edges
+			for (int64_t y = 0; y < sy; y++) {
+				for (int64_t x = 1; x < sx; x++) {
+					if (labels[x + sx * y] != labels[(x-1) + sx * y]) {
+						int64_t node_up = x + sxe * y;
+						int64_t node_down = x + sxe * (y + 1);
+						adjacency[node_up] |= 0b0100;
+						adjacency[node_down] |= 0b1000;
+						equivalences.unify(node_up, node_down);
+						all_edges.push_back(mkedge(node_up, node_down));
+					}
 				}
 			}
+
+			// assign horizontal edges
+			for (int64_t y = 1; y < sy; y++) {
+				for (int64_t x = 0; x < sx; x++) {
+					if (labels[x + sx * y] != labels[x + sx * (y-1)]) {
+						int64_t node_left = x + sxe * y;
+						int64_t node_right = (x+1) + sxe * y;
+						adjacency[node_left] |= 0b0001;
+						adjacency[node_right] |= 0b0010;
+						equivalences.unify(node_left, node_right);
+						all_edges.push_back(mkedge(node_left, node_right));
+					}
+				}
+			}			
 		}
 
 		component_edge_list.resize(all_edges.size() * 2);
