@@ -234,7 +234,7 @@ std::vector<CandidatePin> find_optimal_pins(
 				heap.erase(heap_ptrs[i]);
 			}
 			else {
-				heap.update_key(heap_ptrs[i], tmp.size());
+				heap.update_key(heap_ptrs[i], -1 * tmp.size());
 			}
 		}
 		for (uint64_t i : to_erase) {
