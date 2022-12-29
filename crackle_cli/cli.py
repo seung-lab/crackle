@@ -53,7 +53,7 @@ def print_header(src):
 
 	head = crackle.header(binary)
 	print(f"Filename: {src}")
-	for key,val in head.items():
+	for key,val in head.__dict__.items():
 		print(f"{key}: {val}")
 	print()
 
