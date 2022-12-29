@@ -153,6 +153,31 @@ RANDOM NOISE [0,2000) uint32
       decompress   :  70.71 MVx/sec
       decompress+gz:  47.17 MVx/sec
     
+BINARY NOISE [0,1] uint8 (pathological case)
+
+      ckl:       1843818    
+      cpso:      2900459  (63.57%) 
+      raw:       4194304  (43.96%)
+      ckl.gz:    1194228   
+      cpso.gz    1098294  (108.73%)
+      raw:.gz     667171  (179.00%)
+    
+
+      ckl:       1842842    
+      cpso:      2898730  (63.57%) 
+      raw:       4194304  (43.94%)
+      ckl.gz:    1194008   
+      cpso.gz    1099130  (108.63%)
+      raw:.gz     667111  (178.98%)
+    
+
+      ckl:       1844494    
+      cpso:      2899730  (63.61%) 
+      raw:       4194304  (43.98%)
+      ckl.gz:    1194865   
+      cpso.gz    1100276  (108.60%)
+      raw:.gz     666783  (179.20%)
+
 EMPTY
 
       compress     :  26.56 MVx/sec (607 bytes, 0.0%)
