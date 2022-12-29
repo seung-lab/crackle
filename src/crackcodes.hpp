@@ -310,15 +310,9 @@ create_crack_codes(
 
   const int64_t n_clusters = G.num_components();
 
-  std::unordered_map<int64_t, char> dirmap = {
-    {1, 'r'},
-    {-1, 'l'},
-    {sx+1, 'd'},
-    {-(sx+1), 'u'}
-  };
-
   std::vector<std::pair<int64_t, std::vector<char>>> chains;
   std::vector<int64_t> revisit;
+  revisit.reserve(sx);
 
   if (n_clusters == 0) {
     return symbols_to_integers(chains);
@@ -368,8 +362,21 @@ create_crack_codes(
     	}
 
     	int64_t next_node = neighbors[0];
-    	int64_t dir_taken = dirmap[next_node - node];
-    	code.push_back(dir_taken);
+    	int64_t dir_taken = next_node - node;
+
+    	if (dir_taken == 1) {
+    		code.push_back('r');
+    	}
+    	else if (dir_taken == -1) {
+    		code.push_back('l');
+    	}
+    	else if (dir_taken > 1) {
+    		code.push_back('d');
+    	}
+    	else {
+    		code.push_back('u');
+    	}
+
     	auto edge = mkedge(node, next_node);
     	remaining.erase(edge);
     	G.erase_edge(edge);
