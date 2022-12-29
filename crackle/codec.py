@@ -12,13 +12,17 @@ def header(binary:bytes) -> dict:
 
 def labels(binary:bytes) -> np.ndarray:
   head = header(binary)
+  hb = CrackleHeader.HEADER_BYTES
 
   if head.label_format == LabelFormat.FLAT:
-    return np.unique(
-      decode_flat_labels(binary, head.stored_dtype, head.dtype, head.sz)
-    )
+    # num labels (u64), N labels
+    num_labels = int.from_bytes(binary[hb:hb+8], 'little')
+    offset = hb + 8
+    return np.frombuffer(
+      binary[offset:offset+num_labels*head.stored_data_width],
+      dtype=head.stored_dtype
+    ).astype(head.dtype, copy=False)
   else:
-    hb = CrackleHeader.HEADER_BYTES
     # bgcolor, num labels (u64), N labels, pins
     offset = hb + head.stored_data_width
     num_labels = int.from_bytes(binary[offset:offset+8], 'little')
@@ -30,7 +34,7 @@ def labels(binary:bytes) -> np.ndarray:
     bgcolor = background_color(binary)
     labels = np.concatenate(([ bgcolor ], labels))
     labels.sort()
-    return labels
+    return labels.astype(head.dtype, copy=False)
 
 def contains(binary:bytes, label:int) -> bool:
   head = header(binary)
