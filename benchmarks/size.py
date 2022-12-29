@@ -31,21 +31,17 @@ def run_sample(labels, shape, N):
     ccpso_binary = zlib.compress(cpso_binary)
     craw_binary = zlib.compress(raw_binary)
 
-    mvxs = cutout.size / compress_time / 1e6
-    mvxs_gz = cutout.size / compress_time_gz / 1e6
-    mvxs_cpso = cutout.size / cpso_time / 1e6
-
     print(f"""
-      ckl:     {len(ckl_binary)}    ({mvxs:.2f} MVx/sec)
-      cpso:    {len(cpso_binary)}   ({len(ckl_binary)/len(cpso_binary)*100:.2f}%) ({mvxs_cpso:.2f} MVx/sec)
-      raw:     {len(raw_binary)}   ({len(ckl_binary)/len(raw_binary)*100:.2f}%)
-      ckl.gz:  {len(cckl_binary)}   ({mvxs_gz:.2f} MVx/sec)
-      cpso.gz  {len(ccpso_binary)}  ({len(cckl_binary)/len(ccpso_binary)*100:.2f}%)
-      raw:.gz  {len(craw_binary)}  ({len(cckl_binary)/len(craw_binary)*100:.2f}%)
+      ckl:     {len(ckl_binary): 9}    
+      cpso:    {len(cpso_binary): 9}  ({len(ckl_binary)/len(cpso_binary)*100:.2f}%) 
+      raw:     {len(raw_binary): 9}  ({len(ckl_binary)/len(raw_binary)*100:.2f}%)
+      ckl.gz:  {len(cckl_binary): 9}   
+      cpso.gz  {len(ccpso_binary): 9}  ({len(cckl_binary)/len(ccpso_binary)*100:.2f}%)
+      raw:.gz  {len(craw_binary): 9}  ({len(cckl_binary)/len(craw_binary)*100:.2f}%)
     """, flush=True)
 
 N = 3
-shape = (128,128,64)
+shape = (256,256,64)
 
 print("shape:", shape)
 
