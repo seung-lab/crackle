@@ -1,3 +1,5 @@
+Note that all numbers provided are for the "flat" label layout. The pin layout is still under investigation (it is much slower and may not always provide a benefit).
+
 ## Size Benchmark
 shape: (256, 256, 64)
 PINKY40 CUTOUTS (connectomics.npy)
