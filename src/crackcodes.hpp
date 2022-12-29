@@ -319,6 +319,7 @@ create_crack_codes(
   std::vector<std::pair<int64_t, std::vector<char>>> chains;
   std::vector<int64_t> revisit;
   revisit.reserve(sx);
+  std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
 
   if (n_clusters == 0) {
     return symbols_to_integers(chains);
@@ -352,6 +353,7 @@ create_crack_codes(
 	    			node = revisit.back();
 	    			revisit.pop_back();
 	    			if (node > -1) {
+	    				revisit_ct[node]--;
 	    				break;
 	    			}
 	    		}
@@ -364,6 +366,7 @@ create_crack_codes(
     	else if (neighbors.size() > 1) {
     		code.push_back('b');
     		revisit.push_back(node);
+    		revisit_ct[node]++;
     		branch_nodes[node].push_back(code.size() - 1);
     		branches_taken++;
     	}
@@ -392,7 +395,7 @@ create_crack_codes(
     	// if we reencounter a node we've already visited,
     	// remove it from revisit and replace the branch. 
     	// with a skip.
-    	if (branch_nodes[node].size()) {
+    	if (revisit_ct[node]) {
 				int64_t pos = revisit.size() - 1;
 				for (; pos >= 0; pos--) {
 					if (revisit[pos] == node) {
@@ -403,6 +406,7 @@ create_crack_codes(
 				branches_taken--;
 				code[branch_nodes[node].back()] = 's';
 				branch_nodes[node].pop_back();
+				revisit_ct[node]--;
 			}
     }
 
