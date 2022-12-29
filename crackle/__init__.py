@@ -1,6 +1,6 @@
-from .encoder import compress
-from .decoder import (
-	decompress, labels, remap, 
+from .array import CrackleArray
+from .codec import (
+	compress, decompress, labels, remap, 
 	nbytes, components, component_lengths,
 	header
 )

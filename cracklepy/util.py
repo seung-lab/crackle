@@ -1,7 +1,8 @@
 import os.path
 import gzip
 
-from .codec import compress, decompress
+from .encoder import compress
+from .decoder import decompress
 
 def load(filelike):
   """Load an image from a file-like object or file path."""

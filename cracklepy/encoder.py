@@ -1,28 +1,30 @@
 import numpy as np
 
 import fastremap
-import fastcrackle
 
 from . import crackcode
 from . import pins
 from .headers import CrackleHeader, LabelFormat, CrackFormat
-from .lib import (
-  compute_byte_width, width2dtype, 
-  compute_dtype, eytzinger_sort
-)
+from .lib import compute_byte_width, width2dtype, compute_dtype
+from .ccl import connected_components
 
 def encode_flat_labels(labels, stored_data_dtype):
   sx,sy,sz = labels.shape
 
-  cc_labels, components, N_total = fastcrackle.connected_components(labels)
-  cc_labels = cc_labels.reshape(labels.shape, order='F')
-  components = np.array(components, dtype=np.uint32)
+  components = np.zeros((sz,), dtype=np.uint32)
+  cc_labels = np.zeros((sx,sy,sz), dtype=np.uint32)
+  N_total = 0
+  for z in range(sz):
+    cc_slice, N = connected_components(labels[:,:,z])
+    cc_slice += N_total
+    cc_labels[:,:,z] = cc_slice
+    N_total += N
+    components[z] = N
 
   mapping = fastremap.component_map(cc_labels, labels)
   
   uniq = np.array(list(mapping.values()), dtype=stored_data_dtype)
   uniq = np.unique(uniq)
-  uniq = np.array(eytzinger_sort(uniq), dtype=stored_data_dtype)
 
   remapping = { k:i for i,k in enumerate(uniq) }
   key_dtype = compute_dtype(len(uniq))

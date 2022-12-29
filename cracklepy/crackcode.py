@@ -128,7 +128,7 @@ def remove_initial_branch(code, sx, sy):
   code[0] = node
   return code
 
-def create_crack_codes(labels, permissible) -> List[List[chr]]:
+def create_crack_codes(labels, permissible) -> List[List[int]]:
   sx, sy = labels.shape
   G = create_graph(labels, permissible=permissible)
   Gcc = list(nx.connected_components(G))
@@ -198,7 +198,89 @@ def create_crack_codes(labels, permissible) -> List[List[chr]]:
     code = remove_initial_branch(code, sx, sy)
     chains.append(code)
 
-  return symbols_to_integers(chains)
+  return symbols_to_integers(
+    # chains
+    relative_code_directions(chains)
+  )
+
+def relative_code_directions(chains):
+  encoded_chains = []
+
+  relative_map = {
+    'u': {
+      'u': 'u',
+      'd': 'd',
+      'l': 'l',
+      'r': 'r',
+      'b': 'b',
+      't': 't',
+    },
+    'l': {
+      'u': 'r',
+      'd': 'l',
+      'l': 'u',
+      'r': 'd',
+      'b': 'b',
+      't': 't',
+    },
+    'd': {
+      'u': 'd',
+      'd': 'u',
+      'l': 'r',
+      'r': 'l',
+      'b': 'b',
+      't': 't',
+    },
+    'r': {
+      'u': 'l',
+      'd': 'r',
+      'l': 'd',
+      'r': 'u',
+      'b': 'b',
+      't': 't',
+    },
+  }
+
+  for chain in chains:
+    code = [ chain[0] ] # node
+    
+    direction = None
+    for move in chain[1:]:
+      if move == 's':
+        code.append(move)  
+        continue
+      if move in ('b','t'):
+        code.append(move)
+        direction = None
+        continue
+      if direction is None:
+        direction = move
+        code.append(move)
+        continue
+
+      tmp = move
+      move = relative_map[direction][move]
+      direction = tmp
+      code.append(move)
+    encoded_chains.append(code)
+
+  print()
+  frequency_table(chains)  
+  frequency_table(encoded_chains)
+
+  return encoded_chains
+
+def frequency_table(chains):
+  counts = defaultdict(int)
+  for chain in chains:
+    for i, symbol in enumerate(chain[1:]):
+      counts[symbol] += 1
+      # if i > 2:
+      #   counts[(chain[i-1], chain[i])] += 1
+
+  import pprint
+  pp = pprint.PrettyPrinter(width=60, compact=True)
+  pp.pprint(counts)
 
 def symbols_to_integers(chains):
   encoded_chains = []

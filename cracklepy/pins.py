@@ -3,45 +3,19 @@ from collections import defaultdict
 import numpy as np
 from tqdm import tqdm
 
-import fastcrackle
-
-from .lib import compute_byte_width, eytzinger_sort
-
-def append_pin(pinsets, label, z_start, x, y, z, cc_set):
-  # try to reduce candidate pins by filtering
-  # out ones that are strictly dominated by their
-  # neighboring pin
-  if (
-    len(pinsets[label])
-    and pinsets[label][-1][0][0] == x-1
-    and pinsets[label][-1][0][1] == y
-  ):
-    if (
-      pinsets[label][-1][0][2] <= z_start
-      and pinsets[label][-1][1][2] >= z
-    ):
-      pass
-    elif (
-      pinsets[label][-1][0][2] >= z_start
-      and pinsets[label][-1][1][2] <= z
-    ):
-      pinsets[label][-1] = (
-        (x,y,z_start), (x,y,z), set(cc_set)
-      )
-    else:
-      pinsets[label].append(
-        ((x,y,z_start), (x,y,z), set(cc_set))
-      )
-  else:
-    pinsets[label].append(
-      ((x,y,z_start), (x,y,z), set(cc_set))
-    )
+from .ccl import connected_components
+from .lib import compute_byte_width
 
 def extract_columns(labels:np.ndarray):
   sx,sy,sz = labels.shape
 
-  cc_labels, components, N_total = fastcrackle.connected_components(labels)
-  cc_labels = cc_labels.reshape(labels.shape, order='F')
+  cc_labels = np.zeros((sx,sy,sz), dtype=np.uint32)
+  N_total = 0
+  for z in range(sz):
+    cc_slice, N = connected_components(labels[:,:,z])
+    cc_slice += N_total
+    cc_labels[:,:,z] = cc_slice
+    N_total += N
 
   pinsets = defaultdict(list)
     
@@ -52,11 +26,22 @@ def extract_columns(labels:np.ndarray):
       for z in range(1, sz):
         cur = labels[x,y,z]
         if label != cur:
-          append_pin(pinsets, label, z_start, x, y, z-1, cc_labels[x,y,z_start:z])
+          pinsets[label].append(
+            ((x,y,z_start), (x,y,z-1), set(cc_labels[x,y,z_start:z]))
+          )
           label = cur
           z_start = z
 
-      append_pin(pinsets, label, z_start, x, y, z, cc_labels[x,y,z_start:])
+      if not (
+        len(pinsets[label])
+        and pinsets[label][-1][0][0] == x-1
+        and pinsets[label][-1][0][1] == y
+        and pinsets[label][-1][0][2] <= z_start
+        and pinsets[label][-1][1][2] >= z
+      ):
+        pinsets[label].append(
+          ((x,y,z_start), (x,y,z), set(cc_labels[x,y,z_start:]))
+        )
 
   return pinsets
 
@@ -72,9 +57,6 @@ def find_optimal_pins(pinset):
     idx = sizes.index(max(sizes))
     i, cur = isets.pop(idx)
     universe -= cur
-    if len(universe) == 0:
-      final_pins.append(pinset[i][:2])
-      break
     for j, otherset in isets:
       otherset -= cur
     isets = [ x for x in isets if len(x[1]) > 0 ]
@@ -123,7 +105,7 @@ def fixed_width_binary(
   linear = sorted(linear, key=lambda x: x[1])
   bgcolor = max_pins_label.to_bytes(stored_data_width, 'little')
 
-  all_labels = eytzinger_sort(list(all_pins.keys()))
+  all_labels = sorted(list(all_pins.keys()))
 
   bytestream = []
   bytestream.append(bgcolor) # bgcolor
@@ -176,3 +158,7 @@ def condensed_binary(
   del linear
 
   return b''.join(bytestream)
+
+
+
+

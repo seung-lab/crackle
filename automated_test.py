@@ -1,5 +1,5 @@
 import crackle
-import crackle.crackcode
+import cracklepy.crackcode
 import numpy as np
 
 import compresso
@@ -10,7 +10,7 @@ def test_create_graph():
   labels = np.zeros((3,3), dtype=np.uint32)
   labels[1,1] = 1
 
-  G = crackle.crackcode.create_graph(labels)
+  G = cracklepy.crackcode.create_graph(labels)
 
   assert set(G.nodes) == set([5,9,6,10])
   assert set(G.edges) == set([(5,9), (5,6), (6,10), (9,10)])
@@ -19,7 +19,7 @@ def test_create_crack_codes():
   labels = np.zeros((3,3), dtype=np.uint32)
   labels[1,1] = 1
 
-  codes = crackle.crackcode.create_crack_codes(labels, permissible=False)
+  codes = cracklepy.crackcode.create_crack_codes(labels, permissible=False)
   ans = [[9, 1, 0, 2, 3, 3, 0]]
   assert codes == ans
 
@@ -30,24 +30,24 @@ def test_packed_encoding(size):
 
   sx = sy = size
 
-  packed_code = crackle.crackcode.pack_codes(chains, sx, sy)
-  recovered = crackle.crackcode.unpack_binary(packed_code, sx, sy)
+  packed_code = cracklepy.crackcode.pack_codes(chains, sx, sy)
+  recovered = cracklepy.crackcode.unpack_binary(packed_code, sx, sy)
 
   assert ans == recovered
 
 def test_remove_initial_branch():
   code = []
-  assert crackle.crackcode.remove_initial_branch(code, 5, 5) == []
+  assert cracklepy.crackcode.remove_initial_branch(code, 5, 5) == []
 
   code = [10, 'd','u','t']
-  assert crackle.crackcode.remove_initial_branch(code, 5, 5) == code
+  assert cracklepy.crackcode.remove_initial_branch(code, 5, 5) == code
 
   code = [10, 'b', 'd', 'r', 't']
-  revised = crackle.crackcode.remove_initial_branch(code, 5, 5)
+  revised = cracklepy.crackcode.remove_initial_branch(code, 5, 5)
   assert revised == [17, 's', 's', 'l', 'u']
 
   code = [10, 'b', 'd', 'b', 'r', 't']
-  revised = crackle.crackcode.remove_initial_branch(code, 5, 5)
+  revised = cracklepy.crackcode.remove_initial_branch(code, 5, 5)
   assert revised == [10, 'b', 'd', 'b', 'r', 't']
 
 
