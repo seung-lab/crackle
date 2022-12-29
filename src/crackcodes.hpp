@@ -20,7 +20,7 @@ enum DirectionCode {
 	DOWN = 0b11
 };
 
-std::pair<int64_t, int64_t> mkedge(int64_t a, int64_t b){
+inline std::pair<int64_t, int64_t> mkedge(int64_t a, int64_t b){
 	if (a < b) {
 		return std::make_pair(a,b);
 	}
@@ -92,6 +92,7 @@ struct Graph {
 		}
 
 		std::vector<std::pair<int64_t, int64_t>> all_edges;
+		all_edges.reserve(sxe * sye / 10);
 
 		if (permissible) {
 			// assign vertical edges
@@ -103,7 +104,7 @@ struct Graph {
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
 						equivalences.ids[node_down] = node_up;
-						all_edges.push_back(mkedge(node_up, node_down));
+						all_edges.emplace_back(node_up,node_down);
 					}
 				}
 			}
@@ -117,7 +118,7 @@ struct Graph {
 						adjacency[node_left] |= 0b0001;
 						adjacency[node_right] |= 0b0010;
 						equivalences.unify(node_left, node_right);
-						all_edges.push_back(mkedge(node_left, node_right));
+						all_edges.emplace_back(node_left,node_right);
 					}
 				}
 			}
@@ -132,7 +133,7 @@ struct Graph {
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
 						equivalences.ids[node_down] = node_up;
-						all_edges.push_back(mkedge(node_up, node_down));
+						all_edges.emplace_back(node_up,node_down);
 					}
 				}
 			}
@@ -146,7 +147,7 @@ struct Graph {
 						adjacency[node_left] |= 0b0001;
 						adjacency[node_right] |= 0b0010;
 						equivalences.unify(node_left, node_right);
-						all_edges.push_back(mkedge(node_left, node_right));
+						all_edges.emplace_back(node_left, node_right);
 					}
 				}
 			}			
@@ -154,7 +155,7 @@ struct Graph {
 
 		component_edge_list.resize(all_edges.size() * 2);
 
-		robin_hood::unordered_flat_map<int64_t,int64_t> renumber;
+		std::vector<int64_t> renumber(sxe*sye);
 		int64_t next_label = 1;
 		int64_t label = 0;
 		int64_t membership = 0;
@@ -345,7 +346,7 @@ create_crack_codes(
     while (!remaining.empty() || !revisit.empty()) {
     	G.neighbors(node, neighbors);
 
-    	if (neighbors.empty()) {
+    	if (!G.adjacency[node]) {
     		code.push_back('t');
     		branches_taken--;
     		if (!revisit.empty()) {
