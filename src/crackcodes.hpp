@@ -33,8 +33,8 @@ struct Graph {
 	int64_t sxe;
 	int64_t sye;
 
-	std::vector<int64_t> neighbors(int64_t node) {
-		std::vector<int64_t> nbrs;
+	void neighbors(int64_t node, std::vector<int64_t> &nbrs) {
+		nbrs.clear();
 		if (adjacency[node] & 0b0001) {
 			nbrs.push_back(node + 1);
 		}
@@ -47,6 +47,12 @@ struct Graph {
 		if (adjacency[node] & 0b1000) {
 			nbrs.push_back(node - sxe);
 		}
+	}
+
+	std::vector<int64_t> neighbors(int64_t node) {
+		std::vector<int64_t> nbrs;
+		nbrs.reserve(4);
+		neighbors(node, nbrs);
 		return nbrs;
 	}
 
@@ -318,6 +324,7 @@ create_crack_codes(
     return symbols_to_integers(chains);
   }
 
+  std::vector<int64_t> neighbors;
   for (int64_t cluster = 0; cluster < n_clusters; cluster++) {
   	robin_hood::unordered_flat_set<std::pair<int64_t, int64_t>, pair_hash>
   		remaining;
@@ -335,7 +342,7 @@ create_crack_codes(
     int64_t branches_taken = 1;
 
     while (!remaining.empty() || !revisit.empty()) {
-    	auto neighbors = G.neighbors(node);
+    	G.neighbors(node, neighbors);
 
     	if (neighbors.empty()) {
     		code.push_back('t');
@@ -385,18 +392,18 @@ create_crack_codes(
     	// if we reencounter a node we've already visited,
     	// remove it from revisit and replace the branch. 
     	// with a skip.
-			int64_t pos = revisit.size() - 1;
-			for (; pos >= 0; pos--) {
-				if (revisit[pos] == node) {
-					break;
+    	if (branch_nodes[node].size()) {
+				int64_t pos = revisit.size() - 1;
+				for (; pos >= 0; pos--) {
+					if (revisit[pos] == node) {
+						break;
+					}
 				}
-			}
-			if (pos > -1) {
 				revisit[pos] = -1;
 				branches_taken--;
 				code[branch_nodes[node].back()] = 's';
 				branch_nodes[node].pop_back();
-    	}
+			}
     }
 
     while (branches_taken > 0) {
