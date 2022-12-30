@@ -433,14 +433,11 @@ std::vector<uint64_t> read_boc_index(
 	std::vector<uint64_t> nodes;
 
 	const uint64_t sxe = sx + 1;
-	const uint64_t sye = sy + 1;
 
 	const uint64_t x_width = crackle::lib::compute_byte_width(sx+1);
 	const uint64_t y_width = crackle::lib::compute_byte_width(sy+1);
 
-	uint64_t idx = 0;
-	uint32_t index_size = crackle::lib::ctoid(binary, idx, 4);
-
+	uint64_t idx = 4; // skip over index size
 	uint64_t num_y = crackle::lib::ctoid(binary, idx, y_width);
 	idx += y_width;
 
@@ -604,9 +601,11 @@ unpack_binary(
 	char remap[4] = { 'u', 'r', 'l', 'd' };
 
 	std::vector<uint64_t> nodes = read_boc_index(code, sx, sy);
-	int node_i = 0;
+	uint32_t index_size = crackle::lib::ctoid(code, 0, 4);
 
-	for (uint64_t i = 0; i < code.size(); i++) {
+	uint64_t node_i = 0;
+
+	for (uint64_t i = index_size; i < code.size(); i++) {
 		if (branches_taken == 0) {
 			node = nodes[node_i];
 			node_i++;
