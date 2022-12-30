@@ -425,17 +425,25 @@ create_crack_codes(
   return symbols_to_integers(chains);
 }
 
-std::vector<unsigned char> pack_codes(
-	const std::vector<std::vector<uint64_t>>& chains,
+std::vector<unsigned char> write_boc_index(
+	std::vector<std::vector<uint64_t>>& chains,
 	const uint64_t sx, const uint64_t sy
 ) {
-	uint64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
+	struct {
+			bool operator()(
+				const std::vector<uint64_t> &a, const std::vector<uint64_t> &b 
+			) const { 
+				return a[0] < b[0];
+			}
+	} CmpNodeIndex;
 
-
-	std::sort(chains.begin(), chains.end(), [](){ chain[0] });
+	std::sort(chains.begin(), chains.end(), CmpNodeIndex);
 
 	const uint64_t sxe = sx + 1;
 	const uint64_t sye = sy + 1;
+
+	const uint64_t x_width = crackle::lib::compute_byte_width(sx+1);
+	const uint64_t y_width = crackle::lib::compute_byte_width(sy+1);
 
 	// beginning of chain index
 	std::vector<std::vector<uint64_t>> boc(sye);
@@ -449,25 +457,49 @@ std::vector<unsigned char> pack_codes(
 		boc[y].push_back(x);
 	}
 
-	for (uint64_t i = 0; i < 2; i++) {
-		binary.push_back((start_y >> (8*i)) & 0xff);
+	uint64_t index_size = y_width;
+	uint64_t num_y = 0;
+	for (int i = 0; i < boc.size(); i++) {
+		index_size += (boc[i].size() > 0) * y_width;
+		index_size += (boc[i].size() > 0) * (boc[i].size() + 1) * x_width;
+		num_y += (boc[i].size() > 0);
 	}
 
-	for (int y = start_y; y < sye; y++) {
+	std::vector<unsigned char> binary(index_size);
 
-	}
-
-
-
-
-	std::vector<unsigned char> binary;
-
-	for (auto& chain : chains) {
-		// serialize node
-		for (uint64_t i = 0; i < byte_width; i++) {
-			binary.push_back((chain[0] >> (8*i)) & 0xff);
+	uint64_t idx = 0;
+	idx += crackle::lib::itocd(num_y, binary, idx, y_width);
+	idx += crackle::lib::itocd(start_y, binary, idx, y_width);
+	uint64_t y = start_y;
+	while (y < sye) {
+		idx += crackle::lib::itocd(boc[y].size(), binary, idx, x_width);
+		uint64_t last_x = 0;
+		for (uint64_t x : boc[y]) {
+			idx += crackle::lib::itocd(x - last_x, binary, idx, x_width);
+			last_x = x;
 		}
 
+		uint64_t delta = 0;
+		while (boc[y+delta].size() == 0 && (y+delta) < sye) {
+			delta++;
+		}
+		if (y+delta >= sye) {
+			break;
+		}
+		idx += crackle::lib::itocd(delta, binary, idx, y_width);
+		y += delta;
+	}
+
+	return binary;
+}
+
+std::vector<unsigned char> pack_codes(
+	std::vector<std::vector<uint64_t>>& chains,
+	const uint64_t sx, const uint64_t sy
+) {
+	std::vector<unsigned char> binary = write_boc_index(chains, sx, sy);
+
+	for (auto& chain : chains) {
 		uint64_t all_moves = chain.size() - 1;
 		all_moves -= (all_moves % 4);
 
