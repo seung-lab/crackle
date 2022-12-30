@@ -472,12 +472,10 @@ std::vector<unsigned char> write_boc_index(
 	// beginning of chain index
 	robin_hood::unordered_node_map<uint64_t, std::vector<uint64_t>> boc(sye);
 
-	uint64_t start_y = sye;
 	for (auto& chain : chains) {
 		uint64_t node = chain[0];
 		uint64_t y = node / sxe;
 		uint64_t x = node - sxe * y;
-		start_y = std::min(start_y, y);
 		boc[y].push_back(x);
 	}
 
@@ -601,17 +599,17 @@ unpack_binary(
 	char remap[4] = { 'u', 'r', 'l', 'd' };
 
 	std::vector<uint64_t> nodes = read_boc_index(code, sx, sy);
-	uint32_t index_size = crackle::lib::ctoid(code, 0, 4);
+	uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
 
 	uint64_t node_i = 0;
 
 	for (uint64_t i = index_size; i < code.size(); i++) {
 		if (branches_taken == 0) {
-			node = nodes[node_i];
-			node_i++;
 			if (node_i >= nodes.size()) {
 				throw std::runtime_error("corrupted crack code.");
 			}
+			node = nodes[node_i];
+			node_i++;
 			branches_taken = 1;
 			continue;
 		}
