@@ -427,7 +427,7 @@ create_crack_codes(
 
 
 std::vector<uint64_t> read_boc_index(
-	std::vector<unsigned char>& binary,
+	const std::vector<unsigned char>& binary,
 	const uint64_t sx, const uint64_t sy
 ) {
 	std::vector<uint64_t> nodes;
@@ -574,11 +574,10 @@ encode_boundaries(
 	const int64_t sxy = sx * sy;
 
 	for (int64_t z = 0; z < sz; z++) {
+
+		auto codes = create_crack_codes(labels + z * sxy, sx, sy, permissible);
 		binary_components.push_back(
-			pack_codes(
-				create_crack_codes(labels + z * sxy, sx, sy, permissible),
-				sx, sy
-			)
+			pack_codes(codes, sx, sy)
 		);
 	}
 

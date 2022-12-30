@@ -97,6 +97,12 @@ uint64_t ctoid(
 	return val;
 }
 
+uint64_t ctoid(
+	const std::vector<unsigned char>& buf, const uint64_t idx, const int byte_width
+) {
+	return ctoid(buf.data(), idx, byte_width);
+}
+
 template <typename LABEL>
 LABEL max_label(const LABEL* labels, const uint64_t voxels) {
 	LABEL mx = 0;
