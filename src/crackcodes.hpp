@@ -431,6 +431,35 @@ std::vector<unsigned char> pack_codes(
 ) {
 	uint64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
 
+
+	std::sort(chains.begin(), chains.end(), [](){ chain[0] });
+
+	const uint64_t sxe = sx + 1;
+	const uint64_t sye = sy + 1;
+
+	// beginning of chain index
+	std::vector<std::vector<uint64_t>> boc(sye);
+
+	uint64_t start_y = sye;
+	for (auto& chain : chains) {
+		uint64_t node = chain[0];
+		uint64_t y = node / sxe;
+		uint64_t x = node - sxe * y;
+		start_y = std::min(start_y, y);
+		boc[y].push_back(x);
+	}
+
+	for (uint64_t i = 0; i < 2; i++) {
+		binary.push_back((start_y >> (8*i)) & 0xff);
+	}
+
+	for (int y = start_y; y < sye; y++) {
+
+	}
+
+
+
+
 	std::vector<unsigned char> binary;
 
 	for (auto& chain : chains) {
