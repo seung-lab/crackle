@@ -298,6 +298,107 @@ void remove_initial_branch(
 	node = pos_x + sxe * pos_y;
 }
 
+
+auto encode_relative_directions(
+	std::vector<std::pair<int64_t, std::vector<char>>>& chains
+) {
+
+	robin_hood::unordered_flat_map<char,robin_hood::unordered_flat_map<char,char>> relative_map;
+	
+	relative_map['u']['u'] = 'u';
+	relative_map['u']['d'] = 'd';
+	relative_map['u']['l'] = 'l';
+	relative_map['u']['r'] = 'r';
+	relative_map['u']['b'] = 'b';
+	relative_map['u']['t'] = 't';
+
+	relative_map['l']['u'] = 'r';
+	relative_map['l']['d'] = 'l';
+	relative_map['l']['l'] = 'u';
+	relative_map['l']['r'] = 'd';
+	relative_map['l']['b'] = 'b';
+	relative_map['l']['t'] = 't';
+
+	relative_map['d']['u'] = 'd';
+	relative_map['d']['d'] = 'u';
+	relative_map['d']['l'] = 'r';
+	relative_map['d']['r'] = 'l';
+	relative_map['d']['b'] = 'b';
+	relative_map['d']['t'] = 't';
+
+	relative_map['r']['u'] = 'l';
+	relative_map['r']['d'] = 'r';
+	relative_map['r']['l'] = 'd';
+	relative_map['r']['r'] = 'u';
+	relative_map['r']['b'] = 'b';
+	relative_map['r']['t'] = 't';
+
+	for (auto [node, chain] : chains) {
+		char direction = '\0';
+		for (uint64_t i = 0; i < chain.size(); i++) {
+			char move = chain[i];
+			if (move == 's') {
+				continue;
+			}
+			else if (move == 'b' || move == 't') {
+				direction = '\0';
+				continue;
+			}
+			if (direction == '\0') {
+				direction = move;
+				continue;
+			}
+
+			char tmp = move;
+			move = relative_map[direction][move];
+			direction = tmp;
+			chain[i] = move;
+		}
+	}
+
+	return chains;
+}
+
+auto decode_relative_directions(
+	std::unordered_map<uint64_t, std::vector<unsigned char>>& chains
+) {
+
+	char orientation[4] = {'u', 'r', 'd', 'l'};
+	std::vector<int> start_dir(256);
+	start_dir[static_cast<int>('u')] = 0;
+	start_dir[static_cast<int>('r')] = 1;
+	start_dir[static_cast<int>('d')] = 2;
+	start_dir[static_cast<int>('l')] = 3;
+
+	uint8_t direction = 0;
+	bool direction_set = false;
+
+	for (auto [node, chain] : chains) {
+		for (uint64_t i = 0; i < chain.size(); i++) {
+			char move = chain[i];
+			if (move == 's') {
+				continue;
+			}
+			else if (move == 'b' || move == 't') {
+				direction_set = false;
+				continue;
+			}
+			if (direction_set == false) {
+				direction = start_dir[static_cast<int>(move)];
+				direction_set = true;
+				continue;
+			}
+
+			direction += start_dir[static_cast<int>(move)];
+			direction &= 0b11;
+			chain[i] = orientation[direction];
+		}
+	}
+
+	return chains;
+}
+
+
 struct pair_hash {
 	size_t operator()(const std::pair<int64_t, int64_t>& p) const {
 		return p.first + 31 * p.second;
@@ -422,6 +523,7 @@ create_crack_codes(
     );
   }
 
+  encode_relative_directions(chains);
   return symbols_to_integers(chains);
 }
 
@@ -553,6 +655,7 @@ unpack_binary(
 		}
 	}
 
+	decode_relative_directions(chains);
 	return chains;
 }
 
