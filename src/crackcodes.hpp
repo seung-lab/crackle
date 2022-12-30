@@ -473,7 +473,7 @@ std::vector<unsigned char> write_boc_index(
 	const uint64_t y_width = crackle::lib::compute_byte_width(sy+1);
 
 	// beginning of chain index
-	std::vector<std::vector<uint64_t>> boc(sye);
+	robin_hood::unordered_node_map<uint64_t, std::vector<uint64_t>> boc(sye);
 
 	uint64_t start_y = sye;
 	for (auto& chain : chains) {
@@ -484,38 +484,38 @@ std::vector<unsigned char> write_boc_index(
 		boc[y].push_back(x);
 	}
 
+	std::vector<uint64_t> all_y;
+	for (auto pair : boc) {
+		all_y.push_back(pair.first);
+	}
+	std::sort(all_y.begin(), all_y.end());
+
 	uint64_t index_size = y_width;
-	uint64_t num_y = 0;
-	for (int i = 0; i < boc.size(); i++) {
-		index_size += (boc[i].size() > 0) * y_width;
-		index_size += (boc[i].size() > 0) * (boc[i].size() + 1) * x_width;
-		num_y += (boc[i].size() > 0);
+	for (uint64_t y : all_y) {
+		index_size += y_width;
+		index_size += (boc[y].size() + 1) * x_width;
 	}
 
 	std::vector<unsigned char> binary(4 + index_size);
 
 	uint64_t idx = 0;
 	idx += crackle::lib::itocd(index_size, binary, idx, 4);
-	idx += crackle::lib::itocd(num_y, binary, idx, y_width);
-	idx += crackle::lib::itocd(start_y, binary, idx, y_width);
-	uint64_t y = start_y;
-	while (y < sye) {
+	idx += crackle::lib::itocd(all_y.size(), binary, idx, y_width);
+	
+	for (uint64_t i = 0; i < all_y.size(); i++) {
+		if (i == 0) {
+			idx += crackle::lib::itocd(all_y[0], binary, idx, y_width);
+		}
+		else {
+			idx += crackle::lib::itocd(all_y[i] - all_y[i-1], binary, idx, y_width);
+		}
+		uint64_t y = all_y[i];
 		idx += crackle::lib::itocd(boc[y].size(), binary, idx, x_width);
 		uint64_t last_x = 0;
 		for (uint64_t x : boc[y]) {
 			idx += crackle::lib::itocd(x - last_x, binary, idx, x_width);
 			last_x = x;
 		}
-
-		uint64_t delta = 0;
-		while (boc[y+delta].size() == 0 && (y+delta) < sye) {
-			delta++;
-		}
-		if (y+delta >= sye) {
-			break;
-		}
-		idx += crackle::lib::itocd(delta, binary, idx, y_width);
-		y += delta;
 	}
 
 	return binary;
