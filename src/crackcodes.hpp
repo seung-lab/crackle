@@ -448,6 +448,8 @@ std::vector<uint64_t> read_boc_index(
 		idx += y_width;
 
 		uint64_t num_x = crackle::lib::ctoid(binary, idx, x_width);
+		idx += x_width;
+
 		uint64_t x = 0;
 		for (uint64_t xi = 0; xi < num_x; xi++) {
 			x += crackle::lib::ctoid(binary, idx, x_width);
@@ -610,6 +612,7 @@ unpack_binary(
 			}
 			node = nodes[node_i];
 			node_i++;
+			i--; // b/c i will be incremented
 			branches_taken = 1;
 			continue;
 		}
