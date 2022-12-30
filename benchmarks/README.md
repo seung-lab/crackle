@@ -1,4 +1,4 @@
-Note that all numbers provided are for the "flat" label layout. The pin layout is still under investigation (it is much slower and may not always provide a benefit).
+Note that all numbers provided are for the "flat" label layout. The pin layout is still under investigation (it is much slower and may not always provide a benefit). All data were first converted to Fortran order.
 
 ## Size Benchmark
 shape: (256, 256, 64)
@@ -125,90 +125,90 @@ SOLID ONES
 shape: (256, 256, 64)  
 PINKY40 CUTOUTS (connectomics.npy)
 
-      compress     :  51.89 MVx/sec (206730 bytes, 1.2%)
-      compress+gz  :  49.86 MVx/sec (139201 bytes, 67.3%)
-      decompress   :  61.87 MVx/sec
-      decompress+gz:  61.19 MVx/sec
+      compress     :  105.91 MVx/sec (58767 bytes, 0.4%)
+      compress+gz  :  103.73 MVx/sec (43407 bytes, 73.9%)
+      decompress   :  72.90 MVx/sec
+      decompress+gz:  72.47 MVx/sec
     
 
-      compress     :  90.83 MVx/sec (90864 bytes, 0.5%)
-      compress+gz  :  88.39 MVx/sec (67940 bytes, 74.8%)
-      decompress   :  72.77 MVx/sec
-      decompress+gz:  72.38 MVx/sec
+      compress     :  57.63 MVx/sec (173198 bytes, 1.0%)
+      compress+gz  :  55.79 MVx/sec (131285 bytes, 75.8%)
+      decompress   :  66.40 MVx/sec
+      decompress+gz:  65.79 MVx/sec
     
 
-      compress     :  64.93 MVx/sec (143477 bytes, 0.9%)
-      compress+gz  :  63.00 MVx/sec (109468 bytes, 76.3%)
-      decompress   :  67.88 MVx/sec
-      decompress+gz:  67.34 MVx/sec
+      compress     :  54.05 MVx/sec (219674 bytes, 1.3%)
+      compress+gz  :  51.94 MVx/sec (148645 bytes, 67.7%)
+      decompress   :  64.94 MVx/sec
+      decompress+gz:  64.29 MVx/sec
     
 WATERSHED CUTOUTS (ws.npy)
 
-      compress     :  24.21 MVx/sec (573341 bytes, 1.7%)
-      compress+gz  :  23.25 MVx/sec (428509 bytes, 74.7%)
-      decompress   :  45.24 MVx/sec
-      decompress+gz:  44.34 MVx/sec
+      compress     :  24.13 MVx/sec (585525 bytes, 1.7%)
+      compress+gz  :  23.18 MVx/sec (436503 bytes, 74.5%)
+      decompress   :  47.94 MVx/sec
+      decompress+gz:  46.96 MVx/sec
     
 
-      compress     :  25.16 MVx/sec (552975 bytes, 1.6%)
-      compress+gz  :  24.17 MVx/sec (410592 bytes, 74.3%)
-      decompress   :  49.42 MVx/sec
-      decompress+gz:  48.43 MVx/sec
+      compress     :  24.89 MVx/sec (558694 bytes, 1.7%)
+      compress+gz  :  23.91 MVx/sec (418787 bytes, 75.0%)
+      decompress   :  48.52 MVx/sec
+      decompress+gz:  47.55 MVx/sec
     
 
-      compress     :  25.08 MVx/sec (556677 bytes, 1.7%)
-      compress+gz  :  24.10 MVx/sec (414916 bytes, 74.5%)
-      decompress   :  48.29 MVx/sec
-      decompress+gz:  47.33 MVx/sec
+      compress     :  24.88 MVx/sec (562736 bytes, 1.7%)
+      compress+gz  :  23.90 MVx/sec (419293 bytes, 74.5%)
+      decompress   :  47.31 MVx/sec
+      decompress+gz:  46.35 MVx/sec
     
 RANDOM NOISE [0,2000) uint32
 
-      compress     :  11.37 MVx/sec (8405666 bytes, 50.1%)
-      compress+gz  :  9.03 MVx/sec (6882837 bytes, 81.9%)
-      decompress   :  59.66 MVx/sec
-      decompress+gz:  41.83 MVx/sec
+      compress     :  14.65 MVx/sec (8405711 bytes, 50.1%)
+      compress+gz  :  10.98 MVx/sec (6882592 bytes, 81.9%)
+      decompress   :  60.78 MVx/sec
+      decompress+gz:  42.54 MVx/sec
     
 
-      compress     :  11.31 MVx/sec (8405540 bytes, 50.1%)
-      compress+gz  :  9.00 MVx/sec (6882446 bytes, 81.9%)
-      decompress   :  70.85 MVx/sec
-      decompress+gz:  47.18 MVx/sec
+      compress     :  15.02 MVx/sec (8405429 bytes, 50.1%)
+      compress+gz  :  11.18 MVx/sec (6882826 bytes, 81.9%)
+      decompress   :  68.45 MVx/sec
+      decompress+gz:  46.16 MVx/sec
     
 
-      compress     :  11.43 MVx/sec (8405455 bytes, 50.1%)
-      compress+gz  :  9.07 MVx/sec (6882718 bytes, 81.9%)
-      decompress   :  69.72 MVx/sec
-      decompress+gz:  46.73 MVx/sec
+      compress     :  14.78 MVx/sec (8405280 bytes, 50.1%)
+      compress+gz  :  11.05 MVx/sec (6882707 bytes, 81.9%)
+      decompress   :  66.84 MVx/sec
+      decompress+gz:  45.45 MVx/sec
     
 BINARY NOISE [0,1] uint8 (pathological case)
 
-      compress     :  6.26 MVx/sec (1841889 bytes, 43.9%)
-      compress+gz  :  6.01 MVx/sec (1193359 bytes, 64.8%)
-      decompress   :  21.98 MVx/sec
-      decompress+gz:  21.43 MVx/sec
+      compress     :  6.57 MVx/sec (1840310 bytes, 43.9%)
+      compress+gz  :  6.29 MVx/sec (1191938 bytes, 64.8%)
+      decompress   :  20.60 MVx/sec
+      decompress+gz:  20.11 MVx/sec
     
 
-      compress     :  6.28 MVx/sec (1844669 bytes, 44.0%)
-      compress+gz  :  6.03 MVx/sec (1194496 bytes, 64.8%)
-      decompress   :  22.61 MVx/sec
-      decompress+gz:  22.02 MVx/sec
+      compress     :  6.61 MVx/sec (1840982 bytes, 43.9%)
+      compress+gz  :  6.34 MVx/sec (1193078 bytes, 64.8%)
+      decompress   :  21.59 MVx/sec
+      decompress+gz:  21.05 MVx/sec
     
 
-      compress     :  6.27 MVx/sec (1843716 bytes, 44.0%)
-      compress+gz  :  6.02 MVx/sec (1194203 bytes, 64.8%)
-      decompress   :  22.07 MVx/sec
-      decompress+gz:  21.51 MVx/sec
+      compress     :  6.60 MVx/sec (1841117 bytes, 43.9%)
+      compress+gz  :  6.32 MVx/sec (1192435 bytes, 64.8%)
+      decompress   :  21.35 MVx/sec
+      decompress+gz:  20.82 MVx/sec
     
 EMPTY
 
-      compress     :  31.13 MVx/sec (607 bytes, 0.0%)
-      compress+gz  :  31.12 MVx/sec (46 bytes, 7.6%)
-      decompress   :  78.12 MVx/sec
-      decompress+gz:  78.11 MVx/sec
+      compress     :  170.79 MVx/sec (607 bytes, 0.0%)
+      compress+gz  :  170.62 MVx/sec (46 bytes, 7.6%)
+      decompress   :  74.61 MVx/sec
+      decompress+gz:  74.60 MVx/sec
     
 SOLID ONES
 
-      compress     :  29.83 MVx/sec (607 bytes, 0.0%)
-      compress+gz  :  29.83 MVx/sec (48 bytes, 7.9%)
-      decompress   :  82.59 MVx/sec
-      decompress+gz:  82.58 MVx/sec
+      compress     :  210.25 MVx/sec (607 bytes, 0.0%)
+      compress+gz  :  210.02 MVx/sec (48 bytes, 7.9%)
+      decompress   :  81.08 MVx/sec
+      decompress+gz:  81.07 MVx/sec

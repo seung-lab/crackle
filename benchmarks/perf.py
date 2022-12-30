@@ -54,17 +54,19 @@ run_sample(labels, shape, N)
 
 print("RANDOM NOISE [0,2000) uint32")
 labels = np.random.randint(0,2000, size=(512,512,512), dtype=np.uint32)
+labels = np.asfortranarray(labels)
 run_sample(labels, shape, N)
 
 print("BINARY NOISE [0,1] uint8 (pathological case)")
 labels = np.random.randint(0,2, size=(512,512,512), dtype=np.uint8)
+labels = np.asfortranarray(labels)
 run_sample(labels, shape, N)
 
 print("EMPTY")
-labels = np.zeros((512,512,512), dtype=np.uint32)
+labels = np.zeros((512,512,512), dtype=np.uint32, order="F")
 run_sample(labels, shape, 1)
 
 print("SOLID ONES")
-labels = np.ones((512,512,512), dtype=np.uint32)
+labels = np.ones((512,512,512), dtype=np.uint32, order="F")
 run_sample(labels, shape, 1)
 
