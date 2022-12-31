@@ -26,7 +26,7 @@ template <typename LABEL, typename STORED_LABEL>
 std::vector<unsigned char> compress_helper(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
-	const bool force_flat = false,
+	const bool allow_pins = false,
 	const bool fortran_order = true
 ) {
 	const int64_t voxels = sx * sy * sz;
@@ -40,7 +40,7 @@ std::vector<unsigned char> compress_helper(
 		label_format = LabelFormat::FLAT;
 	}
 
-	if (sz == 1 || force_flat) {
+	if (sz == 1 || !allow_pins) {
 		label_format = LabelFormat::FLAT;
 	}
 
@@ -108,7 +108,7 @@ template <typename LABEL>
 std::vector<unsigned char> compress(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
-	const bool force_flat = false,
+	const bool allow_pins = false,
 	const bool fortran_order = true
 ) {
 	const int64_t voxels = sx * sy * sz;
@@ -117,16 +117,16 @@ std::vector<unsigned char> compress(
 	);
 
 	if (stored_data_width == 1) {
-		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, force_flat, fortran_order);
+		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, allow_pins, fortran_order);
 	}
 	else if (stored_data_width == 2) {
-		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, force_flat, fortran_order);
+		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, allow_pins, fortran_order);
 	}
 	else if (stored_data_width == 4) {
-		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, force_flat, fortran_order);
+		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, allow_pins, fortran_order);
 	}
 	else {
-		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, force_flat, fortran_order);
+		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, allow_pins, fortran_order);
 	}
 }
 

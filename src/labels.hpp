@@ -142,11 +142,11 @@ std::vector<unsigned char> encode_fixed_width_pins(
 	}
 
 	struct {
-			bool operator()(
-				std::tuple<uint64_t,uint64_t,uint64_t>& a, std::tuple<uint64_t,uint64_t,uint64_t>& b
-			) const { 
-				return std::get<1>(a) < std::get<1>(b); 
-			}
+		bool operator()(
+			std::tuple<uint64_t,uint64_t,uint64_t>& a, std::tuple<uint64_t,uint64_t,uint64_t>& b
+		) const { 
+			return std::get<1>(a) < std::get<1>(b); 
+		}
 	} CmpIndex;
 
 	std::sort(linear.begin(), linear.end(), CmpIndex);
