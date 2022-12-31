@@ -38,7 +38,8 @@ from .array import CrackleArray
 from .codec import (
 	compress, decompress, labels, remap, 
 	nbytes, components, component_lengths,
-	header
+	header, contains
 )
+from .headers import FormatError, CrackleHeader
 from .util import save, load
 

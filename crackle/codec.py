@@ -4,13 +4,15 @@ import numpy as np
 import fastremap
 import fastcrackle
 
-from .headers import CrackleHeader, CrackFormat, LabelFormat
+from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype
 
-def header(binary:bytes) -> dict:
+def header(binary:bytes) -> CrackleHeader:
+  """Decode the header from a Crackle bytestream."""
   return CrackleHeader.frombytes(binary)
 
 def labels(binary:bytes) -> np.ndarray:
+  """Extract the unique labels from a Crackle bytestream."""
   head = header(binary)
   hb = CrackleHeader.HEADER_BYTES
 
@@ -37,6 +39,7 @@ def labels(binary:bytes) -> np.ndarray:
     return labels.astype(head.dtype, copy=False)
 
 def contains(binary:bytes, label:int) -> bool:
+  """Rapidly check if a label exists in a Crackle bytestream."""
   head = header(binary)
   hb = CrackleHeader.HEADER_BYTES
   offset = hb
@@ -68,6 +71,17 @@ def raw_labels(binary:bytes) -> bytes:
   return binary[hb:hb+header.num_label_bytes]
 
 def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
+  """
+  Remap the labels in a crackle bystream without decompressing.
+  
+  binary: A Crackle bytestream
+  mapping: A dict mapping old labels to new labels.
+  preserve_missing_labels: By default we presume all values
+    will be remapped. If a value in the binary does not have
+    a corresponding mapping key, it will raise a KeyError. If
+    True, just leave it be and encode all the labels that are 
+    in the mapping.
+  """
   orig = binary
   binary = bytearray(binary)
   
@@ -106,6 +120,7 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   return bytes(binary)
 
 def nbytes(binary:bytes) -> np.ndarray:
+  """Compute the size in bytes of the decompressed array."""
   header = CrackleHeader.frombytes(binary)
   return header.data_width * header.sx * header.sy * header.sz
 
@@ -128,15 +143,24 @@ def component_lengths(binary:bytes):
   return { k:len(v) for k,v in components(binary).items() }
 
 def background_color(binary:bytes) -> int:
+  """For pin encodings only, extract the background color."""
   header = CrackleHeader.frombytes(binary)
+
+  if header.label_format == LabelFormat.FLAT:
+    raise FormatError("Background color can only be extracted from pin encoded streams.")
+
   hb = CrackleHeader.HEADER_BYTES
   dtype = width2dtype[header.stored_data_width]
   bgcolor = np.frombuffer(binary[hb:hb+header.stored_data_width], dtype=dtype)
   return int(bgcolor[0])
 
 def decode_pins(binary:bytes) -> np.ndarray:
+  """For pin encodings only, extract the pins."""
   header = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
+
+  if header.label_format == LabelFormat.FLAT:
+    raise FormatError("Pins can only be extracted from pin encoded streams.")
 
   # bgcolor, num labels (u64), N labels, pins
   offset = hb + header.stored_data_width
