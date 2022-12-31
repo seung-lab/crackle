@@ -60,6 +60,7 @@ struct CandidatePin {
 		: x(_x), y(_y), z_s(_z_s), 
 		  z_e(_z_e)
 	{
+		ccids.reserve(_ccids.size());
 		ccids.insert(_ccids.begin(), _ccids.end());
 
 	}
