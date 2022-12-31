@@ -332,6 +332,7 @@ create_crack_codes(
   		remaining;
 
   	auto& cluster_edges = G.component_edge_list[cluster];
+  	remaining.reserve(cluster_edges.size());
   	remaining.insert(cluster_edges.begin(), cluster_edges.end());
   	
   	std::pair<int64_t, int64_t> start_edge = *remaining.begin();
