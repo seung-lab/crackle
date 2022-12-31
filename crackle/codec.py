@@ -187,6 +187,7 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
   return uniq[cc_map]
 
 def decompress(binary:bytes) -> np.ndarray:
+  """Decompress a Crackle binary into a Numpy array."""
   header = CrackleHeader.frombytes(binary)
   sx, sy, sz = header.sx, header.sy, header.sz
 
@@ -197,8 +198,10 @@ def decompress(binary:bytes) -> np.ndarray:
 
 def compress(labels:np.ndarray, allow_pins:bool = False) -> bytes:
   """
-  Compress the 3D labels array into a crackle bytestream.
+  Compress the 3D labels array into a Crackle bytestream.
 
+  [EXPERIMENTAL]
+  BINARIES ENCODED USING THIS OPTION MAY BREAK IN FUTURE VERSIONS
   allow_pins: If True, when the number of voxel pairs in the 
     volume is > 50% of the number of voxels, use the pin encoding
     strategy. Pins use 3D information to encode the label map.
