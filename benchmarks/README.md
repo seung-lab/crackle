@@ -125,7 +125,7 @@ SOLID ONES
 ## Performance Benchmark
 
 shape: (256, 256, 64)  
-PINKY40 CUTOUTS (connectomics.npy)
+PINKY40 CUTOUTS (connectomics.npy) uint32
 
       compress     :  70.37 MVx/sec (151425 bytes, 0.9%)
       compress+gz  :  66.79 MVx/sec (114134 bytes, 75.4%)
@@ -144,7 +144,7 @@ PINKY40 CUTOUTS (connectomics.npy)
       decompress   :  72.28 MVx/sec
       decompress+gz:  71.88 MVx/sec
     
-WATERSHED CUTOUTS (ws.npy)
+WATERSHED CUTOUTS (ws.npy) uint64
 
       compress     :  29.90 MVx/sec (553901 bytes, 1.7%)
       compress+gz  :  28.50 MVx/sec (415444 bytes, 75.0%)
