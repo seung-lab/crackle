@@ -1,5 +1,10 @@
 from .headers import CrackleHeader
-from .codec import compress, decompress, remap, labels, nbytes, contains
+from .codec import (
+  compress, decompress_range, 
+  remap, labels, nbytes, contains, 
+  header
+)
+import numpy as np
 
 class CrackleArray:
   def __init__(self, binary):
@@ -28,7 +33,7 @@ class CrackleArray:
   @property
   def shape(self):
     head = header(self.binary)
-    return (head["sx"], head["sy"], head["sz"])
+    return (head.sx, head.sy, head.sz)
 
   def labels(self):
     return labels(self.binary)
@@ -51,16 +56,12 @@ class CrackleArray:
     while len(slcs) < 3:
        slcs += (slice(None, None, None),)
 
-    # if self.random_access_enabled:
-    #   img = decompress(self.binary, z=(slices[2].start, slices[2].stop))
-    #   zslc = slice(None, None, slices[2].step)
-    #   if hasattr(slcs, "__getitem__") and isinstance(slcs[2], int):
-    #     zslc = 0
-    #   slices = (slcs[0], slcs[1], zslc)
-    #   return img[slices]
-    # else:
-    img = decompress(self.binary)
-    return img[slcs]
+    img = decompress_range(self.binary, slices[2].start, slices[2].stop)
+    zslc = slice(None, None, slices[2].step)
+    if hasattr(slcs, "__getitem__") and isinstance(slcs[2], int):
+      zslc = 0
+    slices = (slcs[0], slcs[1], zslc)
+    return img[slices]
 
 def reify_slices(slices, sx, sy, sz):
   """

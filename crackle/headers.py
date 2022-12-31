@@ -111,5 +111,24 @@ class CrackleHeader:
   def z_index_width(self) -> int:
     return compute_byte_width(self.sx * self.sy * 2)
 
+  def details(self) -> str:
+    return f"""
+    magic:         {MAGIC}
+    version:       {FORMAT_VERSION}
+    label fmt:     {'FLAT' if self.label_format == LabelFormat.FLAT else 'FIXED_PINS'}
+    crack fmt:     {'PERMISSIBLE' if self.crack_format == CrackFormat.PERMISSIBLE else 'IMPERMISSIBLE' }
+    data width:    {self.data_width}
+    stored width:  {self.stored_data_width}
+    sx:            {self.sx}
+    sy:            {self.sy}
+    sz:            {self.sz}
+    label bytes:   {self.num_label_bytes}
+    fortran order: {self.fortran_order}
+    grid_size:     {self.grid_size}
+    ---
+    BOC width:     {self.index_width()}
+    z index width: {self.z_index_width()}
+    """
+
   def __repr__(self):
     return str(self.__dict__)
