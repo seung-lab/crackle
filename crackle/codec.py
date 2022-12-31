@@ -195,7 +195,18 @@ def decompress(binary:bytes) -> np.ndarray:
   labels = labels.reshape((sx,sy,sz), order=order)
   return labels
 
-def compress(labels:np.ndarray, force_flat:bool = False) -> bytes:
+def compress(labels:np.ndarray, allow_pins:bool = False) -> bytes:
+  """
+  Compress the 3D labels array into a crackle bytestream.
+
+  allow_pins: If True, when the number of voxel pairs in the 
+    volume is > 50% of the number of voxels, use the pin encoding
+    strategy. Pins use 3D information to encode the label map.
+    However, they are still investigational and currently work 
+    best on simpler images. Pin computation requires appoximately
+    solving a set cover problem and can be slow on larger images.
+    However, it can likely be improved.
+  """
   f_order = labels.flags.f_contiguous
   labels = np.asfortranarray(labels)
   return fastcrackle.compress(labels, force_flat, f_order)
