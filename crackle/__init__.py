@@ -33,6 +33,10 @@ simpler images, but can be slightly more expensive
 on more complicated images. The pin encoding method is
 experimental and its format is subject to change and
 is by default disabled.
+
+Author: William Silversmith
+Affiliation: Princeton Neuroscience Institute
+Date: December 2022
 """
 from .array import CrackleArray
 from .codec import (
