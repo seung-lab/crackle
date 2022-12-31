@@ -53,6 +53,14 @@ std::vector<unsigned char> compress_helper(
 		/*sx=*/sx,
 		/*sy=*/sy,
 		/*sz=*/sz,
+		
+		// grid size is not yet supported, but will be
+		// used for within-slice random access.
+		// very large value so that way when we start 
+		// using random access decoders, old formats
+		// will be backwards compatible (each slice is 1 grid).
+		/*grid_size*/2147483648,
+		
 		/*num_label_bytes=*/0,
 		/*fortran_order*/fortran_order
 	);

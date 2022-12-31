@@ -22,7 +22,7 @@ class CrackFormat(IntEnum):
 class CrackleHeader:
   MAGIC = b'crkl'
   FORMAT_VERSION = 0
-  HEADER_BYTES = 22
+  HEADER_BYTES = 23
 
   def __init__(
     self, 
@@ -31,7 +31,8 @@ class CrackleHeader:
     data_width:int, stored_data_width:int,
     sx:int, sy:int, sz:int,
     num_label_bytes:int,
-    fortran_order:bool
+    fortran_order:bool,
+    grid_size:int,
   ):
     self.label_format = label_format
     self.crack_format = crack_format
@@ -42,6 +43,7 @@ class CrackleHeader:
     self.sz = int(sz)
     self.num_label_bytes = num_label_bytes
     self.fortran_order = fortran_order
+    self.grid_size = int(grid_size)
     # should we have a field that is y/n pins?
 
   @classmethod
@@ -65,7 +67,8 @@ class CrackleHeader:
     	sx=int.from_bytes(buffer[6:10], byteorder='little', signed=False),
     	sy=int.from_bytes(buffer[10:14], byteorder='little', signed=False),
     	sz=int.from_bytes(buffer[14:18], byteorder='little', signed=False),
-    	num_label_bytes=int.from_bytes(buffer[18:22], byteorder='little', signed=False),
+      grid_size=(2 ** int(buffer[18])),
+    	num_label_bytes=int.from_bytes(buffer[19:23], byteorder='little', signed=False),
       fortran_order=bool(values[4]),
     )
 
@@ -78,6 +81,8 @@ class CrackleHeader:
       (self.fortran_order, 1),
     ])
 
+    log_grid_size = int(np.log2(self.grid_size))
+
     return b''.join([
       self.MAGIC,
       self.FORMAT_VERSION.to_bytes(1, 'little'),
@@ -85,6 +90,7 @@ class CrackleHeader:
       self.sx.to_bytes(4, 'little'),
       self.sy.to_bytes(4, 'little'),
       self.sz.to_bytes(4, 'little'),
+      log_grid_size.to_bytes(1, 'little'),
       self.num_label_bytes.to_bytes(4, 'little'),
     ])
 

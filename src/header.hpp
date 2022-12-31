@@ -30,7 +30,7 @@ enum CrackFormat {
  */
 struct CrackleHeader {
 public:
-	static constexpr size_t header_size{22};
+	static constexpr size_t header_size{23};
 
 	static constexpr char magic[4]{ 'c', 'r', 'k', 'l' }; 
 	uint8_t format_version; 
@@ -41,6 +41,7 @@ public:
 	uint32_t sx;
 	uint32_t sy;
 	uint32_t sz;
+	uint32_t grid_size;
 	uint32_t num_label_bytes;
 	bool fortran_order;
 
@@ -49,7 +50,7 @@ public:
 		label_format(LabelFormat::FLAT),
 		crack_format(CrackFormat::IMPERMISSIBLE),
 		data_width(1), stored_data_width(1),
-		sx(1), sy(1), sz(1), 
+		sx(1), sy(1), sz(1), grid_size(2147483648),
 		num_label_bytes(0), fortran_order(true)
 	{}
 
@@ -60,6 +61,7 @@ public:
 		const uint8_t _data_width,
 		const uint8_t _stored_data_width,
 		const uint32_t _sx, const uint32_t _sy, const uint32_t _sz,
+		const uint32_t _grid_size,
 		const uint32_t _num_label_bytes,
 		const bool _fortran_order
 	) : 
@@ -68,7 +70,9 @@ public:
 		crack_format(_crack_fmt),
 		data_width(_data_width), stored_data_width(_stored_data_width),
 		sx(_sx), sy(_sy), sz(_sz),
-		num_label_bytes(_num_label_bytes), fortran_order(_fortran_order)
+		grid_size(_grid_size),
+		num_label_bytes(_num_label_bytes), 
+		fortran_order(_fortran_order)
 	{}
 
 	void assign_from_buffer(const unsigned char* buf) {
@@ -83,7 +87,10 @@ public:
 		sx = lib::ctoi<uint32_t>(buf, 6); 
 		sy = lib::ctoi<uint32_t>(buf, 10); 
 		sz = lib::ctoi<uint32_t>(buf, 14);
-		num_label_bytes = lib::ctoi<uint32_t>(buf, 18);
+		grid_size = static_cast<uint32_t>(
+			pow(2, lib::ctoi<uint8_t>(buf, 18))
+		);
+		num_label_bytes = lib::ctoi<uint32_t>(buf, 19);
 
 		data_width = pow(2, (format_byte & 0b00000011));
 		stored_data_width = pow(2, (format_byte & 0b00001100) >> 2);
@@ -142,6 +149,7 @@ public:
 		i += lib::itoc(sx, buf, i);
 		i += lib::itoc(sy, buf, i);
 		i += lib::itoc(sz, buf, i);
+		i += lib::itoc(static_cast<uint8_t>(log2(grid_size)), buf, i);
 		i += lib::itoc(num_label_bytes, buf, i);
 
 		return i - idx;
