@@ -244,7 +244,13 @@ std::vector<LABEL> decode_flat(
 	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
 
 	const int cc_label_width = crackle::lib::compute_byte_width(num_labels);
-	uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels + 4 * header.sz;
+
+	uint64_t grid_size = std::min(header.grid_size, std::max(header.sx, header.sy));
+	uint64_t num_grids = ((header.sx + grid_size - 1) / grid_size) * ((header.sy + grid_size - 1) / grid_size);
+	num_grids = std::max(num_grids, 1ULL);
+	num_grids *= header.sz;
+
+	uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels + 4 * num_grids;
 
 	uint64_t num_fields = (labels_binary.size() - offset) / cc_label_width;
 	std::vector<LABEL> label_map(num_fields);
