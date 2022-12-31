@@ -65,6 +65,7 @@ std::vector<unsigned char> encode_flat(
 	}
 
 	int key_width = crackle::lib::compute_byte_width(uniq.size());
+	int component_width = crackle::lib::compute_byte_width(sx * sy);
 
 	std::vector<unsigned char> binary(
 		8 + sizeof(STORED_LABEL) * uniq.size() 
@@ -82,8 +83,8 @@ std::vector<unsigned char> encode_flat(
 		);		
 	}
 	for (auto val : num_components_per_slice) {
-		i += crackle::lib::itoc(
-			static_cast<uint32_t>(val), binary, i
+		i += crackle::lib::itocd(
+			val, binary, i, component_width
 		);		
 	}
 
@@ -250,7 +251,9 @@ std::vector<LABEL> decode_flat(
 	num_grids = std::max(num_grids, 1ULL);
 	num_grids *= header.sz;
 
-	uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels + 4 * num_grids;
+	uint64_t component_width = crackle::lib::compute_byte_width(header.sx * header.sy);
+
+	uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels + component_width * num_grids;
 
 	uint64_t num_fields = (labels_binary.size() - offset) / cc_label_width;
 	std::vector<LABEL> label_map(num_fields);
@@ -268,7 +271,7 @@ std::vector<LABEL> decode_flat(
 	}
 	else if (cc_label_width == 4) {
 		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint32_t>(buf, j)]
+			uniq[crackle::lib::ctoid(buf, j, component_width)]
 		);
 	}
 	else {
