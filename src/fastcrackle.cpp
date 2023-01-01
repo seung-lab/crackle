@@ -30,8 +30,6 @@ py::array decompress_helper(
 
 	voxels *= z_end - z_start;
 
-	std::cout << voxels << " " << head.sx << " " << head.sy << " " << z_start << " " << z_end << " " << head.sz << std::endl;
-
 	py::array arr = py::array_t<LABEL>(voxels);
 	crackle::decompress<LABEL>(
 		buffer,
