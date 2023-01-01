@@ -257,6 +257,10 @@ LABEL* decompress(
 		* static_cast<uint64_t>(szr)
 	);
 
+	if (voxels == 0) {
+		return output;
+	}
+
 	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
 
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
