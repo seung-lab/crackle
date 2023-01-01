@@ -279,25 +279,25 @@ std::vector<LABEL> decode_flat(
 
 	for (uint64_t i = 0, j = offset; i < num_fields; i++, j += cc_label_width) {
 		if (cc_label_width == 1) {
-		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint8_t>(buf, j)]
-		);
-	}
-	else if (cc_label_width == 2) {
-		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint16_t>(buf, j)]
-		);
-	}
-	else if (cc_label_width == 4) {
-		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoid(buf, j, component_width)]
-		);
-	}
-	else {
-		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint64_t>(buf, j)]
-		);
-	}
+			label_map[i] = static_cast<LABEL>(
+				uniq[crackle::lib::ctoi<uint8_t>(buf, j)]
+			);
+		}
+		else if (cc_label_width == 2) {
+			label_map[i] = static_cast<LABEL>(
+				uniq[crackle::lib::ctoi<uint16_t>(buf, j)]
+			);
+		}
+		else if (cc_label_width == 4) {
+			label_map[i] = static_cast<LABEL>(
+				uniq[crackle::lib::ctoid(buf, j, component_width)]
+			);
+		}
+		else {
+			label_map[i] = static_cast<LABEL>(
+				uniq[crackle::lib::ctoi<uint64_t>(buf, j)]
+			);
+		}
 	}
 	return label_map;
 }
