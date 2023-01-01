@@ -31,7 +31,7 @@ jobs:
           python -m pip install pytest -r requirements.txt -r requirements-dev.txt
 
       - name: Compile
-        run: python setup.py develop
+        run: CXX=g++ python setup.py develop
 
       - name: Test with pytest
         run: pytest -v -x automated_test.py
