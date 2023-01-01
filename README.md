@@ -31,17 +31,17 @@ crackle.save(labels, "example.ckl.gz")
 labels = crackle.load("example.ckl.gz")
 
 arr = crackle.CrackleArray(binary)
-res = arr[:10,:10,:10] # array slicing (not efficient yet)
+res = arr[:10,:10,:10] # array slicing (efficient z ranges)
 20 in arr # highly efficient search
 ```
 
-*This repository is currently highly experimental.*
+*This repository is currently experimental.*
 
 Crackle is a new codec inspired by Compresso \[1\] for creating highly compressed 3D dense segmentation images. Compresso innovated by separating labels from boundary structures. There were conceptually four (but really five) elements in the format: header, labels, bit packed and RLE encoded binary image boundaries, and indeterminate boundary locations. 
 
 Crackle improves upon Compresso by replacing the bit-packed boundary map with a "crack code" and also uses 3D information to reduce redundancy in labels using "pins". Like Compresso, Crackle uses a two pass compression strategy where the output of crackle may be further comrpessed with a bitstream compressor like gzip, bzip2, zstd, or lzma.
 
-Based on preliminary experiments, it seems likely that the output of Crackle will be in the ballpark of 50\% to 60\% the size of Compresso. The second stage compressed Crackle file will likely be about 80% the size of the equivalent Compresso file.
+Based on benchmarks, it seems likely that the output of Crackle will be in the ballpark of 20\% to 50\% the size of Compresso. The second stage compressed Crackle file will likely be about 80\% the size of the equivalent Compresso file.
 
 ## Boundary Structure: Crack Code
 
@@ -71,11 +71,10 @@ The condensed format is a bit smaller than the fixed width format, but the fixed
 
 ## References
 
-
 1. Matejek, B., Haehn, D., Lekschas, F., Mitzenmacher, M., Pfister, H., 2017. Compresso: Efficient Compression of Segmentation Data for Connectomics, in: Descoteaux, M., Maier-Hein, L., Franz, A., Jannin, P., Collins, D.L., Duchesne, S. (Eds.), Medical Image Computing and Computer Assisted Intervention − MICCAI 2017, Lecture Notes in Computer Science. Springer International Publishing, Cham, pp. 781–788. https://doi.org/10.1007/978-3-319-66182-7_89
 
 2. Zingaretti, P., Gasparroni, M., Vecci, L., 1998. Fast chain coding of region boundaries. IEEE Transactions on Pattern Analysis and Machine Intelligence 20, 407–415. https://doi.org/10.1109/34.677272
 
-
+3. Freeman, H., 1974. Computer Processing of Line-Drawing Images. ACM Comput. Surv. 6, 57–97. https://doi.org/10.1145/356625.356627
 
 
