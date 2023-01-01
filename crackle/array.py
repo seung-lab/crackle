@@ -106,11 +106,14 @@ def reify_slices(slices, sx, sy, sz):
 
   while len(slices) < ndim:
     slices.append( slice(None, None, None) )
-
+  
   # First three slices are x,y,z, last is channel. 
   # Handle only x,y,z here, channel seperately
   for index, slc in enumerate(slices):
     if isinstance(slc, integer_types) or isinstance(slc, floating_types):
+      slc = int(slc)
+      if slc < 0:
+        slc += maxpt[index]
       slices[index] = slice(int(slc), int(slc)+1, 1)
     elif slc == Ellipsis:
       raise ValueError("More than one Ellipsis operator used at once.")
