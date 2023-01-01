@@ -249,6 +249,14 @@ LABEL* decompress(
 	z_end = z_end < 0 ? static_cast<int64_t>(header.sz) : z_end;
 	z_end = std::max(std::min(z_end, static_cast<int64_t>(header.sz)), 0LL);
 
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
+	}
+
 	const int64_t szr = z_end - z_start;
 
 	const uint64_t voxels = (
