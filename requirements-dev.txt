@@ -1,4 +1,5 @@
 cloud-volume
 compresso
 pytest
-cython
+networkx
+tqdm

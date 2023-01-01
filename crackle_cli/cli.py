@@ -6,6 +6,8 @@ import click
 import crackle
 import numpy as np
 
+import crackle
+
 class Tuple3(click.ParamType):
   """A command line option type consisting of 3 comma-separated integers."""
   name = 'tuple3'
@@ -59,21 +61,15 @@ def print_header(src):
 
 def decompress_file(src):
 	try:
-		with open(src, "rb") as f:
-			binary = f.read()
+		data = crackle.util.load(src)
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
-
-	try:
-		data = crackle.decompress(binary)
 	except crackle.DecodeError:
 		print(f"crackle: {src} could not be decoded.")
 		return
 
-	del binary
-
-	dest = src.replace(".ckl", "")
+	dest = src.replace(".ckl", "").replace(".gz", "")
 	_, ext = os.path.splitext(dest)
 	
 	if ext != ".npy":

@@ -2,7 +2,7 @@ import setuptools
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 setuptools.setup(
-  setup_requires=['pbr'],
+  setup_requires=['pbr','pybind11','numpy'],
   cmdclass={"build_ext": build_ext},
   ext_modules=[
     Pybind11Extension(
