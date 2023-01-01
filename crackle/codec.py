@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import fastremap
@@ -212,12 +212,25 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
 
 def decompress(binary:bytes) -> np.ndarray:
   """Decompress a Crackle binary into a Numpy array."""
+  return decompress_range(binary, None, None)
+
+def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -> np.ndarray:
+  """
+  Decompress a Crackle binary into a Numpy array.
+
+  A partial z-range can be decoded by setting z_start and z_end.
+  """
   header = CrackleHeader.frombytes(binary)
   sx, sy, sz = header.sx, header.sy, header.sz
 
-  labels = fastcrackle.decompress(binary)
+  if z_start is None:
+    z_start = 0
+  if z_end is None:
+    z_end = sz
+  
+  labels = fastcrackle.decompress(binary, z_start, z_end)
   order = 'F' if header.fortran_order else 'C'
-  labels = labels.reshape((sx,sy,sz), order=order)
+  labels = labels.reshape((sx,sy,z_end - z_start), order=order)
   return labels
 
 def compress(labels:np.ndarray, allow_pins:bool = False) -> bytes:

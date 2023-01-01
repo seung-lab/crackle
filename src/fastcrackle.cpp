@@ -15,30 +15,47 @@ namespace py = pybind11;
 template <typename LABEL>
 py::array decompress_helper(
 	const crackle::CrackleHeader& head, 
-	const py::bytes &buffer
+	const py::bytes &buffer,
+	int64_t z_start, int64_t z_end
 ) {
-	py::array arr = py::array_t<LABEL>(head.voxels());
+	int64_t voxels = head.sx * head.sy;
+	z_start = std::max(z_start, 0LL);
+	if (z_end == -1) {
+		z_end = head.sz;
+	}
+	z_end = std::min(
+		std::max(z_end, 0LL), 
+		static_cast<int64_t>(head.sz)
+	);
+
+	voxels *= z_end - z_start;
+
+	py::array arr = py::array_t<LABEL>(voxels);
 	crackle::decompress<LABEL>(
 		buffer,
-		reinterpret_cast<LABEL*>(const_cast<void*>(arr.data()))
+		reinterpret_cast<LABEL*>(const_cast<void*>(arr.data())),
+		z_start, z_end
 	);
 	return arr;
 }
 
-py::array decompress(const py::bytes &buffer) {
+py::array decompress(
+	const py::bytes &buffer, 
+	const int64_t z_start = 0, const int64_t z_end = -1
+) {
 	crackle::CrackleHeader head(buffer);
 
 	if (head.data_width == 1) {
-		return decompress_helper<uint8_t>(head, buffer);
+		return decompress_helper<uint8_t>(head, buffer, z_start, z_end);
 	}
 	else if (head.data_width == 2) {
-		return decompress_helper<uint16_t>(head, buffer);
+		return decompress_helper<uint16_t>(head, buffer, z_start, z_end);
 	}
 	else if (head.data_width == 4) {
-		return decompress_helper<uint32_t>(head, buffer);	
+		return decompress_helper<uint32_t>(head, buffer, z_start, z_end);	
 	}
 	else {
-		return decompress_helper<uint64_t>(head, buffer);
+		return decompress_helper<uint64_t>(head, buffer, z_start, z_end);
 	}
 }
 

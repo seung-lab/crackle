@@ -236,7 +236,8 @@ std::vector<STORED_LABEL> decode_uniq(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_flat(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary
+	const std::vector<unsigned char> &binary,
+	const uint64_t z_start, const uint64_t z_end
 ) {
 	std::vector<unsigned char> labels_binary = raw_labels(binary);
 	const unsigned char* buf = labels_binary.data();
@@ -253,32 +254,50 @@ std::vector<LABEL> decode_flat(
 
 	uint64_t component_width = crackle::lib::compute_byte_width(header.sx * header.sy);
 
-	uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels + component_width * num_grids;
+	uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels;
+	std::vector<uint64_t> components(num_grids);
+	for (uint64_t i = 0, j = offset; i < num_grids; i++, j += component_width) {
+		components[i] = crackle::lib::ctoid(buf, j, component_width);
+	}
+	uint64_t component_left_offset = 0;
+	uint64_t component_right_offset = 0;
+	for (uint64_t z = 0; z < z_start; z++) {
+		component_left_offset += components[z];
+	}
+	for (uint64_t z = header.sz - 1; z >= z_end; z--) {
+		component_right_offset += components[z];
+	}
 
-	uint64_t num_fields = (labels_binary.size() - offset) / cc_label_width;
+	offset += component_width * num_grids + component_left_offset * cc_label_width;
+
+	uint64_t num_fields = (
+		labels_binary.size() 
+		- offset 
+		- (component_right_offset * cc_label_width)
+	) / cc_label_width;
 	std::vector<LABEL> label_map(num_fields);
 
 	for (uint64_t i = 0, j = offset; i < num_fields; i++, j += cc_label_width) {
 		if (cc_label_width == 1) {
-		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint8_t>(buf, j)]
-		);
-	}
-	else if (cc_label_width == 2) {
-		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint16_t>(buf, j)]
-		);
-	}
-	else if (cc_label_width == 4) {
-		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoid(buf, j, component_width)]
-		);
-	}
-	else {
-		label_map[i] = static_cast<LABEL>(
-			uniq[crackle::lib::ctoi<uint64_t>(buf, j)]
-		);
-	}
+			label_map[i] = static_cast<LABEL>(
+				uniq[crackle::lib::ctoi<uint8_t>(buf, j)]
+			);
+		}
+		else if (cc_label_width == 2) {
+			label_map[i] = static_cast<LABEL>(
+				uniq[crackle::lib::ctoi<uint16_t>(buf, j)]
+			);
+		}
+		else if (cc_label_width == 4) {
+			label_map[i] = static_cast<LABEL>(
+				uniq[crackle::lib::ctoid(buf, j, component_width)]
+			);
+		}
+		else {
+			label_map[i] = static_cast<LABEL>(
+				uniq[crackle::lib::ctoi<uint64_t>(buf, j)]
+			);
+		}
 	}
 	return label_map;
 }
@@ -436,10 +455,11 @@ std::vector<LABEL> decode_label_map(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &binary,
 	const std::vector<uint32_t> &cc_labels,
-	const uint64_t N
+	const uint64_t N,
+	const uint64_t z_start, const uint64_t z_end
 ) {
 	if (header.label_format == LabelFormat::FLAT) {
-		return decode_flat<LABEL, STORED_LABEL>(header, binary);
+		return decode_flat<LABEL, STORED_LABEL>(header, binary, z_start, z_end);
 	}
 	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
 		return decode_fixed_width_pins<LABEL, STORED_LABEL>(

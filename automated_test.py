@@ -40,6 +40,25 @@ def test_compress_decompress(i):
 
   assert np.all(cutout == recovered)
 
+def test_compress_decompress_z_range():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+
+  x,y,z = tuple(np.random.randint(128,384, size=(3,)))
+  print(x,y,z)
+  cutout = labels[x:x+128,y:y+128,z:z+16]
+  
+  binary = crackle.compress(cutout)
+  arr = crackle.CrackleArray(binary)
+
+  recovered = arr[2:100,5:83,5:7]
+  assert np.all(cutout[2:100,5:83,5:7] == recovered)
+
+  recovered = arr[2:100,5:83,0]
+  assert np.all(cutout[2:100,5:83,0] == recovered)
+
+  recovered = arr[2:100,5:83,-1]
+  assert np.all(cutout[2:100,5:83,-1] == recovered)
+
 def test_labels():
   labels = np.random.randint(0,100, size=(100,100,10), dtype=np.uint32)
   binary = crackle.compress(labels)

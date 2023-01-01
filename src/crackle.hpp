@@ -174,7 +174,8 @@ std::vector<uint64_t> get_crack_code_offsets(
 
 std::vector<std::vector<unsigned char>> get_crack_codes(
 	const CrackleHeader &header,
-	const std::vector<unsigned char> &binary
+	const std::vector<unsigned char> &binary,
+	const uint64_t z_start, const uint64_t z_end
 ) {
 	std::vector<uint64_t> z_index = get_crack_code_offsets(header, binary);
 
@@ -182,16 +183,16 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 		throw std::runtime_error("crackle: get_crack_codes: Unable to read past end of buffer.");
 	}
 
-	std::vector<std::vector<unsigned char>> crack_codes(header.sz);
+	std::vector<std::vector<unsigned char>> crack_codes(z_end - z_start);
 
-	for (uint64_t z = 0; z < header.sz; z++) {
+	for (uint64_t z = z_start; z < z_end; z++) {
 		uint64_t code_size = z_index[z+1] - z_index[z];
 		std::vector<unsigned char> code;
 		code.reserve(code_size);
 		for (uint64_t i = z_index[z]; i < z_index[z+1]; i++) {
 			code.push_back(binary[i]);
 		}
-		crack_codes[z] = std::move(code);
+		crack_codes[z - z_start] = std::move(code);
 	}
 
 	return crack_codes;
@@ -226,7 +227,9 @@ template <typename LABEL>
 LABEL* decompress(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
-	LABEL* output = NULL
+	LABEL* output = NULL,
+	int64_t z_start = -1,
+	int64_t z_end = -1
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
@@ -242,18 +245,36 @@ LABEL* decompress(
 		throw std::runtime_error(err);
 	}
 
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(header.sz - 1)), 0LL);
+	z_end = z_end < 0 ? static_cast<int64_t>(header.sz) : z_end;
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(header.sz)), 0LL);
+
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
+	}
+
+	const int64_t szr = z_end - z_start;
+
 	const uint64_t voxels = (
 		static_cast<uint64_t>(header.sx) 
 		* static_cast<uint64_t>(header.sy) 
-		* static_cast<uint64_t>(header.sz)
+		* static_cast<uint64_t>(szr)
 	);
+
+	if (voxels == 0) {
+		return output;
+	}
 
 	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
 
-	auto crack_codes = get_crack_codes(header, binary);
+	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 	uint64_t N = 0;
 	std::vector<uint32_t> cc_labels = crack_codes_to_cc_labels<uint32_t>(
-		crack_codes, header.sx, header.sy, header.sz, 
+		crack_codes, header.sx, header.sy, szr, 
 		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
 		/*N=*/N
 	);
@@ -261,22 +282,22 @@ LABEL* decompress(
 	std::vector<LABEL> label_map;
 	if (header.stored_data_width == 1) {
 		label_map = crackle::labels::decode_label_map<LABEL, uint8_t>(
-			header, binary, cc_labels, N
+			header, binary, cc_labels, N, z_start, z_end
 		);
 	}
 	else if (header.stored_data_width == 2) {
 		label_map = crackle::labels::decode_label_map<LABEL, uint16_t>(
-			header, binary, cc_labels, N
+			header, binary, cc_labels, N, z_start, z_end
 		);
 	}
 	else if (header.stored_data_width == 4) {
 		label_map = crackle::labels::decode_label_map<LABEL, uint32_t>(
-			header, binary, cc_labels, N
+			header, binary, cc_labels, N, z_start, z_end
 		);
 	}
 	else {
 		label_map = crackle::labels::decode_label_map<LABEL, uint64_t>(
-			header, binary, cc_labels, N
+			header, binary, cc_labels, N, z_start, z_end
 		);
 	}
 
@@ -291,10 +312,10 @@ LABEL* decompress(
 	}
 	else { // cc_labels is in fortran order so transpose it
 		uint64_t i = 0;
-		for (uint64_t z = 0; z < header.sz; z++) {
+		for (uint64_t z = 0; z < static_cast<uint64_t>(szr); z++) {
 			for (uint64_t y = 0; y < header.sy; y++) {
 				for (uint64_t x = 0; x < header.sx; x++, i++) {
-					output[z + header.sz * (y + header.sy * x)] = label_map[cc_labels[i]];
+					output[z + szr * (y + header.sy * x)] = label_map[cc_labels[i]];
 				}
 			}
 		}
@@ -306,24 +327,28 @@ LABEL* decompress(
 template <typename LABEL>
 LABEL* decompress(
 	const std::vector<unsigned char>& buffer,
-	LABEL* output = NULL
+	LABEL* output = NULL,
+	const int64_t z_start = -1, const int64_t z_end = -1
 ) {
 	return decompress<LABEL>(
 		buffer.data(),
 		buffer.size(),
-		output
+		output,
+		z_start, z_end
 	);
 }
 
 template <typename LABEL>
 LABEL* decompress(
 	const std::string &buffer,
-	LABEL* output = NULL
+	LABEL* output = NULL,
+	const int64_t z_start = -1, const int64_t z_end = -1
 ) {
 	return decompress<LABEL>(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size(),
-		output
+		output,
+		z_start, z_end
 	);
 }
 
