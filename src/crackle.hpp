@@ -192,7 +192,7 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 		for (uint64_t i = z_index[z]; i < z_index[z+1]; i++) {
 			code.push_back(binary[i]);
 		}
-		crack_codes[z] = std::move(code);
+		crack_codes[z - z_start] = std::move(code);
 	}
 
 	return crack_codes;
