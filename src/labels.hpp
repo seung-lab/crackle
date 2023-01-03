@@ -200,6 +200,84 @@ std::vector<unsigned char> encode_fixed_width_pins(
 	return binary;
 }
 
+template <typename LABEL, typename STORED_LABEL>
+std::vector<unsigned char> encode_condensed_pins(
+	std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>& all_pins,
+	const int64_t sx, const int64_t sy, const int64_t sz,
+	const int64_t index_width
+) {
+	STORED_LABEL bgcolor = find_bgcolor<STORED_LABEL>(all_pins, sz);
+	all_pins.erase(bgcolor);
+
+	uint64_t max_pins = 0;
+	uint64_t max_depth = 0;
+	uint64_t total_pins = 0;
+	for (auto& [label, pins] : all_pins) {
+		max_pins = std::max(pins.size(), max_pins);
+		total_pins += pins.size();
+		for (auto& pin : pins) {
+			max_depth = std::max(max_depth, pin.depth);
+		}
+	}
+
+	std::vector<STORED_LABEL> all_labels;
+	all_labels.reserve(all_pins.size());
+	for (auto& [label, pins] : all_pins) {
+		all_labels.push_back(label);
+	}
+	std::sort(all_labels.begin(), all_labels.end());
+
+	uint8_t renum_data_width = crackle::lib::compute_byte_width(all_labels.size());
+	uint8_t num_pins_width = crackle::lib::compute_byte_width(max_pins);
+	uint8_t depth_width = crackle::lib::compute_byte_width(max_depth);
+
+	uint8_t combined_width = static_cast<uint8_t>(log2(num_pins_width)) | (static_cast<uint8_t>(log2(depth_width)) << 2);
+
+	robin_hood::unordered_flat_map<STORED_LABEL, STORED_LABEL> renumbering;
+	renumbering.reserve(all_labels.size());
+	for (uint64_t i = 0; i < all_labels.size(); i++) {
+		renumbering[all_labels[i]] = static_cast<STORED_LABEL>(i);
+	}
+
+	struct {
+		bool operator()(
+			crackle::pins::Pin<uint64_t, uint64_t, uint64_t>& a, 
+			crackle::pins::Pin<uint64_t, uint64_t, uint64_t>& b
+		) const { 
+			return a.index < b.index; 
+		}
+	} CmpIndex;
+
+	std::vector<unsigned char> binary(
+		sizeof(STORED_LABEL) // bgcolor
+		+ 8 // num labels
+		+ sizeof(STORED_LABEL) * all_labels.size() // unique
+		+ 1 // depth size, num_pins_size
+		+ (renum_data_width + num_pins_width) * all_labels.size()
+		+ (index_width + depth_width) * total_pins
+	);
+
+	int64_t i = 0;
+	i += crackle::lib::itoc(bgcolor, binary, i);
+	i += crackle::lib::itoc(static_cast<uint64_t>(all_labels.size()), binary, i);
+	for (auto label : all_labels) {
+		i += crackle::lib::itoc(label, binary, i);
+	}
+	i += crackle::lib::itoc(combined_width, binary, i);
+
+	for (auto label : all_labels) {
+		i += crackle::lib::itocd(renumbering[label], binary, i, renum_data_width);
+		
+		auto& pins = all_labels[label];
+		i += crackle::lib::itocd(pins.size(), binary, i, num_pins_width);
+		std::sort(pins.begin(), pins.end(), CmpIndex);
+		for (auto& pin : pins) {
+			i += crackle::lib::itocd(pin.index, binary, i, index_width);
+			i += crackle::lib::itocd(pin.depth, binary, i, depth_width);
+		}
+	}
+}
+
 
 std::vector<unsigned char> raw_labels(
 	const std::vector<unsigned char> &binary
