@@ -35,6 +35,16 @@ struct Pin {
 		depth = crackle::lib::ctoi<DEPTH>(buf, idx + sizeof(LABEL) + sizeof(INDEX));
 		return sizeof(LABEL) + sizeof(INDEX) + sizeof(DEPTH);
 	}
+
+	uint64_t dynamic_decode_buffer(
+		const unsigned char* buf, const uint64_t idx,
+		const uint64_t label_width, const uint64_t index_width, const uint64_t depth_width  
+	) {
+		label = crackle::lib::ctoid(buf, idx, label_width);
+		index = crackle::lib::ctoid(buf, idx + label_width, index_width);
+		depth = crackle::lib::ctoid(buf, idx + label_width + index_width, depth_width);
+		return label_width + index_width + depth_width;
+	}	
 };
 
 struct CandidatePin {

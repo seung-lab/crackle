@@ -392,113 +392,6 @@ std::vector<LABEL> decode_flat(
 	return label_map;
 }
 
-template <
-	typename LABEL, typename STORED_LABEL, 
-	typename RENUM_LABEL, typename INDEX, 
-	typename DEPTH
->
-std::vector<LABEL> decode_pins_helper3(
-	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &labels_binary,
-	const std::vector<STORED_LABEL> &uniq,
-	const std::vector<uint32_t> &cc_labels,
-	const uint64_t N,
-	const LABEL bgcolor
-) {
-	typedef crackle::pins::Pin<RENUM_LABEL, INDEX, DEPTH> PinType;
-	const unsigned char* buf = labels_binary.data();
-
-	const uint64_t pin_size = sizeof(RENUM_LABEL) + sizeof(INDEX) + sizeof(DEPTH);
-
-	uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1);
-	const uint64_t num_pins = (labels_binary.size() - offset) / pin_size;
-
-	std::vector<PinType> pins(num_pins);
-	for (uint64_t i = 0, j = offset; i < num_pins; i++) {
-		j += pins[i].decode_buffer(buf, j);
-	}
-
-	const uint64_t sx = header.sx;
-	const uint64_t sy = header.sy;
-
-	const uint64_t sxy = sx * sy;
-
-	std::vector<LABEL> label_map(N, bgcolor);
-	for (uint64_t i = 0; i < num_pins; i++) {
-		PinType pin = pins[i];
-		for (uint64_t z = 0; z <= pin.depth; z++) {
-			auto cc_id = cc_labels[pin.index + sxy * z];
-			label_map[cc_id] = uniq[pin.label];
-		}
-	}
-
-	return label_map;
-}
-
-template <typename LABEL, typename STORED_LABEL, typename RENUM_LABEL, typename INDEX>
-std::vector<LABEL> decode_pins_helper2(
-	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &labels_binary,
-	const std::vector<STORED_LABEL> &uniq,
-	const std::vector<uint32_t> &cc_labels,
-	const uint64_t N,
-	const LABEL bgcolor
-) {
-	int depth = header.depth_width();
-	if (depth == 1) {
-		return decode_pins_helper3<LABEL, STORED_LABEL, RENUM_LABEL, INDEX, uint8_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-	else if (depth == 2) {
-		return decode_pins_helper3<LABEL, STORED_LABEL, RENUM_LABEL, INDEX, uint16_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-	else if (depth == 4) {
-		return decode_pins_helper3<LABEL, STORED_LABEL, RENUM_LABEL, INDEX, uint32_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-	else {
-		return decode_pins_helper3<LABEL, STORED_LABEL, RENUM_LABEL, INDEX, uint64_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-}
-
-template <typename LABEL, typename STORED_LABEL, typename RENUM_LABEL>
-std::vector<LABEL> decode_pins_helper(
-	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &labels_binary,
-	const std::vector<STORED_LABEL> &uniq,
-	const std::vector<uint32_t> &cc_labels,
-	const uint64_t N,
-	const LABEL bgcolor
-) {
-	int width = header.pin_index_width();
-	if (width == 1) {
-		return decode_pins_helper2<LABEL, STORED_LABEL, RENUM_LABEL, uint8_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-	else if (width == 2) {
-		return decode_pins_helper2<LABEL, STORED_LABEL, RENUM_LABEL, uint16_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-	else if (width == 4) {
-		return decode_pins_helper2<LABEL, STORED_LABEL, RENUM_LABEL, uint32_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-	else {
-		return decode_pins_helper2<LABEL, STORED_LABEL, RENUM_LABEL, uint64_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-}
-
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_fixed_width_pins(
 	const crackle::CrackleHeader &header,
@@ -516,28 +409,41 @@ std::vector<LABEL> decode_fixed_width_pins(
 	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
 
 	// bgcolor, num labels (u64), N labels, pins
-	const int renum_width = crackle::lib::compute_byte_width(num_labels);
+	const uint64_t renum_width = crackle::lib::compute_byte_width(num_labels);
+	const uint64_t index_width = header.pin_index_width();
+	const uint64_t depth_width = header.depth_width();
 
-	if (renum_width == 1) {
-		return decode_pins_helper<LABEL, STORED_LABEL, uint8_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
+	typedef crackle::pins::Pin<uint64_t, uint64_t, uint64_t> PinType;
+	const unsigned char* buf = labels_binary.data();
+
+	const uint64_t pin_size = renum_width + index_width + depth_width;
+
+	uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1);
+	const uint64_t num_pins = (labels_binary.size() - offset) / pin_size;
+
+	std::vector<PinType> pins(num_pins);
+	for (uint64_t i = 0, j = offset; i < num_pins; i++) {
+		j += pins[i].dynamic_decode_buffer(
+			buf, j,
+			renum_width, index_width, depth_width
 		);
 	}
-	else if (renum_width == 2) {
-		return decode_pins_helper<LABEL, STORED_LABEL, uint16_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+
+	const uint64_t sxy = sx * sy;
+
+	std::vector<LABEL> label_map(N, bgcolor);
+	for (uint64_t i = 0; i < num_pins; i++) {
+		PinType pin = pins[i];
+		for (uint64_t z = 0; z <= pin.depth; z++) {
+			auto cc_id = cc_labels[pin.index + sxy * z];
+			label_map[cc_id] = uniq[pin.label];
+		}
 	}
-	else if (renum_width == 4) {
-		return decode_pins_helper<LABEL, STORED_LABEL, uint32_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
-	else {
-		return decode_pins_helper<LABEL, STORED_LABEL, uint64_t>(
-			header, labels_binary, uniq, cc_labels, N, bgcolor
-		);
-	}
+
+	return label_map;
 }
 
 template <typename LABEL, typename STORED_LABEL>
