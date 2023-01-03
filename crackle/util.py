@@ -29,9 +29,9 @@ def load(filelike) -> np.ndarray:
   """Load an image from a file-like object or file path."""
   return decompress(_load(filelike))
 
-def save(labels:np.ndarray, filelike):
+def save(labels:np.ndarray, filelike, **kwargs):
   """Save labels into the file-like object or file path."""
-  binary = compress(labels)
+  binary = compress(labels, **kwargs)
   if hasattr(filelike, 'write'):
     filelike.write(binary)
   elif (

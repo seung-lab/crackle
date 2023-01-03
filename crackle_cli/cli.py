@@ -24,8 +24,9 @@ class Tuple3(click.ParamType):
 @click.command()
 @click.option("-c/-d", "--compress/--decompress", default=True, is_flag=True, help="Compress from or decompress to a numpy .npy file.", show_default=True)
 @click.option('-i', "--info", default=False, is_flag=True, help="Print the header for the file.", show_default=True)
+@click.option('--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
 @click.argument("source", nargs=-1)
-def main(compress, info, source):
+def main(compress, info, allow_pins, source):
 	"""
 	Compress and decompress crackle (.ckl) files to and from numpy (.npy) files.
 
@@ -41,7 +42,7 @@ def main(compress, info, source):
 			continue
 
 		if compress:
-			compress_file(src)
+			compress_file(src, allow_pins)
 		else:
 			decompress_file(src)
 
@@ -87,7 +88,7 @@ def decompress_file(src):
 		print(f"crackle: Unable to write {dest}. Aborting.")
 		sys.exit()
 
-def compress_file(src):
+def compress_file(src, allow_pins):
 	try:
 		data = np.load(src)
 	except ValueError:
@@ -98,7 +99,7 @@ def compress_file(src):
 		return
 
 	dest = f"{src}.ckl"
-	crackle.save(data, dest)
+	crackle.save(data, dest, allow_pins=allow_pins)
 	del data
 
 	try:
