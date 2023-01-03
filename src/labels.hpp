@@ -163,13 +163,14 @@ std::vector<unsigned char> encode_fixed_width_pins(
 	std::sort(linear.begin(), linear.end(), CmpIndex);
 
 	std::vector<STORED_LABEL> all_labels;
-	all_labels.reserve(all_labels.size());
+	all_labels.reserve(all_pins.size());
 	for (auto& [label, pins] : all_pins) {
 		all_labels.push_back(label);
 	}
 	std::sort(all_labels.begin(), all_labels.end());
 
 	robin_hood::unordered_flat_map<STORED_LABEL, STORED_LABEL> renumbering;
+	renumbering.reserve(all_labels.size());
 	for (uint64_t i = 0; i < all_labels.size(); i++) {
 		renumbering[all_labels[i]] = static_cast<STORED_LABEL>(i);
 	}
