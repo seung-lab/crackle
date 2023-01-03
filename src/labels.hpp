@@ -213,7 +213,7 @@ std::vector<unsigned char> encode_condensed_pins(
 	uint64_t max_depth = 0;
 	uint64_t total_pins = 0;
 	for (auto& [label, pins] : all_pins) {
-		max_pins = std::max(pins.size(), max_pins);
+		max_pins = std::max(static_cast<uint64_t>(pins.size()), max_pins);
 		total_pins += pins.size();
 		for (auto& pin : pins) {
 			max_depth = std::max(max_depth, pin.depth);
