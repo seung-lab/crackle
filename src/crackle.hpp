@@ -81,6 +81,15 @@ std::vector<unsigned char> compress_helper(
 			header.depth_width()
 		);
 	}
+	else if (label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
+		std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>
+			all_pins = crackle::pins::compute(labels, sx, sy, sz);
+		labels_binary = crackle::labels::encode_condensed_pins<LABEL, STORED_LABEL>(
+			all_pins,
+			sx, sy, sz,
+			header.pin_index_width()
+		);
+	}
 	else {
 		labels_binary = crackle::labels::encode_flat<LABEL, STORED_LABEL>(labels, sx, sy, sz);
 	}

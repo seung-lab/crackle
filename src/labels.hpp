@@ -268,7 +268,7 @@ std::vector<unsigned char> encode_condensed_pins(
 	for (auto label : all_labels) {
 		i += crackle::lib::itocd(renumbering[label], binary, i, renum_data_width);
 		
-		auto& pins = all_labels[label];
+		auto& pins = all_pins[label];
 		i += crackle::lib::itocd(pins.size(), binary, i, num_pins_width);
 		std::sort(pins.begin(), pins.end(), CmpIndex);
 		for (auto& pin : pins) {
@@ -276,6 +276,8 @@ std::vector<unsigned char> encode_condensed_pins(
 			i += crackle::lib::itocd(pin.depth, binary, i, depth_width);
 		}
 	}
+
+	return binary;
 }
 
 
@@ -520,6 +522,11 @@ std::vector<LABEL> decode_label_map(
 	}
 	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
 		return decode_fixed_width_pins<LABEL, STORED_LABEL>(
+			header, binary, cc_labels, N
+		);
+	}
+	else if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
+		return decode_condensed_pins<LABEL, STORED_LABEL>(
 			header, binary, cc_labels, N
 		);
 	}
