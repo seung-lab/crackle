@@ -68,9 +68,10 @@ std::vector<unsigned char> encode_flat(
 	int component_width = crackle::lib::compute_byte_width(sx * sy);
 
 	std::vector<unsigned char> binary(
-		8 + sizeof(STORED_LABEL) * uniq.size() 
-			+ sizeof(uint32_t) * num_components_per_slice.size()
-			+ key_width * stored_labels.size()
+		8 
+		+ sizeof(STORED_LABEL) * uniq.size() 
+		+ sizeof(uint32_t) * num_components_per_slice.size()
+		+ key_width * stored_labels.size()
 	);
 
 	int64_t i = 0;
@@ -97,13 +98,11 @@ std::vector<unsigned char> encode_flat(
 	return binary;
 }
 
-template <typename LABEL, typename STORED_LABEL>
-std::vector<unsigned char> encode_fixed_width_pins(
+template <typename STORED_LABEL>
+STORED_LABEL find_bgcolor(
 	std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>& all_pins,
-	const int64_t sx, const int64_t sy, const int64_t sz,
-	const int64_t index_width, const int64_t z_width
+	const int64_t sz
 ) {
-
 	// find bg color, pick the most pins
 	// first, and then the one with the most
 	// pin depth (so less decoding work later)
@@ -130,6 +129,18 @@ std::vector<unsigned char> encode_fixed_width_pins(
 			}
 		}
 	}
+
+	return bgcolor;
+}
+
+template <typename LABEL, typename STORED_LABEL>
+std::vector<unsigned char> encode_fixed_width_pins(
+	std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>& all_pins,
+	const int64_t sx, const int64_t sy, const int64_t sz,
+	const int64_t index_width, const int64_t z_width
+) {
+
+	STORED_LABEL bgcolor = find_bgcolor<STORED_LABEL>(all_pins, sz);
 	all_pins.erase(bgcolor);
 
 	std::vector<std::tuple<uint64_t, uint64_t, uint64_t>> linear;
