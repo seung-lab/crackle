@@ -447,6 +447,67 @@ std::vector<LABEL> decode_fixed_width_pins(
 }
 
 template <typename LABEL, typename STORED_LABEL>
+std::vector<LABEL> decode_condensed_pins(
+	const crackle::CrackleHeader &header,
+	const std::vector<unsigned char> &binary,
+	const std::vector<uint32_t> &cc_labels,
+	const uint64_t N
+) {
+	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	const LABEL bgcolor = static_cast<LABEL>(
+		crackle::lib::ctoi<STORED_LABEL>(
+			labels_binary.data(), 0
+		)
+	);
+	const uint64_t num_labels = decode_num_labels(header, labels_binary);
+	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
+
+	// bgcolor, num labels (u64), N labels, fmt depth num_pins, 
+	// [renum label][num_pins][idx_1][depth_1]...[idx_n][depth_n]
+	const uint64_t renum_width = crackle::lib::compute_byte_width(num_labels);
+	const uint64_t index_width = header.pin_index_width();
+
+	typedef crackle::pins::Pin<uint64_t, uint64_t, uint64_t> PinType;
+	const unsigned char* buf = labels_binary.data();
+
+	uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1);
+	uint8_t combined_width = crackle::lib::ctoi<uint8_t>(buf, offset);
+	offset += 1;
+
+	const uint8_t num_pins_width = pow(2, (combined_width & 0b11));
+	const uint8_t depth_width = pow(2, (combined_width >> 2) & 0b11);
+
+	std::vector<PinType> pins;
+	for (uint64_t i = offset; i < labels_binary.size(); i++) {
+		uint64_t label = crackle::lib::ctoid(buf, i, renum_width);
+		i += renum_width;
+		uint64_t num_pins = crackle::lib::ctoid(buf, i, num_pins_width);
+		i += num_pins_width;
+		for (uint64_t j = 0; j < num_pins; j++) {
+			uint64_t index = crackle::lib::ctoid(buf, i, index_width);
+			i += index_width;
+			uint64_t depth = crackle::lib::ctoid(buf, i, depth_width);
+			pins.emplace_back(label, index, depth);
+		}
+	}
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+
+	const uint64_t sxy = sx * sy;
+
+	std::vector<LABEL> label_map(N, bgcolor);
+	for (auto& pin : pins) {
+		for (uint64_t z = 0; z <= pin.depth; z++) {
+			auto cc_id = cc_labels[pin.index + sxy * z];
+			label_map[cc_id] = uniq[pin.label];
+		}
+	}
+
+	return label_map;
+}
+
+template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_label_map(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &binary,
