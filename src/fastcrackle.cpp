@@ -19,12 +19,12 @@ py::array decompress_helper(
 	int64_t z_start, int64_t z_end
 ) {
 	int64_t voxels = head.sx * head.sy;
-	z_start = std::max(z_start, 0LL);
+	z_start = std::max(z_start, static_cast<int64_t>(0));
 	if (z_end == -1) {
 		z_end = head.sz;
 	}
 	z_end = std::min(
-		std::max(z_end, 0LL), 
+		std::max(z_end, static_cast<int64_t>(0)), 
 		static_cast<int64_t>(head.sz)
 	);
 
