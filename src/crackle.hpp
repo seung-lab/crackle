@@ -34,7 +34,7 @@ std::vector<unsigned char> compress_helper(
 	int64_t num_pairs = crackle::lib::pixel_pairs(labels, voxels);
 
 	CrackFormat crack_format = CrackFormat::IMPERMISSIBLE;
-	LabelFormat label_format = LabelFormat::PINS_FIXED_WIDTH;
+	LabelFormat label_format = LabelFormat::PINS_VARIABLE_WIDTH;
 	if (num_pairs < voxels / 2) {
 		crack_format = CrackFormat::PERMISSIBLE;
 		label_format = LabelFormat::FLAT;
