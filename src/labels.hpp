@@ -489,6 +489,7 @@ std::vector<LABEL> decode_condensed_pins(
 			uint64_t index = crackle::lib::ctoid(buf, i, index_width);
 			i += index_width;
 			uint64_t depth = crackle::lib::ctoid(buf, i, depth_width);
+			i += depth;
 			pins.emplace_back(label, index, depth);
 		}
 	}
