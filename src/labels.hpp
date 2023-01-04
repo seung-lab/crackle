@@ -258,8 +258,8 @@ std::vector<unsigned char> encode_condensed_pins(
 	}
 	i += crackle::lib::itoc(combined_width, binary, i);
 
-	for (uint64_t label = 0; label < all_labels.size(); label++) {		
-		auto& pins = all_pins[all_labels[i]];
+	for (uint64_t label = 0; label < all_labels.size(); label++) {
+		auto& pins = all_pins[all_labels[label]];
 		std::sort(pins.begin(), pins.end(), CmpIndex);
 
 		i += crackle::lib::itocd(pins.size(), binary, i, num_pins_width);
