@@ -9,6 +9,7 @@ setuptools.setup(
         "fastcrackle",
         ["src/fastcrackle.cpp"],
         extra_compile_args=["-std=c++17"],
+        language="c++",
     ),
   ],
   entry_points={
