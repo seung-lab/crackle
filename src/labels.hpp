@@ -341,7 +341,7 @@ std::vector<LABEL> decode_flat(
 
 	uint64_t grid_size = std::min(header.grid_size, std::max(header.sx, header.sy));
 	uint64_t num_grids = ((header.sx + grid_size - 1) / grid_size) * ((header.sy + grid_size - 1) / grid_size);
-	num_grids = std::max(num_grids, 1ULL);
+	num_grids = std::max(num_grids, static_cast<uint64_t>(1));
 	num_grids *= header.sz;
 
 	uint64_t component_width = crackle::lib::compute_byte_width(header.sx * header.sy);

@@ -254,9 +254,9 @@ LABEL* decompress(
 		throw std::runtime_error(err);
 	}
 
-	z_start = std::max(std::min(z_start, static_cast<int64_t>(header.sz - 1)), 0LL);
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(header.sz - 1)), static_cast<int64_t>(0));
 	z_end = z_end < 0 ? static_cast<int64_t>(header.sz) : z_end;
-	z_end = std::max(std::min(z_end, static_cast<int64_t>(header.sz)), 0LL);
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(header.sz)), static_cast<int64_t>(0));
 
 	if (z_start >= z_end) {
 		std::string err = "crackle: Invalid range: ";
