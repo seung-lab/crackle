@@ -12,7 +12,6 @@ jobs:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
-      compiler: [g++, clang]
       matrix:
         os: [ubuntu-20.04,  macos-latest, windows-2019]
 
