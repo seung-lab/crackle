@@ -453,12 +453,10 @@ std::vector<LABEL> decode_condensed_pins(
 			labels_binary.data(), 0
 		)
 	);
-	const uint64_t num_labels = decode_num_labels(header, labels_binary);
 	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
 
 	// bgcolor, num labels (u64), N labels, fmt depth num_pins, 
-	// [renum label][num_pins][idx_1][depth_1]...[idx_n][depth_n]
-	const uint64_t renum_width = crackle::lib::compute_byte_width(num_labels);
+	// [num_pins][idx_1][depth_1]...[idx_n][depth_n]
 	const uint64_t index_width = header.pin_index_width();
 
 	typedef crackle::pins::Pin<uint64_t, uint64_t, uint64_t> PinType;
