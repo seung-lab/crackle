@@ -414,7 +414,8 @@ std::vector<LABEL> decode_fixed_width_pins(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &binary,
 	const std::vector<uint32_t> &cc_labels,
-	const uint64_t N
+	const uint64_t N,
+	const uint64_t z_start, const uint64_t z_end
 ) {
 	std::vector<unsigned char> labels_binary = raw_labels(binary);
 	const LABEL bgcolor = static_cast<LABEL>(
@@ -446,16 +447,24 @@ std::vector<LABEL> decode_fixed_width_pins(
 		);
 	}
 
-	const uint64_t sx = header.sx;
-	const uint64_t sy = header.sy;
+	const int64_t sx = header.sx;
+	const int64_t sy = header.sy;
 
-	const uint64_t sxy = sx * sy;
+	const int64_t sxy = sx * sy;
 
 	std::vector<LABEL> label_map(N, bgcolor);
-	for (uint64_t i = 0; i < num_pins; i++) {
-		PinType pin = pins[i];
-		for (uint64_t z = 0; z <= pin.depth; z++) {
-			auto cc_id = cc_labels[pin.index + sxy * z];
+	for (auto& pin : pins) {
+		int64_t pin_z = pin.index / sxy;
+		int64_t loc = pin.index - (pin_z * sxy);
+		int64_t pin_z_start = std::max(pin_z, static_cast<int64_t>(z_start));
+		int64_t pin_z_end = pin_z + pin.depth + 1;
+		pin_z_end = std::min(pin_z_end, static_cast<int64_t>(z_end));
+
+		pin_z_start -= static_cast<int64_t>(z_start);
+		pin_z_end -= static_cast<int64_t>(z_start);
+
+		for (int64_t z = pin_z_start; z < pin_z_end; z++) {
+			auto cc_id = cc_labels[loc + sxy * z];
 			label_map[cc_id] = uniq[pin.label];
 		}
 	}
