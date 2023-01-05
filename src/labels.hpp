@@ -54,7 +54,8 @@ std::vector<unsigned char> encode_flat(
 	uniq.resize(j);
 
 	robin_hood::unordered_flat_map<STORED_LABEL, STORED_LABEL> remapping;
-	for (STORED_LABEL i = 0; i < uniq.size(); i++) {
+	remapping.reserve(uniq.size());
+	for (uint64_t i = 0; i < uniq.size(); i++) {
 		remapping[uniq[i]] = i;
 	}
 
