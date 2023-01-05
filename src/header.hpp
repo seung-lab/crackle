@@ -127,6 +127,14 @@ public:
 		return crackle::lib::compute_byte_width(sz == 0 ? 0 : sz - 1);	
 	}
 
+	uint64_t num_grids() const {
+		uint64_t gsize = std::min(grid_size, std::max(sx, sy));
+		uint64_t ngrids = ((sx + gsize - 1) / gsize) * ((sy + gsize - 1) / gsize);
+		ngrids = std::max(ngrids, static_cast<uint64_t>(1));
+		ngrids *= sz;
+		return ngrids;
+	}
+
 	size_t tochars(std::vector<unsigned char> &buf, size_t idx = 0) const {
 		if ((idx + CrackleHeader::header_size) > buf.size()) {
 			throw std::runtime_error("crackle: Unable to write past end of buffer.");

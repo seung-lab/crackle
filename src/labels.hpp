@@ -70,7 +70,7 @@ std::vector<unsigned char> encode_flat(
 	std::vector<unsigned char> binary(
 		8 
 		+ sizeof(STORED_LABEL) * uniq.size() 
-		+ sizeof(uint32_t) * num_components_per_slice.size()
+		+ component_width * num_components_per_slice.size()
 		+ key_width * stored_labels.size()
 	);
 
@@ -324,6 +324,35 @@ std::vector<STORED_LABEL> decode_uniq(
 	return uniq;
 }
 
+std::tuple<
+	std::vector<uint64_t>,
+	uint64_t,
+	uint64_t
+>
+decode_components(
+	const crackle::CrackleHeader &header,
+	const unsigned char *buf,
+	const uint64_t offset,
+	const uint64_t num_grids, 
+	const uint64_t component_width,
+	const uint64_t z_start,
+	const uint64_t z_end
+) {
+	std::vector<uint64_t> components(num_grids);
+	for (uint64_t i = 0, j = offset; i < num_grids; i++, j += component_width) {
+		components[i] = crackle::lib::ctoid(buf, j, component_width);
+	}
+	uint64_t component_left_offset = 0;
+	uint64_t component_right_offset = 0;
+	for (uint64_t z = 0; z < z_start; z++) {
+		component_left_offset += components[z];
+	}
+	for (uint64_t z = header.sz - 1; z >= z_end; z--) {
+		component_right_offset += components[z];
+	}
+	return std::make_tuple(components, component_left_offset, component_right_offset);
+}
+
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_flat(
 	const crackle::CrackleHeader &header,
@@ -338,29 +367,15 @@ std::vector<LABEL> decode_flat(
 
 	const int cc_label_width = crackle::lib::compute_byte_width(num_labels);
 
-	uint64_t grid_size = std::min(header.grid_size, std::max(header.sx, header.sy));
-	uint64_t num_grids = ((header.sx + grid_size - 1) / grid_size) * ((header.sy + grid_size - 1) / grid_size);
-	num_grids = std::max(num_grids, static_cast<uint64_t>(1));
-	num_grids *= header.sz;
-
+	const uint64_t num_grids = header.num_grids();
 	uint64_t component_width = crackle::lib::compute_byte_width(header.sx * header.sy);
 
 	uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels;
-	std::vector<uint64_t> components(num_grids);
-	for (uint64_t i = 0, j = offset; i < num_grids; i++, j += component_width) {
-		components[i] = crackle::lib::ctoid(buf, j, component_width);
-	}
-	uint64_t component_left_offset = 0;
-	uint64_t component_right_offset = 0;
-	for (uint64_t z = 0; z < z_start; z++) {
-		component_left_offset += components[z];
-	}
-	for (uint64_t z = header.sz - 1; z >= z_end; z--) {
-		component_right_offset += components[z];
-	}
-
+	auto [components, component_left_offset, component_right_offset] = decode_components(
+		header, labels_binary.data(), offset, num_grids, component_width,
+		z_start, z_end
+	);
 	offset += component_width * num_grids + component_left_offset * cc_label_width;
-
 	uint64_t num_fields = (
 		labels_binary.size() 
 		- offset 
@@ -452,7 +467,8 @@ std::vector<LABEL> decode_condensed_pins(
 	const crackle::CrackleHeader &header,
 	const std::vector<unsigned char> &binary,
 	const std::vector<uint32_t> &cc_labels,
-	const uint64_t N
+	const uint64_t N, 
+	const uint64_t z_start, const uint64_t z_end
 ) {
 	std::vector<unsigned char> labels_binary = raw_labels(binary);
 	const LABEL bgcolor = static_cast<LABEL>(
@@ -466,7 +482,7 @@ std::vector<LABEL> decode_condensed_pins(
 	// [num_pins][idx_1][depth_1]...[idx_n][depth_n]
 	const uint64_t index_width = header.pin_index_width();
 
-	typedef crackle::pins::Pin<uint64_t, uint64_t, uint64_t> PinType;
+	typedef crackle::pins::Pin<uint64_t, int64_t, int64_t> PinType;
 	const unsigned char* buf = labels_binary.data();
 
 	uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1);
@@ -493,15 +509,24 @@ std::vector<LABEL> decode_condensed_pins(
 		i += num_pins * (index_width + depth_width);
 	}
 
-	const uint64_t sx = header.sx;
-	const uint64_t sy = header.sy;
+	const int64_t sx = header.sx;
+	const int64_t sy = header.sy;
 
-	const uint64_t sxy = sx * sy;
+	const int64_t sxy = sx * sy;
 
 	std::vector<LABEL> label_map(N, bgcolor);
 	for (auto& pin : pins) {
-		for (uint64_t z = 0; z <= pin.depth; z++) {
-			auto cc_id = cc_labels[pin.index + sxy * z];
+		int64_t pin_z = pin.index / sxy;
+		int64_t loc = pin.index - (pin_z * sxy);
+		int64_t pin_z_start = std::max(pin_z, static_cast<int64_t>(z_start));
+		int64_t pin_z_end = pin_z + pin.depth + 1;
+		pin_z_end = std::min(pin_z_end, static_cast<int64_t>(z_end));
+
+		pin_z_start -= static_cast<int64_t>(z_start);
+		pin_z_end -= static_cast<int64_t>(z_start);
+
+		for (int64_t z = pin_z_start; z < pin_z_end; z++) {
+			auto cc_id = cc_labels[loc + sxy * z];
 			label_map[cc_id] = uniq[pin.label];
 		}
 	}
@@ -517,17 +542,18 @@ std::vector<LABEL> decode_label_map(
 	const uint64_t N,
 	const uint64_t z_start, const uint64_t z_end
 ) {
+	std::vector<LABEL> label_map;
 	if (header.label_format == LabelFormat::FLAT) {
 		return decode_flat<LABEL, STORED_LABEL>(header, binary, z_start, z_end);
 	}
 	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
-		return decode_fixed_width_pins<LABEL, STORED_LABEL>(
+		label_map = decode_fixed_width_pins<LABEL, STORED_LABEL>(
 			header, binary, cc_labels, N
 		);
 	}
 	else if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
-		return decode_condensed_pins<LABEL, STORED_LABEL>(
-			header, binary, cc_labels, N
+		label_map = decode_condensed_pins<LABEL, STORED_LABEL>(
+			header, binary, cc_labels, N, z_start, z_end
 		);
 	}
 	else {
@@ -535,6 +561,8 @@ std::vector<LABEL> decode_label_map(
 		err += std::to_string(header.label_format);
 		throw std::runtime_error(err);
 	}
+
+	return label_map;
 }
 
 };

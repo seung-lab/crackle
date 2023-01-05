@@ -259,7 +259,10 @@ std::vector<CandidatePin> find_optimal_pins(
 }
 
 template <typename LABEL>
-std::unordered_map<uint64_t, std::vector<Pin<uint64_t, uint64_t, uint64_t>>> 
+std::tuple<
+	std::unordered_map<uint64_t, std::vector<Pin<uint64_t, uint64_t, uint64_t>>>,
+	std::vector<uint64_t>
+>
 compute(
 	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
@@ -301,7 +304,7 @@ compute(
 		all_pins[label] = encoded_pins;
 	}
 
-	return all_pins;
+	return std::make_tuple(all_pins, num_components_per_slice);
 }
 
 };

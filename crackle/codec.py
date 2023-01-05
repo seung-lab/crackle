@@ -14,6 +14,9 @@ def header(binary:bytes) -> CrackleHeader:
 def labels(binary:bytes) -> np.ndarray:
   """Extract the unique labels from a Crackle bytestream."""
   head = header(binary)
+  if head.voxels() == 0:
+    return np.zeros((0,), dtype=head.dtype)
+
   hb = CrackleHeader.HEADER_BYTES
 
   if head.label_format == LabelFormat.FLAT:
@@ -227,8 +230,12 @@ def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -
     z_start = 0
   if z_end is None:
     z_end = sz
-  
-  labels = fastcrackle.decompress(binary, z_start, z_end)
+
+  if (sx * sy * sz == 0):
+    labels = np.zeros((0,), dtype=header.dtype)
+  else:
+    labels = fastcrackle.decompress(binary, z_start, z_end)
+
   order = 'F' if header.fortran_order else 'C'
   labels = labels.reshape((sx,sy,z_end - z_start), order=order)
   return labels

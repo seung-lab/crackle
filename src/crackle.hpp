@@ -64,6 +64,11 @@ std::vector<unsigned char> compress_helper(
 		/*num_label_bytes=*/0,
 		/*fortran_order*/fortran_order
 	);
+
+	if (voxels == 0) {
+		return header.tobytes();
+	}
+
 	std::vector<std::vector<unsigned char>> 
 		crack_codes = crackle::crackcodes::encode_boundaries(
 			labels, sx, sy, sz, 
@@ -71,19 +76,8 @@ std::vector<unsigned char> compress_helper(
 		);
 	
 	std::vector<unsigned char> labels_binary;
-	if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
-		std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>
-			all_pins = crackle::pins::compute(labels, sx, sy, sz);
-		labels_binary = crackle::labels::encode_fixed_width_pins<LABEL, STORED_LABEL>(
-			all_pins,
-			sx, sy, sz,
-			header.pin_index_width(),
-			header.depth_width()
-		);
-	}
-	else if (label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
-		std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>
-			all_pins = crackle::pins::compute(labels, sx, sy, sz);
+	if (label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
+		auto [all_pins, num_components_per_slice] = crackle::pins::compute(labels, sx, sy, sz);
 		labels_binary = crackle::labels::encode_condensed_pins<LABEL, STORED_LABEL>(
 			all_pins,
 			sx, sy, sz,
