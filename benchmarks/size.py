@@ -13,16 +13,18 @@ def sample(labels, shape):
 def run_sample(labels, shape, N):
   for i in range(N):
     cutout = sample(labels, shape)
-    
+    run(cutout)
+
+def run(labels):
     s = time.time()
-    ckl_binary = crackle.compress(cutout, force_flat=True)
+    ckl_binary = crackle.compress(labels, allow_pins=False)
     compress_time = time.time() - s
 
     s = time.time()
-    cpso_binary = compresso.compress(cutout)
+    cpso_binary = compresso.compress(labels)
     cpso_time = time.time() - s
 
-    raw_binary = cutout.tobytes('F')
+    raw_binary = labels.tobytes('F')
 
     s = time.time()
     cckl_binary = zlib.compress(ckl_binary)
@@ -48,6 +50,11 @@ print("shape:", shape)
 print("PINKY40 CUTOUTS (connectomics.npy)")
 labels = compresso.load("benchmarks/connectomics.npy.cpso.gz")
 run_sample(labels, shape, N)
+
+print("BINARY IMAGE (connectomics.npy, label 67699431)")
+labels = compresso.load("benchmarks/connectomics.npy.cpso.gz")
+labels = labels == 67699431
+run(labels)
 
 print("WATERSHED CUTOUTS (ws.npy)")
 labels = compresso.load("benchmarks/ws.npy.cpso.gz")

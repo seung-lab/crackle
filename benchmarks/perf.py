@@ -15,7 +15,7 @@ def run_sample(labels, shape, N):
     cutout = sample(labels, shape)
     
     s = time.time()
-    ckl_binary = crackle.compress(cutout, force_flat=True)
+    ckl_binary = crackle.compress(cutout, allow_pins=False)
     compress_time = time.time() - s
 
     s = time.time()
