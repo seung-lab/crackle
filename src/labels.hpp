@@ -558,7 +558,7 @@ std::vector<LABEL> decode_label_map(
 	}
 	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
 		label_map = decode_fixed_width_pins<LABEL, STORED_LABEL>(
-			header, binary, cc_labels, N
+			header, binary, cc_labels, N, z_start, z_end
 		);
 	}
 	else if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
