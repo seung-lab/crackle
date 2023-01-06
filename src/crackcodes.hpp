@@ -521,8 +521,8 @@ unpack_binary(
 
 			if (symbols.size()) {
 				if (
-					(move == 0 && symbols.back() == 'd')
-					|| (move == 2 && symbols.back() == 'r')
+					(move == DirectionCode::UP && symbols.back() == 'd')
+					|| (move == DirectionCode::LEFT && symbols.back() == 'r')
 				) {
 					symbols.back() = 't';
 					branches_taken--;
@@ -531,8 +531,8 @@ unpack_binary(
 					}
 				}
 				else if (
-					(move == 3 && symbols.back() == 'u')
-					|| (move == 1 && symbols.back() == 'l')
+					(move == DirectionCode::DOWN && symbols.back() == 'u')
+					|| (move == DirectionCode::RIGHT && symbols.back() == 'l')
 				) {
 					symbols.back() = 'b';
 					branches_taken++;
