@@ -84,7 +84,7 @@ F: whether the array is to be rendered as C (0) or F (1) order
 
 ### Flat Label Format
 
-| NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | NUM CONNECTED COMPONENTS PER A GRID (sizeof(sx \* sy) \* sz) | INDEX INTO UNIQUE LABELS FOR EACH CCL ID (sizeof(NUM_LABELS) \* ... to end of section) |
+`| NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | NUM CONNECTED COMPONENTS PER A GRID (sizeof(sx \* sy) \* sz) | INDEX INTO UNIQUE LABELS FOR EACH CCL ID (sizeof(NUM_LABELS) \* ... to end of section) |`
 
 Flat labels are random access read, allow efficient reading of unique labels, efficient remapping, and efficient search for a given label's existence. Since the connected component labels can often use a smaller byte width than the unique values, even noise arrays can see some value from compression.
 
@@ -92,16 +92,16 @@ Encoding flat labels is fast.
 
 ### Condensed (Variable Width) Pins Label Format
 
-| NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | FMT_BYTE | PIN SECTION |
+`| NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | FMT_BYTE | PIN SECTION |`
 
-FMT_BYTE: 0000DDNN
+FMT_BYTE: `0000DDNN`
 
 DD: 2^(DD) is the depth width
 NN: 2^(NN) is the num pins width
 
-PIN SECTION: | PINS FOR LABEL 0 | PINS FOR LABEL 1 | ... | PINS FOR LABEL N |
+PIN SECTION: `| PINS FOR LABEL 0 | PINS FOR LABEL 1 | ... | PINS FOR LABEL N |`
 
-PINS: | num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N | DEPTH_0 | DEPTH_1 | ... | DEPTH_N |
+PINS: `| num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N | DEPTH_0 | DEPTH_1 | ... | DEPTH_N |`
 
 Note that INDEX_0 to INDEX_N are stored with a difference filter applied to improve compressibility.
 
@@ -112,9 +112,9 @@ Depending on the image statistics and quality of the pin solver, pins can be muc
 ### Crack Code Format
 
 
-CRACK CODE: | CHAIN 0 | CHAIN 1 | ... | CHAIN N |
+CRACK CODE: `| CHAIN 0 | CHAIN 1 | ... | CHAIN N |`
 
-CHAIN: | BEGINNING OF CHAIN INDEX (sizeof(sx * sy)) | BIT PACKED MOVES (2 bits each) |
+CHAIN: `| BEGINNING OF CHAIN INDEX (sizeof(sx * sy)) | BIT PACKED MOVES (2 bits each) |`
 
 The BEGINNING OF CHAIN INDEX (BOC) locates the grid vertex where the crack code will begin. Vertices are the corners of the pixel grid, with 0 at the top left and sx\*sy-1 at the bottom right (fortran order). 
 
