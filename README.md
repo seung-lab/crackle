@@ -1,6 +1,7 @@
 # Crackle: Next gen. 3D segmentation compression codec.
 
 ```bash
+# Command Line Interface
 crackle data.npy # creates data.ckl
 crackle -d data.ckl # recovers data.npy
 ```
@@ -42,6 +43,72 @@ Crackle is a new codec inspired by Compresso \[1\] for creating highly compresse
 Crackle improves upon Compresso by replacing the bit-packed boundary map with a "crack code" and also uses 3D information to reduce redundancy in labels using "pins". Like Compresso, Crackle uses a two pass compression strategy where the output of crackle may be further comrpessed with a bitstream compressor like gzip, bzip2, zstd, or lzma.
 
 Based on benchmarks, it seems likely that the output of Crackle will be in the ballpark of 20\% to 50\% the size of Compresso. The second stage compressed Crackle file will likely be about 60\% to 85\% the size of the equivalent Compresso file.
+
+
+## Versions
+
+| Major Version | Format Version | Description                                                    |
+|---------------|----------------|----------------------------------------------------------------|
+| 1             | 0              | Still experimental. |
+
+
+## Stream Format
+
+| Section   | Bytes                                     | Description                                                                                                     |
+|-----------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| Header    | 23                                        | Metadata incl. length of fields.                                                                                |
+| Labels       | header.num_label_bytes        | Can be either "flat" labels or "pins". Describes how to color connected components.                                                                                   |
+| Crack Index     | header.sz * sizeof(sx\*sy\*2)             | Number of bytes for the crack codes in each slice.
+| Crack Codes    | Variable length.           | Instructions for drawing crack boundaries.             |
+
+### Header
+
+
+| Attribute         | Value             | Type    | Description                                     |
+|-------------------|-------------------|---------|-------------------------------------------------|
+| magic             | crkl              | char[4] | File magic number.                              |
+| format_version    | 0                 | u8      | Stream version.                   |
+| format_field      | bitfield          | u8      | See below.                 |
+| sx, sy, sz        | >= 0              | u32 x 3 | Size of array dimensions.                       |
+| grid_size         | log2(grid_size)   | u8      | Stores log2 of grid dimensions in voxels.          |
+| num_label_bytes   | Any.              | u8      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
+
+
+Format Field (u8): DDSSCLLF (each letter represents a bit, left is LSB)
+
+DD: 2^(DD) = byte width of returned array (1,2,4,8 bytes)  
+SS: 2^(SS) = byte width of stored labels (sometimes you can store values in 2 bytes when the final array is 8 bytes)  
+C: 1: crack codes denote impermissible boundaries 0: they denote permissible boundaries.  
+LL: 0: "flat" label format, 1: fixed width pins (unused?) 2: variable width pins 3: reserved  
+F: whether the array is to be rendered as C (0) or F (1) order
+
+### Flat Label Format
+
+| NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | NUM CONNECTED COMPONENTS PER A GRID (sizeof(sx \* sy) \* sz) | INDEX INTO UNIQUE LABELS FOR EACH CCL ID (sizeof(NUM_LABELS) \* ... to end of section) |
+
+Flat labels are random access read, allow efficient reading of unique labels, efficient remapping, and efficient search for a given label's existence. Since the connected component labels can often use a smaller byte width than the unique values, even noise arrays can see some value from compression.
+
+Encoding flat labels is fast.
+
+### Condensed (Variable Width) Pins Label Format
+
+| NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | FMT_BYTE | PIN SECTION |
+
+FMT_BYTE: 0000DDNN
+
+DD: 2^(DD) is the depth width
+NN: 2^(NN) is the num pins width
+
+PIN SECTION: | PINS FOR LABEL 0 | PINS FOR LABEL 1 | ... | PINS FOR LABEL N |
+
+PINS: | num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N | DEPTH_0 | DEPTH_1 | ... | DEPTH_N |
+
+Note that INDEX_0 to INDEX_N are stored with a difference filter applied to improve compressibility.
+
+A pin (color, position, depth) is a line segment that joins together multiple connected component IDs and labels them with a color (an index into UNIQUE LABELS) in order to use 3D information to compress the labels as compared with the flat label format. Pins are slow to compute but fast to decode, however random access is lost (a full scan of the labels section is needed to decode a subset of crack codes). Like with flat, efficient reading of unique labels, efficient remapping, and search are supported. 
+
+Depending on the image statistics and quality of the pin solver, pins can be much smaller than flat or larger (some heuristics are used to avoid this case). An excellent example of where pins do well is a binary image where remarkable savings can be achieved in the labels section (though overall it is probably a small part of the file).
+
 
 ## Boundary Structure: Crack Code
 
