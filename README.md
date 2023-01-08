@@ -92,7 +92,7 @@ Encoding flat labels is fast.
 
 ### Condensed (Variable Width) Pins Label Format
 
-`| NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | FMT_BYTE | PIN SECTION |`
+`| BACKGROUND COLOR (STORED_DATA_WIDTH) | NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | FMT_BYTE | PIN SECTION |`
 
 FMT_BYTE: `0000DDNN`
 
@@ -105,7 +105,7 @@ PINS: `| num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N | DEPTH_0 | DEPTH_1 | ... 
 
 Note that INDEX_0 to INDEX_N are stored with a difference filter applied to improve compressibility.
 
-A pin (color, position, depth) is a line segment that joins together multiple connected component IDs and labels them with a color (an index into UNIQUE LABELS) in order to use 3D information to compress the labels as compared with the flat label format. Pins are slow to compute but fast to decode, however random access is lost (a full scan of the labels section is needed to decode a subset of crack codes). Like with flat, efficient reading of unique labels, efficient remapping, and search are supported. 
+A pin (color, position, depth) is a line segment that joins together multiple connected component IDs and labels them with a color (an index into UNIQUE LABELS) in order to use 3D information to compress the labels as compared with the flat label format. Pins are slow to compute but fast to decode, however random access is lost (a full scan of the labels section is needed to decode a subset of crack codes). The most frequent pin is replaced with a background color. Like with flat, efficient reading of unique labels, efficient remapping, and search are supported. 
 
 Depending on the image statistics and quality of the pin solver, pins can be much smaller than flat or larger (some heuristics are used to avoid this case). An excellent example of where pins do well is a binary image where remarkable savings can be achieved in the labels section (though overall it is probably a small part of the file).
 
