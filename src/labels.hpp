@@ -287,8 +287,8 @@ std::vector<unsigned char> raw_labels(
 	crackle::CrackleHeader header(binary);
 	uint64_t hb = crackle::CrackleHeader::header_size;
 	std::vector<unsigned char> labels_binary(
-		binary.begin() + hb,
-		binary.begin() + hb + header.num_label_bytes
+		binary.begin() + hb + sizeof(uint32_t) * header.sz,
+		binary.begin() + hb + sizeof(uint32_t) * header.sz + header.num_label_bytes
 	);
 	return labels_binary;
 }

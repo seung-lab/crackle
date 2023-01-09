@@ -18,18 +18,19 @@ def labels(binary:bytes) -> np.ndarray:
     return np.zeros((0,), dtype=head.dtype)
 
   hb = CrackleHeader.HEADER_BYTES
+  offset = hb + head.sz * 4
 
   if head.label_format == LabelFormat.FLAT:
     # num labels (u64), N labels
-    num_labels = int.from_bytes(binary[hb:hb+8], 'little')
-    offset = hb + 8
+    num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+    offset += 8
     return np.frombuffer(
       binary[offset:offset+num_labels*head.stored_data_width],
       dtype=head.stored_dtype
     ).astype(head.dtype, copy=False)
   else:
     # bgcolor, num labels (u64), N labels, pins
-    offset = hb + head.stored_data_width
+    offset += head.stored_data_width
     num_labels = int.from_bytes(binary[offset:offset+8], 'little')
     offset += 8
     labels = np.frombuffer(
@@ -45,7 +46,7 @@ def contains(binary:bytes, label:int) -> bool:
   """Rapidly check if a label exists in a Crackle bytestream."""
   head = header(binary)
   hb = CrackleHeader.HEADER_BYTES
-  offset = hb
+  offset = hb + head.sz * 4
 
   # bgcolor, num labels (u64), N labels, pins
   if head.label_format == LabelFormat.PINS_FIXED_WIDTH:
@@ -60,8 +61,8 @@ def contains(binary:bytes, label:int) -> bool:
     binary[offset:offset+num_labels*head.stored_data_width],
     dtype=head.stored_dtype
   )
-  idx = np.searchsorted(uniq_labels, label)
-  if 0 < idx < uniq_labels.size:
+  idx = np.searchsorted(uniq, label)
+  if 0 < idx < uniq.size:
     return True
   elif idx == 0:
     return uniq[0] == label
@@ -70,8 +71,8 @@ def contains(binary:bytes, label:int) -> bool:
 
 def raw_labels(binary:bytes) -> bytes:
   header = CrackleHeader.frombytes(binary)
-  hb = header.HEADER_BYTES
-  return binary[hb:hb+header.num_label_bytes]
+  offset = header.HEADER_BYTES + header.sz * 4
+  return binary[offset:offset+header.num_label_bytes]
 
 def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   """
@@ -94,7 +95,7 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   # flat: num_labels, N labels, remapped labels
   # pins: bgcolor, num labels (u64), N labels, pins
 
-  offset = hb
+  offset = hb + 4 * head.sz
   if head.label_format == LabelFormat.PINS_FIXED_WIDTH:
     bgcolor = int.from_bytes(binary[offset:offset+head.stored_data_width], 'little')
 
@@ -137,8 +138,8 @@ def components(binary:bytes):
 
   return {
     'header': binary[:hl],
-    'labels': binary[hl:hl+ll],
-    'z_index': binary[hl+ll:hl+ll+il],
+    'z_index': binary[hl:hl+il],
+    'labels': binary[hl+il:hl+ll+il],
     'crack_codes': binary[-cl:],
   }
 
@@ -152,9 +153,9 @@ def background_color(binary:bytes) -> int:
   if header.label_format == LabelFormat.FLAT:
     raise FormatError("Background color can only be extracted from pin encoded streams.")
 
-  hb = CrackleHeader.HEADER_BYTES
+  offset = CrackleHeader.HEADER_BYTES + header.sz * 4
   dtype = width2dtype[header.stored_data_width]
-  bgcolor = np.frombuffer(binary[hb:hb+header.stored_data_width], dtype=dtype)
+  bgcolor = np.frombuffer(binary[offset:offset+header.stored_data_width], dtype=dtype)
   return int(bgcolor[0])
 
 def decode_pins(binary:bytes) -> np.ndarray:
@@ -166,7 +167,7 @@ def decode_pins(binary:bytes) -> np.ndarray:
     raise FormatError("Pins can only be extracted from pin encoded streams.")
 
   # bgcolor, num labels (u64), N labels, pins
-  offset = hb + header.stored_data_width
+  offset = hb + header.stored_data_width + header.sz * 4
   num_labels = int.from_bytes(binary[offset:offset+8], 'little')
   offset += 8
   labels = np.frombuffer(

@@ -120,10 +120,6 @@ public:
 		return static_cast<uint64_t>(sx) * static_cast<uint64_t>(sy) * static_cast<uint64_t>(sz);
 	}
 
-	int z_index_width() const {
-		return crackle::lib::compute_byte_width(2 * sx * sy);
-	}
-
 	int pin_index_width() const {
 		return crackle::lib::compute_byte_width(sx * sy * sz);
 	}

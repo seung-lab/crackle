@@ -150,6 +150,19 @@ def test_labels():
   uniq2 = crackle.labels(binary)
   assert np.all(uniq == uniq2)
 
+def test_contains():
+  labels = np.random.randint(0,4, size=(100,100,10), dtype=np.uint32)
+  binary = crackle.compress(labels)
+
+  assert crackle.contains(binary, -1) == False
+  assert crackle.contains(binary, 0) == True
+  assert crackle.contains(binary, 1) == True
+  assert crackle.contains(binary, 2) == True
+  assert crackle.contains(binary, 3) == True
+  assert crackle.contains(binary, 4) == False
+  assert crackle.contains(binary, 21954124) == False
+  assert crackle.contains(binary, -12998124) == False
+
 def test_remap():
   labels = np.arange(0,1000).reshape((10,10,10))
   binary = crackle.compress(labels)

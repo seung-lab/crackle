@@ -106,16 +106,16 @@ std::vector<unsigned char> compress_helper(
 
 	header.num_label_bytes = labels_binary.size();
 
-	std::vector<unsigned char> z_index_binary(header.z_index_width() * sz);
+	std::vector<unsigned char> z_index_binary(sizeof(uint32_t) * sz);
 	for (int64_t i = 0, z = 0; z < sz; z++) {
-		i += crackle::lib::itocd(crack_codes[z].size(), z_index_binary, i, header.z_index_width());
+		i += crackle::lib::itoc(static_cast<uint32_t>(crack_codes[z].size()), z_index_binary, i);
 	}
 
 	std::vector<unsigned char> final_binary;
 	std::vector<unsigned char> header_binary = header.tobytes();
 	final_binary.insert(final_binary.end(), header_binary.begin(), header_binary.end());
-	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
 	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
+	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
 	for (auto& code : crack_codes) {
 		final_binary.insert(final_binary.end(), code.begin(), code.end());
 	}
@@ -156,9 +156,9 @@ std::vector<uint64_t> get_crack_code_offsets(
 	const CrackleHeader &header,
 	const std::vector<unsigned char> &binary
 ) {
-	uint64_t offset = CrackleHeader::header_size + header.num_label_bytes;
+	uint64_t offset = CrackleHeader::header_size;
 
-	const uint64_t z_width = header.z_index_width();
+	const uint64_t z_width = sizeof(uint32_t);
 	const uint64_t zindex_bytes = z_width * header.sz;
 
 	if (offset + zindex_bytes > binary.size()) {
@@ -169,24 +169,13 @@ std::vector<uint64_t> get_crack_code_offsets(
 
 	std::vector<uint64_t> z_index(header.sz + 1);
 	for (uint64_t z = 0; z < header.sz; z++) {
-		if (z_width == 1) {
-			z_index[z+1] = lib::ctoi<uint8_t>(buf, offset + z_width * z);
-		}
-		else if (z_width == 2) {
-			z_index[z+1] = lib::ctoi<uint16_t>(buf, offset + z_width * z);
-		}
-		else if (z_width == 4) {
-			z_index[z+1] = lib::ctoi<uint32_t>(buf, offset + z_width * z);
-		}
-		else if (z_width == 8) {
-			z_index[z+1] = lib::ctoi<uint64_t>(buf, offset + z_width * z);
-		}
+		z_index[z+1] = lib::ctoi<uint32_t>(buf, offset + z_width * z);
 	}
 	for (uint64_t z = 0; z < header.sz; z++) {
 		z_index[z+1] += z_index[z];
 	}
 	for (uint64_t i = 0; i < header.sz + 1; i++) {
-		z_index[i] += offset + zindex_bytes;
+		z_index[i] += offset + zindex_bytes + header.num_label_bytes;
 	}
 	return z_index;
 }
