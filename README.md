@@ -111,6 +111,15 @@ A pin (color, position, depth) is a line segment that joins together multiple co
 
 Depending on the image statistics and quality of the pin solver, pins can be much smaller than flat or larger (some heuristics are used to avoid this case). An excellent example of where pins do well is a binary image where remarkable savings can be achieved in the labels section (though overall it is probably a small part of the file).
 
+### Fixed Width Pins
+
+`| BACKGROUND COLOR (STORED_DATA_WIDTH) | NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | PIN SECTION |`
+
+PIN SECTION: `|PIN0|PIN1|PIN2|...|PINN|`
+PIN: `|LABEL|INDEX|DEPTH|`
+
+A fixed width variant of pins has also been developed but is not enabled. It frequently is not significantly smaller than flat outside of special circumstances such as a binary image. An advantage this format would have over condensed is that the pins can be sorted and searched rapidly by index, which reduces the amount of reading one might have to do on an mmapped file. Please raise an issue if this seems like something that might be useful to you.
+
 ### Crack Code Format
 
 
