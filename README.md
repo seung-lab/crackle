@@ -38,12 +38,18 @@ res = arr[:10,:10,:10] # array slicing (efficient z ranges)
 
 *This repository is currently experimental.*
 
-Crackle is a new codec inspired by Compresso \[1\] for creating highly compressed 3D dense segmentation images. Compresso innovated by separating labels from boundary structures. There were conceptually four (but really five) elements in the format: header, labels, bit packed and RLE encoded binary image boundaries, and indeterminate boundary locations. 
+Crackle is a compression codec for 3D dense segmentation (labeled) images. The algorithm accepts both signed and unsigned integer labels. It is written in C++ and has Python bindings. Crackle uses a two pass compression strategy where the output of crackle may be further comrpessed with a bitstream compressor like gzip, bzip2, zstd, or lzma. However, if the Crackle binary, which is already small, not further compressed, it supports several efficient operations:
 
-Crackle improves upon Compresso by replacing the bit-packed boundary map with a "crack code" and also uses 3D information to reduce redundancy in labels using "pins". Like Compresso, Crackle uses a two pass compression strategy where the output of crackle may be further comrpessed with a bitstream compressor like gzip, bzip2, zstd, or lzma.
+- Query if a label exists in the image
+- Extract unique labels
+- Remap labels
+- Decode by Z-Range
 
-Based on benchmarks, it seems likely that the output of Crackle will be in the ballpark of 20\% to 50\% the size of Compresso. The second stage compressed Crackle file will likely be about 60\% to 85\% the size of the equivalent Compresso file.
+Crackle is inspired by Compresso \[1\]. Compresso innovated by separating labels from boundary structures. There were conceptually four (but really five) elements in the format: header, labels, bit packed and RLE encoded binary image boundaries, and indeterminate boundary locations. 
 
+Crackle improves upon Compresso by replacing the bit-packed boundary map with a "crack code" and can also use 3D information to reduce redundancy in labels using "pins".
+
+See benchmarks for more information on Crackle's size and compute effiency.
 
 ## Versions
 
