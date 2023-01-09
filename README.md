@@ -56,7 +56,7 @@ Based on benchmarks, it seems likely that the output of Crackle will be in the b
 
 | Section   | Bytes                                     | Description                                                                                                     |
 |-----------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| Header    | 23                                        | Metadata incl. length of fields.                                                                                |
+| Header    | 24                                        | Metadata incl. length of fields.                                                                                |
 | Crack Index     | header.sz * sizeof(uint32)             | Number of bytes for the crack codes in each slice.
 | Labels       | header.num_label_bytes        | Can be either "flat" labels or "pins". Describes how to color connected components.                                                                                   |
 | Crack Codes    | Variable length.           | Instructions for drawing crack boundaries.             |
@@ -68,19 +68,21 @@ Based on benchmarks, it seems likely that the output of Crackle will be in the b
 |-------------------|-------------------|---------|-------------------------------------------------|
 | magic             | crkl              | char[4] | File magic number.                              |
 | format_version    | 0                 | u8      | Stream version.                   |
-| format_field      | bitfield          | u8      | See below.                 |
+| format_field      | bitfield          | u16     | See below.                 |
 | sx, sy, sz        | >= 0              | u32 x 3 | Size of array dimensions.                       |
 | grid_size         | log2(grid_size)   | u8      | Stores log2 of grid dimensions in voxels.          |
 | num_label_bytes   | Any.              | u8      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
 
 
-Format Field (u8): DDSSCLLF (each letter represents a bit, left is LSB)
+Format Field (u8): DDSSCLLFGRRRRRRR (each letter represents a bit, left is LSB)
 
 DD: 2^(DD) = byte width of returned array (1,2,4,8 bytes)  
 SS: 2^(SS) = byte width of stored labels (sometimes you can store values in 2 bytes when the final array is 8 bytes)  
 C: 1: crack codes denote impermissible boundaries 0: they denote permissible boundaries.  
 LL: 0: "flat" label format, 1: fixed width pins (unused?) 2: variable width pins 3: reserved  
 F: whether the array is to be rendered as C (0) or F (1) order
+G: Signed (if (1), data are signed int, otherwise unsigned int)
+R: Reserved
 
 ### Flat Label Format
 
