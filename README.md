@@ -57,8 +57,8 @@ Based on benchmarks, it seems likely that the output of Crackle will be in the b
 | Section   | Bytes                                     | Description                                                                                                     |
 |-----------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
 | Header    | 23                                        | Metadata incl. length of fields.                                                                                |
+| Crack Index     | header.sz * sizeof(uint32)             | Number of bytes for the crack codes in each slice.
 | Labels       | header.num_label_bytes        | Can be either "flat" labels or "pins". Describes how to color connected components.                                                                                   |
-| Crack Index     | header.sz * sizeof(sx\*sy\*2)             | Number of bytes for the crack codes in each slice.
 | Crack Codes    | Variable length.           | Instructions for drawing crack boundaries.             |
 
 ### Header
