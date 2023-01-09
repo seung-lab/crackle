@@ -80,7 +80,7 @@ See benchmarks for more information on Crackle's size and compute effiency.
 | num_label_bytes   | Any.              | u8      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
 
 
-Format Field (u8): DDSSCLLFGRRRRRRR (each letter represents a bit, left is LSB)
+Format Field (u16): DDSSCLLFGRRRRRRR (each letter represents a bit, left is LSB)
 
 DD: 2^(DD) = byte width of returned array (1,2,4,8 bytes)  
 SS: 2^(SS) = byte width of stored labels (sometimes you can store values in 2 bytes when the final array is 8 bytes)  
