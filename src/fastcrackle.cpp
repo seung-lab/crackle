@@ -45,17 +45,35 @@ py::array decompress(
 ) {
 	crackle::CrackleHeader head(buffer);
 
-	if (head.data_width == 1) {
-		return decompress_helper<uint8_t>(head, buffer, z_start, z_end);
-	}
-	else if (head.data_width == 2) {
-		return decompress_helper<uint16_t>(head, buffer, z_start, z_end);
-	}
-	else if (head.data_width == 4) {
-		return decompress_helper<uint32_t>(head, buffer, z_start, z_end);	
+	py::array labels;
+
+	if (head.is_signed) {
+		if (head.data_width == 1) {
+			return decompress_helper<int8_t>(head, buffer, z_start, z_end);
+		}
+		else if (head.data_width == 2) {
+			return decompress_helper<int16_t>(head, buffer, z_start, z_end);
+		}
+		else if (head.data_width == 4) {
+			return decompress_helper<int32_t>(head, buffer, z_start, z_end);	
+		}
+		else {
+			return decompress_helper<int64_t>(head, buffer, z_start, z_end);
+		}
 	}
 	else {
-		return decompress_helper<uint64_t>(head, buffer, z_start, z_end);
+		if (head.data_width == 1) {
+			return decompress_helper<uint8_t>(head, buffer, z_start, z_end);
+		}
+		else if (head.data_width == 2) {
+			return decompress_helper<uint16_t>(head, buffer, z_start, z_end);
+		}
+		else if (head.data_width == 4) {
+			return decompress_helper<uint32_t>(head, buffer, z_start, z_end);	
+		}
+		else {
+			return decompress_helper<uint64_t>(head, buffer, z_start, z_end);
+		}		
 	}
 }
 
@@ -84,18 +102,35 @@ py::bytes compress(
 	const bool fortran_order = true
 ) {
 	int width = labels.dtype().itemsize();
+	bool is_signed = labels.dtype().kind() == 'i';
 
-	if (width == 1) {
-		return compress_helper<uint8_t>(labels, allow_pins, fortran_order);
-	}
-	else if (width == 2) {
-		return compress_helper<uint16_t>(labels, allow_pins, fortran_order);
-	}
-	else if (width == 4) {
-		return compress_helper<uint32_t>(labels, allow_pins, fortran_order);
+	if (is_signed) {
+		if (width == 1) {
+			return compress_helper<int8_t>(labels, allow_pins, fortran_order);
+		}
+		else if (width == 2) {
+			return compress_helper<int16_t>(labels, allow_pins, fortran_order);
+		}
+		else if (width == 4) {
+			return compress_helper<int32_t>(labels, allow_pins, fortran_order);
+		}
+		else {
+			return compress_helper<int64_t>(labels, allow_pins, fortran_order);
+		}
 	}
 	else {
-		return compress_helper<uint64_t>(labels, allow_pins, fortran_order);
+		if (width == 1) {
+			return compress_helper<uint8_t>(labels, allow_pins, fortran_order);
+		}
+		else if (width == 2) {
+			return compress_helper<uint16_t>(labels, allow_pins, fortran_order);
+		}
+		else if (width == 4) {
+			return compress_helper<uint32_t>(labels, allow_pins, fortran_order);
+		}
+		else {
+			return compress_helper<uint64_t>(labels, allow_pins, fortran_order);
+		}
 	}
 }
 

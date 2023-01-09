@@ -5,30 +5,40 @@ import compresso
 
 import pytest
 
-def test_compress_decompress_random():
-  labels = np.random.randint(0,5,size=(4,4,1), dtype=np.uint32)
+DTYPE = [
+  np.uint8, np.uint16, np.uint32, np.uint64,
+  np.int8,  np.int16,  np.int32,  np.int64
+]
+
+@pytest.mark.parametrize('dtype', DTYPE)
+def test_compress_decompress_random(dtype):
+  labels = np.random.randint(0,5,size=(4,4,1), dtype=dtype)
   binary = crackle.compress(labels)
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
-  labels = np.random.randint(0,40,size=(1000,999,1), dtype=np.uint32)
+  labels = np.random.randint(0,40,size=(1000,999,1), dtype=dtype)
   binary = crackle.compress(labels)
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
-  labels = np.random.randint(0,40,size=(100,100,100), dtype=np.uint32)
+  labels = np.random.randint(0,40,size=(100,100,100), dtype=dtype)
   binary = crackle.compress(labels)
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
 @pytest.mark.parametrize('allow_pins', [False,True])
-@pytest.mark.parametrize('i', range(3))
-def test_compress_decompress(i, allow_pins):
+@pytest.mark.parametrize('dtype', DTYPE)
+def test_compress_decompress(dtype, allow_pins):
+
+  if (allow_pins and np.dtype(dtype).kind == 'i'):
+    return
+
   labels = compresso.load("connectomics.npy.cpso.gz")
 
   x,y,z = tuple(np.random.randint(128,384, size=(3,)))
   print(x,y,z)
-  cutout = labels[x:x+128,y:y+128,z:z+16]
+  cutout = labels[x:x+128,y:y+128,z:z+16].astype(dtype)
   
   binary = crackle.compress(cutout, allow_pins=allow_pins)
   recovered = crackle.decompress(binary)

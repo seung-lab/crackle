@@ -30,12 +30,13 @@ enum CrackFormat {
  */
 struct CrackleHeader {
 public:
-	static constexpr size_t header_size{23};
+	static constexpr size_t header_size{24};
 
 	static constexpr char magic[4]{ 'c', 'r', 'k', 'l' }; 
 	uint8_t format_version; 
 	LabelFormat label_format;
 	CrackFormat crack_format;
+	bool is_signed;
 	uint8_t data_width;
 	uint8_t stored_data_width;
 	uint32_t sx;
@@ -49,6 +50,7 @@ public:
 		format_version(0),
 		label_format(LabelFormat::FLAT),
 		crack_format(CrackFormat::IMPERMISSIBLE),
+		is_signed(false),
 		data_width(1), stored_data_width(1),
 		sx(1), sy(1), sz(1), grid_size(2147483648),
 		num_label_bytes(0), fortran_order(true)
@@ -58,6 +60,7 @@ public:
 		const uint8_t _format_version, 
 		const LabelFormat _label_fmt,
 		const CrackFormat _crack_fmt,
+		const bool _is_signed,
 		const uint8_t _data_width,
 		const uint8_t _stored_data_width,
 		const uint32_t _sx, const uint32_t _sy, const uint32_t _sz,
@@ -68,6 +71,7 @@ public:
 		format_version(_format_version),
 		label_format(_label_fmt),
 		crack_format(_crack_fmt),
+		is_signed(_is_signed),
 		data_width(_data_width), stored_data_width(_stored_data_width),
 		sx(_sx), sy(_sy), sz(_sz),
 		grid_size(_grid_size),
@@ -83,20 +87,21 @@ public:
 			throw std::runtime_error("crackle: Data stream is not valid. Unable to decompress.");
 		}
 
-		uint8_t format_byte = lib::ctoi<uint8_t>(buf, 5);
-		sx = lib::ctoi<uint32_t>(buf, 6); 
-		sy = lib::ctoi<uint32_t>(buf, 10); 
-		sz = lib::ctoi<uint32_t>(buf, 14);
+		uint16_t format_bytes = lib::ctoi<uint16_t>(buf, 5);
+		sx = lib::ctoi<uint32_t>(buf, 7); 
+		sy = lib::ctoi<uint32_t>(buf, 11); 
+		sz = lib::ctoi<uint32_t>(buf, 15);
 		grid_size = static_cast<uint32_t>(
-			pow(2, lib::ctoi<uint8_t>(buf, 18))
+			pow(2, lib::ctoi<uint8_t>(buf, 19))
 		);
-		num_label_bytes = lib::ctoi<uint32_t>(buf, 19);
+		num_label_bytes = lib::ctoi<uint32_t>(buf, 20);
 
-		data_width = pow(2, (format_byte & 0b00000011));
-		stored_data_width = pow(2, (format_byte & 0b00001100) >> 2);
-		crack_format = static_cast<CrackFormat>((format_byte & 0b00010000) >> 4);
-		label_format = static_cast<LabelFormat>((format_byte & 0b01100000) >> 5);
-		fortran_order = static_cast<bool>((format_byte & 0b10000000) >> 7);
+		data_width = pow(2, (format_bytes & 0b00000011));
+		stored_data_width = pow(2, (format_bytes & 0b00001100) >> 2);
+		crack_format = static_cast<CrackFormat>((format_bytes & 0b00010000) >> 4);
+		label_format = static_cast<LabelFormat>((format_bytes & 0b01100000) >> 5);
+		fortran_order = static_cast<bool>((format_bytes & 0b10000000) >> 7);
+		is_signed = static_cast<bool>((format_bytes >> 8) & 0b1);
 	}
 
 	CrackleHeader(const unsigned char* buf) {
@@ -145,15 +150,16 @@ public:
 			buf[i] = magic[j];
 		}
 
-		uint8_t format_byte = 0;
-		format_byte |= static_cast<uint8_t>(log2(data_width));
-		format_byte |= static_cast<uint8_t>(log2(stored_data_width)) << 2;
-		format_byte |= static_cast<uint8_t>(crack_format) << 4;
-		format_byte |= static_cast<uint8_t>(label_format) << 5;
-		format_byte |= static_cast<uint8_t>(fortran_order) << 7;
+		uint16_t format_bytes = 0;
+		format_bytes |= static_cast<uint16_t>(log2(data_width));
+		format_bytes |= static_cast<uint16_t>(log2(stored_data_width)) << 2;
+		format_bytes |= static_cast<uint16_t>(crack_format) << 4;
+		format_bytes |= static_cast<uint16_t>(label_format) << 5;
+		format_bytes |= static_cast<uint16_t>(fortran_order) << 7;
+		format_bytes |= static_cast<uint16_t>(is_signed) << 8;
 
 		i += lib::itoc(format_version, buf, i);
-		i += lib::itoc(format_byte, buf, i);
+		i += lib::itoc(format_bytes, buf, i);
 		i += lib::itoc(sx, buf, i);
 		i += lib::itoc(sy, buf, i);
 		i += lib::itoc(sz, buf, i);

@@ -22,7 +22,7 @@ class CrackFormat(IntEnum):
 class CrackleHeader:
   MAGIC = b'crkl'
   FORMAT_VERSION = 0
-  HEADER_BYTES = 23
+  HEADER_BYTES = 24
 
   def __init__(
     self, 
@@ -33,6 +33,7 @@ class CrackleHeader:
     num_label_bytes:int,
     fortran_order:bool,
     grid_size:int,
+    signed:bool,
   ):
     self.label_format = label_format
     self.crack_format = crack_format
@@ -44,7 +45,7 @@ class CrackleHeader:
     self.num_label_bytes = num_label_bytes
     self.fortran_order = fortran_order
     self.grid_size = int(grid_size)
-    # should we have a field that is y/n pins?
+    self.signed = bool(signed)
 
   @classmethod
   def frombytes(kls, buffer:bytes):
@@ -64,12 +65,13 @@ class CrackleHeader:
       crack_format=values[2],
     	data_width=(2 ** values[0]),
     	stored_data_width=(2 ** values[1]),
-    	sx=int.from_bytes(buffer[6:10], byteorder='little', signed=False),
-    	sy=int.from_bytes(buffer[10:14], byteorder='little', signed=False),
-    	sz=int.from_bytes(buffer[14:18], byteorder='little', signed=False),
-      grid_size=(2 ** int(buffer[18])),
-    	num_label_bytes=int.from_bytes(buffer[19:23], byteorder='little', signed=False),
+    	sx=int.from_bytes(buffer[7:11], byteorder='little', signed=False),
+    	sy=int.from_bytes(buffer[11:15], byteorder='little', signed=False),
+    	sz=int.from_bytes(buffer[15:19], byteorder='little', signed=False),
+      grid_size=(2 ** int(buffer[19])),
+    	num_label_bytes=int.from_bytes(buffer[20:24], byteorder='little', signed=False),
       fortran_order=bool(values[4]),
+      signed=(buffer[6] & 0b1),
     )
 
   def tobytes(self) -> bytes:
@@ -87,6 +89,7 @@ class CrackleHeader:
       self.MAGIC,
       self.FORMAT_VERSION.to_bytes(1, 'little'),
       fmt_byte.to_bytes(1, 'little'),
+      self.signed.to_bytes(1, 'little'),
       self.sx.to_bytes(4, 'little'),
       self.sy.to_bytes(4, 'little'),
       self.sz.to_bytes(4, 'little'),

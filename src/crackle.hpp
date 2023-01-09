@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 #include "robin_hood.hpp"
 
@@ -44,10 +45,17 @@ std::vector<unsigned char> compress_helper(
 		label_format = LabelFormat::FLAT;
 	}
 
+	constexpr bool is_signed = std::numeric_limits<LABEL>::is_signed;
+
+	if (is_signed && allow_pins) {
+		throw std::runtime_error("Pins are not yet supported for signed integer volumes.");
+	}
+
 	CrackleHeader header(
 		/*format_version=*/0,
 		/*label_format=*/label_format,
 		/*crack_format=*/crack_format,
+		/*is_signed=*/is_signed,
 		/*data_width=*/sizeof(LABEL),
 		/*stored_data_width=*/sizeof(STORED_LABEL),
 		/*sx=*/sx,
