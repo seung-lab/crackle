@@ -65,6 +65,18 @@ def test_compress_decompress_z_range(allow_pins):
   recovered = arr[2:100,5:83,-1]
   assert np.all(cutout[2:100,5:83,-1] == recovered)
 
+def test_connectomics_npy():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels, allow_pins=False)
+  recovered = crackle.decompress(binary)
+  assert np.all(labels == recovered)
+
+def test_watershed():
+  labels = compresso.load("ws.npy.cpso.gz")
+  binary = crackle.compress(labels, allow_pins=False)
+  recovered = crackle.decompress(binary)
+  assert np.all(labels == recovered)
+
 @pytest.mark.parametrize('allow_pins', [False,True])
 def test_empty(allow_pins):
   labels = np.zeros((0,0,0), dtype=np.uint32, order="F")
