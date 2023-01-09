@@ -111,7 +111,7 @@ A pin (color, position, depth) is a line segment that joins together multiple co
 
 Depending on the image statistics and quality of the pin solver, pins can be much smaller than flat or larger (some heuristics are used to avoid this case). An excellent example of where pins do well is a binary image where remarkable savings can be achieved in the labels section (though overall it is probably a small part of the file).
 
-### Fixed Width Pins
+### Fixed Width Pins (disabled)
 
 `| BACKGROUND COLOR (STORED_DATA_WIDTH) | NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | PIN SECTION |`
 
