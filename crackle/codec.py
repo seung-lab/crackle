@@ -239,6 +239,17 @@ def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -
 
   order = 'F' if header.fortran_order else 'C'
   labels = labels.reshape((sx,sy,z_end - z_start), order=order)
+
+  if header.signed:
+    if header.data_width == 1:
+      labels = labels.view(np.int8)
+    elif header.data_width == 2:
+      labels = labels.view(np.int16)
+    elif header.data_width == 4:
+      labels = labels.view(np.int32)
+    else:
+      labels = labels.view(np.int64)
+
   return labels
 
 def compress(labels:np.ndarray, allow_pins:bool = False) -> bytes:

@@ -47,34 +47,20 @@ py::array decompress(
 
 	py::array labels;
 
-	if (head.is_signed) {
-		if (head.data_width == 1) {
-			return decompress_helper<int8_t>(head, buffer, z_start, z_end);
-		}
-		else if (head.data_width == 2) {
-			return decompress_helper<int16_t>(head, buffer, z_start, z_end);
-		}
-		else if (head.data_width == 4) {
-			return decompress_helper<int32_t>(head, buffer, z_start, z_end);	
-		}
-		else {
-			return decompress_helper<int64_t>(head, buffer, z_start, z_end);
-		}
+	if (head.data_width == 1) {
+		labels = decompress_helper<uint8_t>(head, buffer, z_start, z_end);
+	}
+	else if (head.data_width == 2) {
+		labels = decompress_helper<uint16_t>(head, buffer, z_start, z_end);
+	}
+	else if (head.data_width == 4) {
+		labels = decompress_helper<uint32_t>(head, buffer, z_start, z_end);	
 	}
 	else {
-		if (head.data_width == 1) {
-			return decompress_helper<uint8_t>(head, buffer, z_start, z_end);
-		}
-		else if (head.data_width == 2) {
-			return decompress_helper<uint16_t>(head, buffer, z_start, z_end);
-		}
-		else if (head.data_width == 4) {
-			return decompress_helper<uint32_t>(head, buffer, z_start, z_end);	
-		}
-		else {
-			return decompress_helper<uint64_t>(head, buffer, z_start, z_end);
-		}		
+		labels = decompress_helper<uint64_t>(head, buffer, z_start, z_end);
 	}
+	
+	return labels;
 }
 
 template <typename LABEL>
