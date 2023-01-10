@@ -41,14 +41,13 @@ std::vector<unsigned char> compress_helper(
 		label_format = LabelFormat::FLAT;
 	}
 
-	if (sz == 1 || !allow_pins) {
-		label_format = LabelFormat::FLAT;
-	}
-
 	constexpr bool is_signed = std::numeric_limits<LABEL>::is_signed;
 
-	if (is_signed && allow_pins) {
-		throw std::runtime_error("Pins are not yet supported for signed integer volumes.");
+	// Full support for signed integers in pins is not yet implemented
+	// but is not impossible. The is_signed condition can be removed
+	// at that point.
+	if (sz == 1 || !allow_pins || is_signed) {
+		label_format = LabelFormat::FLAT;
 	}
 
 	CrackleHeader header(

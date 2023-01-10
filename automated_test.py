@@ -30,10 +30,6 @@ def test_compress_decompress_random(dtype):
 @pytest.mark.parametrize('allow_pins', [False,True])
 @pytest.mark.parametrize('dtype', DTYPE)
 def test_compress_decompress(dtype, allow_pins):
-
-  if (allow_pins and np.dtype(dtype).kind == 'i'):
-    return
-
   labels = compresso.load("connectomics.npy.cpso.gz")
 
   x,y,z = tuple(np.random.randint(128,384, size=(3,)))
