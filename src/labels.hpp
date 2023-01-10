@@ -39,7 +39,7 @@ std::vector<unsigned char> encode_flat(
 		}
 	}
 
-	cc_labels.release();
+	cc_labels.reset();
 
 	std::vector<STORED_LABEL> uniq(mapping.begin(), mapping.end());
 	std::sort(uniq.begin(), uniq.end());
