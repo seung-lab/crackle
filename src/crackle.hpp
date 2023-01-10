@@ -27,8 +27,8 @@ template <typename LABEL, typename STORED_LABEL>
 std::vector<unsigned char> compress_helper(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
-	const bool allow_pins = false,
-	const bool fortran_order = true
+	const int pin_threshold,
+	const bool fortran_order
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -38,9 +38,9 @@ std::vector<unsigned char> compress_helper(
 	LabelFormat label_format = LabelFormat::PINS_VARIABLE_WIDTH;
 	if (num_pairs < voxels / 2) {
 		crack_format = CrackFormat::PERMISSIBLE;
-		label_format = LabelFormat::FLAT;
 	}
 
+	const bool allow_pins = num_pairs * 100 / voxels >= pin_threshold;
 	constexpr bool is_signed = std::numeric_limits<LABEL>::is_signed;
 
 	// Full support for signed integers in pins is not yet implemented
@@ -126,7 +126,7 @@ template <typename LABEL>
 std::vector<unsigned char> compress(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
-	const bool allow_pins = false,
+	const int pin_threshold = 101,
 	const bool fortran_order = true
 ) {
 	const int64_t voxels = sx * sy * sz;
@@ -135,16 +135,16 @@ std::vector<unsigned char> compress(
 	);
 
 	if (stored_data_width == 1) {
-		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, pin_threshold, fortran_order);
 	}
 	else if (stored_data_width == 2) {
-		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, pin_threshold, fortran_order);
 	}
 	else if (stored_data_width == 4) {
-		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, pin_threshold, fortran_order);
 	}
 	else {
-		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, pin_threshold, fortran_order);
 	}
 }
 
