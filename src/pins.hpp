@@ -288,6 +288,8 @@ compute(
 		labels, cc_labels.get(), sx, sy, sz, N_total
 	);
 
+	cc_labels.reset();
+
 	for (auto [label, pins] : pinsets) {
 		std::vector<CandidatePin> solution = find_optimal_pins(
 			pins, multiverse[label], sx, sy
