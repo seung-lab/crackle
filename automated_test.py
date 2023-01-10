@@ -7,7 +7,7 @@ import pytest
 
 DTYPE = [
   np.uint8, np.uint16, np.uint32, np.uint64,
-  np.int8,  np.int16,  np.int32,  np.int64
+  # np.int8,  np.int16,  np.int32,  np.int64
 ]
 
 @pytest.mark.parametrize('dtype', DTYPE)
@@ -172,7 +172,7 @@ def test_contains():
   assert crackle.contains(binary, -12998124) == False
 
 def test_remap():
-  labels = np.arange(0,1000).reshape((10,10,10))
+  labels = np.arange(0,1000).reshape((10,10,10)).astype(np.uint32)
   binary = crackle.compress(labels)
 
   labels = crackle.labels(binary)

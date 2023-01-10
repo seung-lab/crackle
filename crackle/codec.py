@@ -266,6 +266,9 @@ def compress(labels:np.ndarray, allow_pins:bool = False) -> bytes:
     solving a set cover problem and can be slow on larger images.
     However, it can likely be improved.
   """
+  if np.issubdtype(labels.dtype, np.signedinteger):
+    raise TypeError("Signed integer data types are not currently supported.")
+
   f_order = labels.flags.f_contiguous
   labels = np.asfortranarray(labels)
   return fastcrackle.compress(labels, allow_pins, f_order)
