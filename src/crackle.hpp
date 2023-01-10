@@ -288,25 +288,49 @@ LABEL* decompress(
 	);
 
 	std::vector<LABEL> label_map;
-	if (header.stored_data_width == 1) {
-		label_map = crackle::labels::decode_label_map<LABEL, uint8_t>(
-			header, binary, cc_labels, N, z_start, z_end
-		);
-	}
-	else if (header.stored_data_width == 2) {
-		label_map = crackle::labels::decode_label_map<LABEL, uint16_t>(
-			header, binary, cc_labels, N, z_start, z_end
-		);
-	}
-	else if (header.stored_data_width == 4) {
-		label_map = crackle::labels::decode_label_map<LABEL, uint32_t>(
-			header, binary, cc_labels, N, z_start, z_end
-		);
+	if (header.is_signed) {
+		if (header.stored_data_width == 1) {
+			label_map = crackle::labels::decode_label_map<LABEL, int8_t>(
+				header, binary, cc_labels, N, z_start, z_end
+			);
+		}
+		else if (header.stored_data_width == 2) {
+			label_map = crackle::labels::decode_label_map<LABEL, int16_t>(
+				header, binary, cc_labels, N, z_start, z_end
+			);
+		}
+		else if (header.stored_data_width == 4) {
+			label_map = crackle::labels::decode_label_map<LABEL, int32_t>(
+				header, binary, cc_labels, N, z_start, z_end
+			);
+		}
+		else {
+			label_map = crackle::labels::decode_label_map<LABEL, int64_t>(
+				header, binary, cc_labels, N, z_start, z_end
+			);
+		}
 	}
 	else {
-		label_map = crackle::labels::decode_label_map<LABEL, uint64_t>(
-			header, binary, cc_labels, N, z_start, z_end
-		);
+		if (header.stored_data_width == 1) {
+			label_map = crackle::labels::decode_label_map<LABEL, uint8_t>(
+				header, binary, cc_labels, N, z_start, z_end
+			);
+		}
+		else if (header.stored_data_width == 2) {
+			label_map = crackle::labels::decode_label_map<LABEL, uint16_t>(
+				header, binary, cc_labels, N, z_start, z_end
+			);
+		}
+		else if (header.stored_data_width == 4) {
+			label_map = crackle::labels::decode_label_map<LABEL, uint32_t>(
+				header, binary, cc_labels, N, z_start, z_end
+			);
+		}
+		else {
+			label_map = crackle::labels::decode_label_map<LABEL, uint64_t>(
+				header, binary, cc_labels, N, z_start, z_end
+			);
+		}
 	}
 
 	if (output == NULL) {
