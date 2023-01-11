@@ -1,4 +1,5 @@
 from typing import List, Optional
+from collections import namedtuple
 
 import numpy as np
 import fastremap
@@ -192,13 +193,11 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
   index_width = header.index_width()
 
   offset += 1
-  pinset = binary[
-    offset:labels_end
-  ]
-  dtype = np.dtype([
-    ('idx', width2dtype[header.index_width()]), 
-    ('depth', width2dtype[depth_width])
-  ])
+  pinset = binary[offset:labels_end]
+  idtype = np.dtype(width2dtype[header.index_width()])
+  ddtype = np.dtype(width2dtype[depth_width])
+
+  PinTuple = namedtuple('Pin', ['index', 'depth'])
 
   pins = {}
 
@@ -206,8 +205,14 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
   for label in range(num_labels):
     n_pins = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
-    pins[uniq[label]] = np.frombuffer(pinset[offset:offset+n_pins*dtype.itemsize], dtype=dtype)
-    offset += n_pins * dtype.itemsize
+    index_arr = np.frombuffer(pinset[offset:offset+n_pins*idtype.itemsize], dtype=idtype)
+    index_arr = index_arr.copy()
+    for i in range(1, len(index_arr)):
+      index_arr[i] += index_arr[i-1]
+    offset += n_pins*idtype.itemsize
+    depth_arr = np.frombuffer(pinset[offset:offset+n_pins*ddtype.itemsize], dtype=ddtype)
+    offset += n_pins * ddtype.itemsize
+    pins[uniq[label]] = [ PinTuple(i,d) for i,d in zip(index_arr, depth_arr) ]
     
   return pins
 
