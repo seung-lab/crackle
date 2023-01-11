@@ -188,11 +188,38 @@ compute_multiverse(
 	return multiverse;
 }
 
+void shrink_pin_to_fit(
+	CandidatePin& pin,
+	const std::unique_ptr<uint32_t[]> &cc_labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {
+	const uint64_t sxy = sx * sy;
+	const uint64_t voxels = sx * sy * sz;
+
+	uint32_t min_id = cc_labels[voxels - 1];
+	uint32_t max_id = 0;
+	for (uint32_t ccid : pin.ccids) {
+		min_id = std::min(min_id, ccid);
+		max_id = std::max(max_id, ccid);
+	}
+
+	for (uint64_t z = pin.z_s; z <= pin.z_e; z++) {
+		uint64_t idx = pin.x + sx * pin.y + sxy * z;
+		if (cc_labels[idx] == min_id) {
+			pin.z_s = z;
+		}
+		if (cc_labels[idx] == max_id) {
+			pin.z_e = z;
+			break;
+		}
+	}
+}
 
 std::vector<CandidatePin> find_optimal_pins(
 	std::vector<CandidatePin> &pinsets,
 	robin_hood::unordered_flat_set<uint32_t> &universe,
-	const uint64_t sx, const uint64_t sy
+	const std::unique_ptr<uint32_t[]> &cc_labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {	
 	std::vector<CandidatePin> final_pins;
 	final_pins.reserve(final_pins.size() / 10);
@@ -219,10 +246,12 @@ std::vector<CandidatePin> find_optimal_pins(
 		heap.pop();
 		isets.erase(idx);
 
-		CandidatePin cur = pinsets[idx];
+		CandidatePin& cur = pinsets[idx];
 		for (uint32_t ccid : cur.ccids) {
 			universe.erase(ccid);
 		}
+
+		shrink_pin_to_fit(cur, cc_labels, sx, sy, sz);
 
 		if (universe.size() == 0) {
 			final_pins.emplace_back(cur);
@@ -288,11 +317,10 @@ compute(
 		labels, cc_labels.get(), sx, sy, sz, N_total
 	);
 
-	cc_labels.reset();
-
 	for (auto [label, pins] : pinsets) {
 		std::vector<CandidatePin> solution = find_optimal_pins(
-			pins, multiverse[label], sx, sy
+			pins, multiverse[label], cc_labels, 
+			sx, sy, sz
 		);
 		std::vector<PinType> encoded_pins;
 		encoded_pins.reserve(solution.size());
