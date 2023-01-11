@@ -118,10 +118,16 @@ class CrackleHeader:
     return self.sx * self.sy * self.sz
 
   def details(self) -> str:
+    label_fmt = 'FLAT'
+    if self.label_format == LabelFormat.PINS_FIXED_WIDTH:
+      label_fmt = 'FIXED_PINS'
+    elif self.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+      label_fmt = 'CONDENSED_PINS'
+
     return f"""
-    magic:         {MAGIC}
-    version:       {FORMAT_VERSION}
-    label fmt:     {'FLAT' if self.label_format == LabelFormat.FLAT else 'FIXED_PINS'}
+    magic:         {CrackleHeader.MAGIC}
+    version:       {CrackleHeader.FORMAT_VERSION}
+    label fmt:     {label_fmt}
     crack fmt:     {'PERMISSIBLE' if self.crack_format == CrackFormat.PERMISSIBLE else 'IMPERMISSIBLE' }
     data width:    {self.data_width}
     stored width:  {self.stored_data_width}
