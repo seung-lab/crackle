@@ -159,12 +159,65 @@ def background_color(binary:bytes) -> int:
   return int(bgcolor[0])
 
 def decode_pins(binary:bytes) -> np.ndarray:
+  header = CrackleHeader.frombytes(binary)
+
+  if header.label_format == LabelFormat.PINS_FIXED_WIDTH:
+    return decode_fixed_pins(binary)
+  elif header.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+    return decode_condensed_pins(binary)
+  else:
+    raise FormatError("Cannot decode pins from flat format.")
+
+def decode_condensed_pins(binary:bytes) -> np.ndarray:
+  header = CrackleHeader.frombytes(binary)
+  hb = CrackleHeader.HEADER_BYTES
+
+  if header.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
+    raise FormatError("This function can only extract pins from variable width streams.")
+
+  # bgcolor, num labels (u64), N labels, pins
+  offset = hb + header.sz * 4 + header.stored_data_width
+  labels_end = hb + header.sz * 4 + header.num_label_bytes
+  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+  offset += 8
+  uniq = np.frombuffer(
+    binary[offset:offset+num_labels*header.stored_data_width],
+    dtype=header.stored_dtype
+  )
+  offset += num_labels * header.stored_data_width  
+  combined_width = binary[offset]
+
+  num_pins_width = 2 ** (combined_width & 0b11)
+  depth_width = 2 ** ((combined_width >> 2) & 0b11)
+  index_width = header.index_width()
+
+  offset += 1
+  pinset = binary[
+    offset:labels_end
+  ]
+  dtype = np.dtype([
+    ('idx', width2dtype[header.index_width()]), 
+    ('depth', width2dtype[depth_width])
+  ])
+
+  pins = {}
+
+  offset = 0
+  for label in range(num_labels):
+    n_pins = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
+    offset += num_pins_width
+    pins[uniq[label]] = np.frombuffer(pinset[offset:offset+n_pins*dtype.itemsize], dtype=dtype)
+    offset += n_pins * dtype.itemsize
+    
+  return pins
+
+def decode_fixed_pins(binary:bytes) -> np.ndarray:
   """For pin encodings only, extract the pins."""
   header = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
 
-  if header.label_format == LabelFormat.FLAT:
-    raise FormatError("Pins can only be extracted from pin encoded streams.")
+  if header.label_format != LabelFormat.PINS_FIXED_WIDTH:
+    raise FormatError("This function can only extract pins from fixed width streams.")
 
   # bgcolor, num labels (u64), N labels, pins
   offset = hb + header.stored_data_width + header.sz * 4
