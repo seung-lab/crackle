@@ -89,7 +89,7 @@ std::vector<unsigned char> compress_helper(
 			all_pins,
 			sx, sy, sz,
 			header.pin_index_width(),
-			num_components
+			num_components_per_slice, num_components
 		);
 	}
 	// else if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
