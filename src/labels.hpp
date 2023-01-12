@@ -592,7 +592,9 @@ std::vector<LABEL> decode_condensed_pins(
 		}
 		for (uint64_t j = 1; j < num_cc_labels; j++) {
 			cc_labels[j] += cc_labels[j-1];
-			label_map[cc_labels[j]] = label;
+		}
+		for (uint64_t j = 0; j < num_cc_labels; j++) {
+			label_map[cc_labels[j]] = uniq[label];
 		}
 	}
 
