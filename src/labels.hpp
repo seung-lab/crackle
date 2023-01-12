@@ -314,6 +314,7 @@ std::vector<unsigned char> encode_condensed_pins(
 		for (uint64_t j : pin_repr) {
 			i += crackle::lib::itocd(pins[j].depth(), binary, i, depth_width);
 		}
+
 		std::vector<uint32_t> cc_ids;
 		cc_ids.reserve(cc_repr.size() * cc_efficient_threshold);
 		for (uint64_t j : cc_repr) {
@@ -334,7 +335,6 @@ std::vector<unsigned char> encode_condensed_pins(
 			i += crackle::lib::itocd(ccid, binary, i, cc_label_width);
 		}
 	}
-
 
 	binary.resize(i);
 	return binary;
@@ -566,8 +566,10 @@ std::vector<LABEL> decode_condensed_pins(
 	std::vector<LABEL> label_map(N, bgcolor);
 
 	std::vector<PinType> pins;
+	
 	for (uint64_t i = offset, label = 0; label < uniq.size(); label++) {
 		uint64_t num_pins = crackle::lib::ctoid(buf, i, num_pins_width);
+
 		i += num_pins_width;
 		for (uint64_t j = 0; j < num_pins; j++) {
 			uint64_t index = crackle::lib::ctoid(buf, i + (j * index_width), index_width);
