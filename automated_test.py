@@ -22,6 +22,11 @@ def test_compress_decompress_random(dtype):
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
+  labels = np.random.randint(0,40,size=(100,100,10), dtype=dtype)
+  binary = crackle.compress(labels, allow_pins=True)
+  recovered = crackle.decompress(binary)
+  assert np.all(labels == recovered)
+
   labels = np.random.randint(0,40,size=(100,100,100), dtype=dtype)
   binary = crackle.compress(labels)
   recovered = crackle.decompress(binary)
