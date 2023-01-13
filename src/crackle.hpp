@@ -84,21 +84,22 @@ std::vector<unsigned char> compress_helper(
 	
 	std::vector<unsigned char> labels_binary;
 	if (label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
-		auto [all_pins, num_components_per_slice] = crackle::pins::compute(labels, sx, sy, sz);
+		auto [all_pins, num_components_per_slice, num_components] = crackle::pins::compute(labels, sx, sy, sz);
 		labels_binary = crackle::labels::encode_condensed_pins<LABEL, STORED_LABEL>(
 			all_pins,
 			sx, sy, sz,
-			header.pin_index_width()
+			header.pin_index_width(),
+			num_components_per_slice, num_components
 		);
 	}
-	else if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
-		auto [all_pins, num_components_per_slice] = crackle::pins::compute(labels, sx, sy, sz);
-		labels_binary = crackle::labels::encode_fixed_width_pins<LABEL, STORED_LABEL>(
-			all_pins,
-			sx, sy, sz,
-			header.pin_index_width(), header.depth_width()
-		);		
-	}
+	// else if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
+	// 	auto [all_pins, num_components_per_slice, num_components] = crackle::pins::compute(labels, sx, sy, sz);
+	// 	labels_binary = crackle::labels::encode_fixed_width_pins<LABEL, STORED_LABEL>(
+	// 		all_pins,
+	// 		sx, sy, sz,
+	// 		header.pin_index_width(), header.depth_width()
+	// 	);		
+	// }
 	else {
 		labels_binary = crackle::labels::encode_flat<LABEL, STORED_LABEL>(labels, sx, sy, sz);
 	}

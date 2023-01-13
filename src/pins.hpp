@@ -75,11 +75,19 @@ struct CandidatePin {
 
 	}
 
-	uint64_t start_idx(uint64_t sx, uint64_t sy) {
+	uint64_t start_idx(uint64_t sx, uint64_t sy) const {
 		return static_cast<uint64_t>(x) + sx * (static_cast<uint64_t>(y) + sy * static_cast<uint64_t>(z_s));
 	}
-	uint64_t depth() {
+	uint64_t depth() const {
 		return static_cast<uint64_t>(z_e - z_s);
+	}
+
+	Pin<uint64_t,uint64_t,uint64_t> to_pin(
+		const uint64_t label, const uint64_t sx, const uint64_t sy
+	) const {
+		return Pin<uint64_t,uint64_t,uint64_t>(
+			label, start_idx(sx, sy), depth()
+		);
 	}
 };
 
@@ -289,15 +297,14 @@ std::vector<CandidatePin> find_optimal_pins(
 
 template <typename LABEL>
 std::tuple<
-	std::unordered_map<uint64_t, std::vector<Pin<uint64_t, uint64_t, uint64_t>>>,
-	std::vector<uint64_t>
+	std::unordered_map<uint64_t, std::vector<CandidatePin>>,
+	std::vector<uint64_t>,
+	uint64_t
 >
 compute(
 	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
-	typedef Pin<uint64_t, uint64_t, uint64_t> PinType;
-
 	std::vector<uint64_t> num_components_per_slice(sz);
 	uint64_t N_total = 0;
 
@@ -310,7 +317,7 @@ compute(
 	);
 
 	auto pinsets = extract_columns(labels, cc_labels.get(), sx, sy, sz);
-	std::unordered_map<uint64_t, std::vector<PinType>> all_pins;
+	std::unordered_map<uint64_t, std::vector<CandidatePin>> all_pins;
 	all_pins.reserve(128);
 
 	auto multiverse = compute_multiverse<LABEL>(
@@ -318,23 +325,13 @@ compute(
 	);
 
 	for (auto [label, pins] : pinsets) {
-		std::vector<CandidatePin> solution = find_optimal_pins(
+		all_pins[label] = find_optimal_pins(
 			pins, multiverse[label], cc_labels, 
 			sx, sy, sz
 		);
-		std::vector<PinType> encoded_pins;
-		encoded_pins.reserve(solution.size());
-		for (auto pin : solution) {
-			encoded_pins.emplace_back(
-				label, 
-				pin.start_idx(sx, sy),
-				pin.depth()
-			);
-		}
-		all_pins[label] = encoded_pins;
 	}
 
-	return std::make_tuple(all_pins, num_components_per_slice);
+	return std::make_tuple(all_pins, num_components_per_slice, N_total);
 }
 
 };
