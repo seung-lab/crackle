@@ -171,6 +171,15 @@ public:
 		return buf;
 	}
 
+	uint64_t nbytes() const {
+		return (
+			  static_cast<uint64_t>(sx) 
+			* static_cast<uint64_t>(sy) 
+			* static_cast<uint64_t>(sz) 
+			* static_cast<uint64_t>(data_width)
+		);
+	}
+
 	static bool valid_header(unsigned char* buf) {
 		bool valid_magic = (buf[0] == 'c' && buf[1] == 'r' && buf[2] == 'k' && buf[3] == 'l');
 		uint8_t format_version = buf[4];
