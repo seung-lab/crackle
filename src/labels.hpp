@@ -618,7 +618,7 @@ std::vector<LABEL> decode_condensed_pins(
 			cc_labels[j] += cc_labels[j-1];
 		}
 		for (uint64_t j = 0; j < num_cc_labels; j++) {
-			if (cc_labels[j] >= component_right_offset) {
+			if (cc_labels[j] < component_left_offset || cc_labels[j] >= component_right_offset) {
 				continue;
 			}
 			label_map[cc_labels[j] - component_left_offset] = uniq[label];
