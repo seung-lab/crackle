@@ -571,7 +571,13 @@ std::vector<LABEL> decode_condensed_pins(
 		header, labels_binary.data(), offset, header.num_grids(), component_width,
 		z_start, z_end
 	);
-	component_right_offset = N - component_right_offset;
+
+	uint64_t N_all = 0;
+	for (uint64_t j = 0; j < components.size(); j++) {
+		N_all += components[j];
+	}
+
+	component_right_offset = N_all - component_right_offset;
 	offset += component_width * header.num_grids();
 
 	uint8_t combined_width = crackle::lib::ctoi<uint8_t>(buf, offset);
