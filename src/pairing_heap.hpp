@@ -213,7 +213,7 @@ public:
     return root == NULL;
   }
 
-  float min_key () {
+  KEY min_key () {
     if (root) {
       return root->key;
     }
@@ -221,7 +221,7 @@ public:
     throw std::runtime_error("No min key.");
   }
 
-  uint32_t min_value () {
+  VALUE min_value () {
     if (root) {
       return root->value;
     }
