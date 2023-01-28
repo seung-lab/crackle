@@ -69,7 +69,8 @@ std::vector<unsigned char> compress_helper(
 		/*grid_size*/2147483648,
 		
 		/*num_label_bytes=*/0,
-		/*fortran_order*/fortran_order
+		/*fortran_order*/fortran_order,
+		/*markov_model_order=*/0, // 0 is disabled
 	);
 
 	if (voxels == 0) {
@@ -116,6 +117,9 @@ std::vector<unsigned char> compress_helper(
 	final_binary.insert(final_binary.end(), header_binary.begin(), header_binary.end());
 	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
 	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
+	if (header.markov_model_order > 0) {
+		// markov model goes here
+	}
 	for (auto& code : crack_codes) {
 		final_binary.insert(final_binary.end(), code.begin(), code.end());
 	}

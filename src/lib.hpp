@@ -134,6 +134,69 @@ uint64_t ctoid(
 	return val;
 }
 
+// bits must be < 8
+// data must be <= 1 byte
+std::vector<unsigned char> write_packed_bitstream(
+	const std::vector<uint8_t>& data, const uint64_t bits
+) {
+	std::vector<unsigned char> output((data.size() * 8 + bits) / bits);
+
+	uint64_t pos = 0;
+	uint64_t j = 0;
+	for (uint64_t i = 0; i < data.size(); i++) {
+		if (pos+bits < 8) {
+			output[j] |= data[i] << (8-pos-bits);
+			pos += bits;
+		}
+		else if (pos+bits == 8) {
+			output[j] |= data[i] << (8-pos-bits);
+			pos = 0;
+			j++;
+		}
+		else {
+			int wrote = 8 - pos;
+			output[j] |= data[i] << wrote;
+			j++;
+			output[j] |= data[i] >> wrote;
+			pos = bits - wrote;
+		}
+	}
+	return output;
+}
+
+std::vector<uint8_t> read_packed_bitstream(
+	const std::vector<unsigned char>& bitstream, 
+	const int bits, const int n_fields
+) {
+
+	std::vector<uint8_t> output(n_fields);
+
+	uint64_t pos = 0;
+	uint64_t j = 0;
+	for (uint64_t i = 0; i < n_fields && i < bitstream.size(); i++) {
+		if (pos+bits < 8) {
+			output[i] |= (bitstream[j] << (8-pos-bits) >> (8-bits));
+			pos += bits;
+		}
+		else if (pos+bits == 8) {
+			output[i] |= (bitstream[j] >> pos);
+			pos = 0;
+			j++;
+		}
+		else {
+			int read = 8 - pos;
+			output[i] |= (bitstream[j] >> pos);
+			j++;
+			output[i] |= (bitstream[j] << (8-(bits-read)) >> (8-(bits-read)));
+			pos = bits - read;
+		}
+	}
+	
+	return output;
+}
+
+
+
 template <typename LABEL>
 LABEL max_label(const LABEL* labels, const uint64_t voxels) {
 	LABEL mx = 0;
