@@ -178,6 +178,39 @@ namespace markov {
 		return data_stream;
 	}
 
+	std::vector<unsigned char> to_stored_model(
+		const std::vector<std::vector<uint8_t>>& model
+	) {
+		std::vector<unsigned char> stored_model(model.size());
+
+		for (uint64_t i = 0; i < model.size(); i++) {
+			stored_model[i] = (
+				  (model[i] & 0b11)
+				| ((model[i] >> 2) & 0b11)
+				| ((model[i] >> 4) & 0b11)
+				| ((model[i] >> 6) & 0b11)
+			);
+		}
+
+		return stored_model;
+	}
+
+	std::vector<std::vector<uint8_t>> from_stored_model(
+		const std::vector<unsigned char>& model_stream
+	) {
+		std::vector<std::vector<uint8_t>> model(model_stream.size());
+
+		for (uint64_t i = 0; i < model_stream.size(); i++) {
+			model[i].resize(4);
+			model[i][0] = model_stream[i] & 0b11;
+			model[i][1] = (model_stream[i] >> 2) & 0b11;
+			model[i][2] = (model_stream[i] >> 4) & 0b11;
+			model[i][3] = (model_stream[i] >> 6) & 0b11;
+		}
+
+		return model;
+	}
+	
 	std::vector<unsigned char> encode_markov(
 		std::vector<std::vector<unsigned char>> &crack_codes,
 		std::vector<robin_hood::unordered_flat_map<int,int>>& stats,
