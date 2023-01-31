@@ -186,6 +186,13 @@ public:
 		);
 	}
 
+	uint64_t markov_model_bytes() const {
+		if (markov_model_order == 0) {
+			return 0;
+		}
+		return pow(4, std::min(markov_model_order, 15));
+	}
+
 	static bool valid_header(unsigned char* buf) {
 		bool valid_magic = (buf[0] == 'c' && buf[1] == 'r' && buf[2] == 'k' && buf[3] == 'l');
 		uint8_t format_version = buf[4];

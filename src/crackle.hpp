@@ -18,6 +18,7 @@
 #include "lib.hpp"
 #include "labels.hpp"
 #include "pins.hpp"
+#include "markov.hpp"
 
 namespace crackle {
 
@@ -28,7 +29,8 @@ std::vector<unsigned char> compress_helper(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const bool allow_pins = false,
-	const bool fortran_order = true
+	const bool fortran_order = true,
+	const uint64_t markov_model_order = 0
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -70,7 +72,7 @@ std::vector<unsigned char> compress_helper(
 		
 		/*num_label_bytes=*/0,
 		/*fortran_order*/fortran_order,
-		/*markov_model_order=*/0, // 0 is disabled
+		/*markov_model_order=*/markov_model_order // 0 is disabled
 	);
 
 	if (voxels == 0) {
@@ -82,6 +84,11 @@ std::vector<unsigned char> compress_helper(
 			labels, sx, sy, sz, 
 			/*permissible=*/(crack_format == CrackFormat::PERMISSIBLE)
 		);
+
+	std::vector<unsigned char> stored_model; // only needed for markov
+	if (markov_model_order > 0) {
+		[stored_model, crack_codes] = crackle::markov::compress(crack_codes, markov_model_order);
+	}
 	
 	std::vector<unsigned char> labels_binary;
 	if (label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
@@ -117,8 +124,8 @@ std::vector<unsigned char> compress_helper(
 	final_binary.insert(final_binary.end(), header_binary.begin(), header_binary.end());
 	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
 	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
-	if (header.markov_model_order > 0) {
-		// markov model goes here
+	if (markov_model_order > 0 && crack_codes.size() > 0) {
+		final_binary.insert(final_binary.end(), stored_model.begin(), stored_model.end());
 	}
 	for (auto& code : crack_codes) {
 		final_binary.insert(final_binary.end(), code.begin(), code.end());
@@ -178,8 +185,17 @@ std::vector<uint64_t> get_crack_code_offsets(
 	for (uint64_t z = 0; z < header.sz; z++) {
 		z_index[z+1] += z_index[z];
 	}
+
+	uint64_t markov_model_offset = 0;
+	if (header.markov_model_order > 0) {
+		markov_model_offset = header.markov_model_bytes();
+	}
+
 	for (uint64_t i = 0; i < header.sz + 1; i++) {
-		z_index[i] += offset + zindex_bytes + header.num_label_bytes;
+		z_index[i] += (
+			offset + zindex_bytes + 
+			header.num_label_bytes + markov_model_offset
+		);
 	}
 	return z_index;
 }
@@ -205,6 +221,19 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 			code.push_back(binary[i]);
 		}
 		crack_codes[z - z_start] = std::move(code);
+	}
+
+	if (header.markov_model_order > 0) {
+		uint64_t model_offset = header.header_size + header.num_label_bytes;
+		const uint64_t z_width = sizeof(uint32_t);
+		const uint64_t zindex_bytes = z_width * header.sz;
+		model_offset += zindex_bytes;
+
+		std::vector<unsigned char> stored_model(
+			binary.begin() + model_offset, 
+			binary.begin() + model_offset + header.markov_model_bytes()
+		);
+		crack_codes = crackle::markov::decompress(stored_model, crack_codes);
 	}
 
 	return crack_codes;
