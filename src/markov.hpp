@@ -210,14 +210,13 @@ namespace markov {
 
 		return model;
 	}
-	
+
 	std::vector<unsigned char> encode_markov(
 		std::vector<std::vector<unsigned char>> &crack_codes,
-		std::vector<robin_hood::unordered_flat_map<int,int>>& stats,
+		std::vector<std::vector<uint8_t>>& model,
 		int64_t model_order
 	) {
 		std::vector<unsigned char> bitstream;
-		auto model = stats_to_model(stats);
 
 		CircularBuf buf(model_order);
 
@@ -259,6 +258,39 @@ namespace markov {
 		}
 
 		return bitstream;
+	}
+
+	std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> 
+	compress(
+		std::vector<std::vector<uint64_t>>& crack_codes,
+		const uint64_t model_order
+	) {
+		apply_difference_code(crack_codes);
+		auto stats = gather_statistics(crack_codes, model_order);
+		auto model = stats_to_model(stats);
+		std::vector<unsigned char> bitstream = encode_markov(
+			crack_codes, model, model_order
+		);
+		std::vector<unsigned char> stored_model = to_stored_model(model);
+		return std::make_tuple(stored_model, bitstream);
+	}
+
+
+	std::vector<uint8_t> decompress(
+		const std::vector<unsigned char>& stored_model,
+		const std::vector<unsigned char>& markov_crack_codes
+	) {
+		auto model = from_stored_model(stored_model);
+
+		std::vector<std::vector<uint8_t>> crack_codes;
+
+		for (auto& code : markov_crack_codes) {
+			crack_codes.push_back(
+				decode_markov(code, model)
+			);
+		}
+
+		return crack_codes;
 	}
 };
 };
