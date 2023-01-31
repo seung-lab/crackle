@@ -87,7 +87,7 @@ namespace markov {
 
 		// might be an off-by-one here
 		for (auto code : crack_codes) {
-			for (int64_t i = 0; i < codes.size() - model_order; i++) {
+			for (int64_t i = 0; i < code.size() - model_order; i++) {
 				buf.push_back(static_cast<uint8_t>(code[i]));
 				int idx = buf.change_to_base_10();
 				stats[idx][code[i]]++;
@@ -98,11 +98,11 @@ namespace markov {
 	}
 
 	std::vector<std::vector<uint8_t>> stats_to_model(
-		std::vector<robin_hood::unordered_flat_map<int,int>>& stats
+		std::vector<robin_hood::unordered_flat_map<uint8_t,int>>& stats
 	) {
 		struct {
 			bool operator()(
-				std::pair<int,int>& a, std::pair<int,int>& b
+				robin_hood::pair<uint8_t,int>& a, robin_hood::pair<uint8_t,int>& b
 			) const { 
 				return a.second >= b.second;
 			}
@@ -110,7 +110,11 @@ namespace markov {
 
 		std::vector<std::vector<uint8_t>> model(stats.size());
 		for (uint64_t i = 0; i < model.size(); i++) {
-			std::vector<std::pair<int,int>> pair_row(stats[i].begin(), stats[i].end());
+			std::vector<robin_hood::pair<uint8_t,int>> pair_row;
+			pair_row.reserve(4);
+			for (auto& pair : stats[i]) {
+				pair_row.push_back(pair);
+			}
 			// most frequent in lowest index
 			std::sort(pair_row.begin(), pair_row.end(), CmpIndex);
 			std::vector<uint8_t> row(4);
@@ -185,10 +189,10 @@ namespace markov {
 
 		for (uint64_t i = 0; i < model.size(); i++) {
 			stored_model[i] = (
-				  (model[i] & 0b11)
-				| ((model[i] >> 2) & 0b11)
-				| ((model[i] >> 4) & 0b11)
-				| ((model[i] >> 6) & 0b11)
+				  (model[i][0] & 0b11)
+				| ((model[i][1] & 0b11) << 2)
+				| ((model[i][2] & 0b11) << 4)
+				| ((model[i][3] & 0b11) << 6)
 			);
 		}
 
