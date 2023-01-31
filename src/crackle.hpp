@@ -85,9 +85,22 @@ std::vector<unsigned char> compress_helper(
 			/*permissible=*/(crack_format == CrackFormat::PERMISSIBLE)
 		);
 
+	if (header.markov_model_order > 0) {
+		bool empty_cracks = true;
+		for (auto& code : crack_codes) {
+			if (code.size()) {
+				empty_cracks = false;
+				break;
+			}
+		}
+		if (empty_cracks) {
+			header.markov_model_order = 0;
+		}
+	}
+
 	std::vector<unsigned char> stored_model; // only needed for markov
-	if (markov_model_order > 0) {
-		[stored_model, crack_codes] = crackle::markov::compress(crack_codes, markov_model_order);
+	if (header.markov_model_order > 0) {
+		[stored_model, crack_codes] = crackle::markov::compress(crack_codes, header.markov_model_order);
 	}
 	
 	std::vector<unsigned char> labels_binary;
@@ -124,7 +137,7 @@ std::vector<unsigned char> compress_helper(
 	final_binary.insert(final_binary.end(), header_binary.begin(), header_binary.end());
 	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
 	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
-	if (markov_model_order > 0 && crack_codes.size() > 0) {
+	if (header.markov_model_order > 0) {
 		final_binary.insert(final_binary.end(), stored_model.begin(), stored_model.end());
 	}
 	for (auto& code : crack_codes) {
@@ -139,7 +152,8 @@ std::vector<unsigned char> compress(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const bool allow_pins = false,
-	const bool fortran_order = true
+	const bool fortran_order = true,
+	const uint64_t markov_model_order = 0
 ) {
 	const int64_t voxels = sx * sy * sz;
 	uint8_t stored_data_width = crackle::lib::compute_byte_width(
@@ -147,16 +161,16 @@ std::vector<unsigned char> compress(
 	);
 
 	if (stored_data_width == 1) {
-		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
 	}
 	else if (stored_data_width == 2) {
-		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
 	}
 	else if (stored_data_width == 4) {
-		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
 	}
 	else {
-		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
 	}
 }
 

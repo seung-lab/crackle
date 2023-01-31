@@ -190,7 +190,12 @@ public:
 		if (markov_model_order == 0) {
 			return 0;
 		}
-		return pow(4, std::min(markov_model_order, 15));
+		return pow(4, 
+			std::min(
+				static_cast<uint64_t>(markov_model_order), 
+				static_cast<uint64_t>(15)
+			)
+		);
 	}
 
 	static bool valid_header(unsigned char* buf) {

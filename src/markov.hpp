@@ -38,7 +38,7 @@ namespace markov {
 			}
 		}
 
-		std::vector<uint8_t> read() {
+		std::vector<uint8_t> read() const {
 			std::vector<uint8_t> out;
 			out.reserve(length);
 			for (int i = 0, j = idx; i < length; i++, j++) {
@@ -50,26 +50,26 @@ namespace markov {
 			return out;
 		}
 
-		int change_to_base_10() {
+		int change_to_base_10() const {
 			int base_10 = 0;
 			for (int i = 0, j = idx; i < length; i++, j++) {
 				if (j >= length) {
 					j = 0;
 				}
-				base_10 += pow(4, i) * static_cast<int>(input[j]);
+				base_10 += pow(4, i) * static_cast<int>(data[j]);
 			}
 			return base_10;
 		}
-	}
+	};
 
 	void apply_difference_code(
-		std::vector<std::vector<uint64_t>>& crack_codes,
+		std::vector<std::vector<uint64_t>>& crack_codes
 	) {
 		for (auto code : crack_codes) {
 			for (uint64_t i = code.size() - 1; i >= 1; i--) {
 				code[i] -= code[i-1];
 				if (code[i] > 3) {
-					code += 4;
+					code[i] += 4;
 				}
 			}
 		}
@@ -77,8 +77,8 @@ namespace markov {
 
 	std::vector<robin_hood::unordered_flat_map<uint8_t,int>> 
 	gather_statistics(
-		std::vector<std::vector<unsigned char>> &crack_codes,
-		int64_t model_order
+		const std::vector<std::vector<uint64_t>> &crack_codes,
+		const int64_t model_order
 	) {
 		std::vector<robin_hood::unordered_flat_map<uint8_t,int>> stats(
 			pow(4, model_order)
@@ -86,7 +86,7 @@ namespace markov {
 		CircularBuf buf(model_order);
 
 		// might be an off-by-one here
-		for (auto codes : crack_codes) {
+		for (auto code : crack_codes) {
 			for (int64_t i = 0; i < codes.size() - model_order; i++) {
 				buf.push_back(static_cast<uint8_t>(code[i]));
 				int idx = buf.change_to_base_10();
@@ -98,7 +98,7 @@ namespace markov {
 	}
 
 	std::vector<std::vector<uint8_t>> stats_to_model(
-		std::vector<robin_hood::unordered_flat_map<int,int>>& stats,
+		std::vector<robin_hood::unordered_flat_map<int,int>>& stats
 	) {
 		struct {
 			bool operator()(
@@ -278,7 +278,7 @@ namespace markov {
 
 	std::vector<uint8_t> decompress(
 		const std::vector<unsigned char>& stored_model,
-		const std::vector<unsigned char>& markov_crack_codes
+		const std::vector<std::vector<unsigned char>>& markov_crack_codes
 	) {
 		auto model = from_stored_model(stored_model);
 
