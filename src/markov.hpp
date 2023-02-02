@@ -280,9 +280,9 @@ namespace markov {
 	}
 
 
-	std::vector<uint8_t> decompress(
+	std::vector<std::vector<uint8_t>> decompress(
 		const std::vector<unsigned char>& stored_model,
-		const std::vector<std::vector<unsigned char>>& markov_crack_codes
+		std::vector<std::vector<unsigned char>>& markov_crack_codes
 	) {
 		auto model = from_stored_model(stored_model);
 
