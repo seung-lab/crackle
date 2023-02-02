@@ -600,7 +600,7 @@ codepoints_to_symbols(
 	uint64_t branches_taken = 0;
 	uint64_t node = 0;
 
-	char remap[4] = { 'u', 'r', 'l', 'd' };
+	char remap[4] = { 'u', 'r', 'd', 'l' };
 
 	uint64_t node_i = 0;
 
