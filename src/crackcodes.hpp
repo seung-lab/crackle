@@ -14,10 +14,10 @@ namespace crackle {
 namespace crackcodes {
 
 enum DirectionCode {
-	LEFT = 0b10,
+	LEFT = 0b11,
 	RIGHT = 0b01,
 	UP = 0b00,
-	DOWN = 0b11
+	DOWN = 0b10
 };
 
 inline std::pair<int64_t, int64_t> mkedge(int64_t a, int64_t b){
