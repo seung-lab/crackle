@@ -516,12 +516,12 @@ create_crack_codes(
 
   auto codepoint_chains = symbols_to_codepoints(chains);
   for (auto& [node, codepoints] : codepoint_chains) {
-  		for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
-  			codepoints[i] -= codepoints[i-1];
-  			if (codepoints[i] > 3) {
-  				codepoints[i] += 4;
-  			}
-  		}
+		for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
+			codepoints[i] -= codepoints[i-1];
+			if (codepoints[i] > 3) {
+				codepoints[i] += 4;
+			}
+		}
   }
 
   return codepoint_chains;
@@ -663,7 +663,6 @@ std::vector<uint8_t> unpack_codepoints(
 		return std::vector<uint8_t>();
 	}
 
-	// std::vector<uint64_t> nodes = read_boc_index(code, sx, sy);
 	uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
 
 	std::vector<uint8_t> codepoints;
@@ -676,13 +675,13 @@ std::vector<uint8_t> unpack_codepoints(
 		}
 	}
 	for (uint64_t i = 1; i < codepoints.size(); i++) {
-		codepoints[i] += codepoints[i+1];
+		codepoints[i] += codepoints[i-1];
 		if (codepoints[i] > 3) {
 			codepoints[i] -= 4;
 		}
 	}
 
-	return codepoints; // codepoints_to_symbols(nodes, codepoints);
+	return codepoints;
 }
 
 std::vector<uint8_t> decode_permissible_crack_code(
