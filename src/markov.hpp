@@ -106,8 +106,21 @@ namespace markov {
 			// most frequent in lowest index
 			std::sort(pair_row.begin(), pair_row.end(), CmpIndex);
 			std::vector<uint8_t> row(4);
-			for (int j = 0; j < 4; j++) {
+			std::vector<bool> marked(4);
+			int j = 0;
+			for (j = 0; j < pair_row.size(); j++) {
 				row[pair_row[j].first] = j;
+				marked[pair_row[j].first] = true;
+			}
+			// handle sparse statistics
+			if (j < 4) {
+				for (int k = 0; k < 4; k++) {
+					if (marked[k]) {
+						continue;
+					}
+					row[k] = j;
+					j++;
+				}
 			}
 			model[i] = std::move(row);
 		}
