@@ -432,7 +432,7 @@ create_crack_codes(
   	int64_t start_node = start_edge.first;
 
     std::vector<char> code;
-    std::unordered_map<int64_t, std::vector<int64_t>> branch_nodes;
+    robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
     int64_t branches_taken = 1;
 
     while (!remaining.empty() || !revisit.empty()) {
@@ -523,14 +523,15 @@ create_crack_codes(
   			}
   		}
   }
+
   return codepoint_chains;
 }
 
-std::vector<unsigned char> pack_codes(
+std::vector<unsigned char> pack_codepoints(
 	const robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& chains,
 	const uint64_t sx, const uint64_t sy
 ) {
-	
+
 	std::vector<uint64_t> nodes;
 	for (auto& [node, code] : chains) {
 		nodes.push_back(node);
@@ -566,22 +567,19 @@ std::vector<unsigned char> pack_codes(
 }
 
 template <typename LABEL>
-std::vector<std::vector<unsigned char>> 
+std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> 
 encode_boundaries(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const bool permissible
 ) {
-	std::vector<std::vector<unsigned char>> binary_components;
+	std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> binary_components;
 
 	const int64_t sxy = sx * sy;
 
 	for (int64_t z = 0; z < sz; z++) {
 		binary_components.push_back(
-			pack_codes(
-				create_crack_codes(labels + z * sxy, sx, sy, permissible),
-				sx, sy
-			)
+				create_crack_codes(labels + z * sxy, sx, sy, permissible)
 		);
 	}
 
@@ -655,18 +653,15 @@ codepoints_to_symbols(
 	return chains;
 }
 
-robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> 
-unpack_binary(
+std::vector<uint8_t> unpack_codepoints(
 	const std::vector<unsigned char> &code, 
 	const uint64_t sx, const uint64_t sy
 ) {
 	if (code.size() == 0) {
-		return robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>>();
+		return std::vector<uint8_t>();
 	}
 
-	uint64_t index_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
-
-	std::vector<uint64_t> nodes = read_boc_index(code, sx, sy);
+	// std::vector<uint64_t> nodes = read_boc_index(code, sx, sy);
 	uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
 
 	std::vector<uint8_t> codepoints;
@@ -678,12 +673,18 @@ unpack_binary(
 			codepoints.push_back(codepoint);
 		}
 	}
+	for (uint64_t i = 1; i < codepoints.size(); i++) {
+		codepoints[i] += codepoints[i+1];
+		if (codepoints[i] > 3) {
+			codepoints[i] -= 4;
+		}
+	}
 
-	return codepoints_to_symbols(nodes, codepoints);
+	return codepoints; // codepoints_to_symbols(nodes, codepoints);
 }
 
 std::vector<uint8_t> decode_permissible_crack_code(
-	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
+	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
 	const int64_t sx, const int64_t sy
 ) {
 	// voxel connectivity
@@ -756,7 +757,7 @@ std::vector<uint8_t> decode_permissible_crack_code(
 }
 
 std::vector<uint8_t> decode_impermissible_crack_code(
-	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
+	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
 	const int64_t sx, const int64_t sy
 ) {
 	// voxel connectivity
@@ -830,7 +831,7 @@ std::vector<uint8_t> decode_impermissible_crack_code(
 }
 
 std::vector<uint8_t> decode_crack_code(
-	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
+	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
 	const uint64_t sx, const uint64_t sy,
 	const bool permissible
 ) {

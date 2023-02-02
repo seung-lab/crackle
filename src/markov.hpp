@@ -62,35 +62,23 @@ namespace markov {
 		}
 	};
 
-	void apply_difference_code(
-		std::vector<std::vector<uint64_t>>& crack_codes
-	) {
-		for (auto code : crack_codes) {
-			for (uint64_t i = code.size() - 1; i >= 1; i--) {
-				code[i] -= code[i-1];
-				if (code[i] > 3) {
-					code[i] += 4;
-				}
-			}
-		}
-	}
-
 	std::vector<robin_hood::unordered_flat_map<uint8_t,int>> 
 	gather_statistics(
-		const std::vector<std::vector<uint64_t>> &crack_codes,
+		const std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> &crack_codes,
 		const int64_t model_order
 	) {
 		std::vector<robin_hood::unordered_flat_map<uint8_t,int>> stats(
 			pow(4, model_order)
 		);
-		CircularBuf buf(model_order);
 
-		// might be an off-by-one here
-		for (auto code : crack_codes) {
-			for (int64_t i = 0; i < code.size() - model_order; i++) {
-				buf.push_back(static_cast<uint8_t>(code[i]));
-				int idx = buf.change_to_base_10();
-				stats[idx][code[i]]++;
+		for (auto slice : crack_codes) {
+			for (auto& [node, code] : slice) {
+				CircularBuf buf(model_order);
+				for (int64_t i = 0; i < code.size() - model_order; i++) {
+					buf.push_back(static_cast<uint8_t>(code[i]));
+					int idx = buf.change_to_base_10();
+					stats[idx][code[i]]++;
+				}
 			}
 		}
 
@@ -127,7 +115,7 @@ namespace markov {
 		return model;
 	}
 
-	std::vector<uint8_t> decode_markov(
+	std::vector<uint8_t> decode_codepoints(
 		std::vector<unsigned char>& crack_code,
 		std::vector<std::vector<uint8_t>>& model
 	) {
@@ -264,37 +252,27 @@ namespace markov {
 		return bitstream;
 	}
 
-	std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> 
+	std::vector<unsigned char>
 	compress(
-		std::vector<std::vector<uint64_t>>& crack_codes,
-		const uint64_t model_order
+		const robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& codepoints,
+		const std::vector<std::vector<uint8_t>>& model,
+		const int64_t model_order
 	) {
-		apply_difference_code(crack_codes);
-		auto stats = gather_statistics(crack_codes, model_order);
-		auto model = stats_to_model(stats);
-		std::vector<unsigned char> bitstream = encode_markov(
-			crack_codes, model, model_order
-		);
-		std::vector<unsigned char> stored_model = to_stored_model(model);
-		return std::make_tuple(stored_model, bitstream);
-	}
-
-
-	std::vector<std::vector<uint8_t>> decompress(
-		const std::vector<unsigned char>& stored_model,
-		std::vector<std::vector<unsigned char>>& markov_crack_codes
-	) {
-		auto model = from_stored_model(stored_model);
-
-		std::vector<std::vector<uint8_t>> crack_codes;
-
-		for (auto& code : markov_crack_codes) {
-			crack_codes.push_back(
-				decode_markov(code, model)
-			);
+		std::vector<uint64_t> nodes;
+		for (auto& [node, code] : codepoints) {
+			nodes.push_back(node);
 		}
+		std::sort(nodes.begin(), nodes.end());
 
-		return crack_codes;
+		std::vector<unsigned char> binary = crackle::crackcodes::write_boc_index(nodes, sx, sy);
+
+		for (uint64_t node : nodes) {
+			std::vector<unsigned char> bitstream = encode_markov(
+				codepoints[node], model, model_order
+			);
+			binary.insert(binary.end(), bitstream.begin(), bitstream.end());
+		}
+		return binary;
 	}
 };
 };
