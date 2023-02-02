@@ -173,7 +173,7 @@ std::vector<unsigned char> write_packed_bitstream(
 
 std::vector<uint8_t> read_packed_bitstream(
 	const std::vector<unsigned char>& bitstream, 
-	const int bits, const int n_fields
+	const uint64_t bits, const uint64_t n_fields
 ) {
 
 	std::vector<uint8_t> output(n_fields);
@@ -191,7 +191,7 @@ std::vector<uint8_t> read_packed_bitstream(
 			j++;
 		}
 		else {
-			int read = 8 - pos;
+			uint64_t read = 8 - pos;
 			output[i] |= (bitstream[j] >> pos);
 			j++;
 			output[i] |= (bitstream[j] << (8-(bits-read)) >> (8-(bits-read)));

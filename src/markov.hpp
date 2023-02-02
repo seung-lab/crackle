@@ -65,7 +65,7 @@ namespace markov {
 	std::vector<robin_hood::unordered_flat_map<uint8_t,int>> 
 	gather_statistics(
 		const std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> &crack_codes,
-		const int64_t model_order
+		const uint64_t model_order
 	) {
 		std::vector<robin_hood::unordered_flat_map<uint8_t,int>> stats(
 			pow(4, model_order)
@@ -74,7 +74,7 @@ namespace markov {
 		for (auto slice : crack_codes) {
 			for (auto& [node, code] : slice) {
 				CircularBuf buf(model_order);
-				for (int64_t i = 0; i < code.size() - model_order; i++) {
+				for (uint64_t i = 0; i < code.size() - model_order; i++) {
 					buf.push_back(static_cast<uint8_t>(code[i]));
 					int idx = buf.change_to_base_10();
 					stats[idx][code[i]]++;
@@ -110,14 +110,14 @@ namespace markov {
 			std::sort(pair_row.begin(), pair_row.end(), CmpIndex);
 			std::vector<uint8_t> row(4);
 			std::vector<bool> marked(4);
-			int j = 0;
+			uint64_t j = 0;
 			for (j = 0; j < pair_row.size(); j++) {
 				row[pair_row[j].first] = j;
 				marked[pair_row[j].first] = true;
 			}
 			// handle sparse statistics
 			if (j < 4) {
-				for (int k = 0; k < 4; k++) {
+				for (uint64_t k = 0; k < 4; k++) {
 					if (marked[k]) {
 						continue;
 					}
