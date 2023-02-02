@@ -607,7 +607,7 @@ codepoints_to_symbols(
 	for (uint64_t i = 0; i < codepoints.size(); i++) {
 		if (branches_taken == 0) {
 			if (node_i >= sorted_nodes.size()) {
-				throw std::runtime_error("corrupted crack code.");
+				break;
 			}
 			node = sorted_nodes[node_i];
 			node_i++;
@@ -625,9 +625,6 @@ codepoints_to_symbols(
 			) {
 				symbols.back() = 't';
 				branches_taken--;
-				if (branches_taken == 0) {
-					break;
-				}
 			}
 			else if (
 				(move == DirectionCode::DOWN && symbols.back() == 'u')
