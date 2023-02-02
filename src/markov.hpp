@@ -168,6 +168,8 @@ namespace markov {
 					data_stream.push_back(model[model_row][3]);
 					pos += 3;
 				}
+
+				buf.push_back(data_stream.back());
 			}
 
 			pos -= 8;
