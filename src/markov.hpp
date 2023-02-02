@@ -96,6 +96,9 @@ namespace markov {
 			}
 		} CmpIndex;
 
+		// model is: index is direction, value is which 
+		// codepoint to use
+
 		std::vector<std::vector<uint8_t>> model(stats.size());
 		for (uint64_t i = 0; i < model.size(); i++) {
 			std::vector<robin_hood::pair<uint8_t,int>> pair_row;
@@ -190,12 +193,30 @@ namespace markov {
 	) {
 		std::vector<unsigned char> stored_model(model.size());
 
+		// invert keys and values for model to make decoding faster.
+		// assumption: reading occurs more often than writing
+
+		struct {
+			bool operator()(
+				robin_hood::pair<uint8_t,uint8_t>& a, robin_hood::pair<uint8_t,uint8_t>& b
+			) const { 
+				return a.second < b.second;
+			}
+		} CmpValue;
+
 		for (uint64_t i = 0; i < model.size(); i++) {
+			std::vector<robin_hood::pair<uint8_t, uint8_t>> decode_row;
+			decode_row.reserve(4);
+			for (int j = 0; j < 4; j++) {
+				decode_row.emplace_back(j, model[i][j]);
+			}
+			std::sort(decode_row.begin(), decode_row.end(), CmpValue);
+
 			stored_model[i] = (
-				  (model[i][0] & 0b11)
-				| ((model[i][1] & 0b11) << 2)
-				| ((model[i][2] & 0b11) << 4)
-				| ((model[i][3] & 0b11) << 6)
+				  (decode_row[0].first & 0b11)
+				| ((decode_row[1].first & 0b11) << 2)
+				| ((decode_row[2].first & 0b11) << 4)
+				| ((decode_row[3].first & 0b11) << 6)
 			);
 		}
 
