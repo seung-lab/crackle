@@ -242,11 +242,11 @@ namespace markov {
 				pos++;
 			}
 			else if (idx == 1) {
-				byte |= (0b10 << pos);
+				byte |= (0b01 << pos);
 				pos += 2;
 			}
 			else if (idx == 2) {
-				byte |= (0b110 << pos);
+				byte |= (0b011 << pos);
 				pos += 3;
 			}
 			else {
