@@ -134,6 +134,13 @@ uint64_t ctoid(
 	return val;
 }
 
+uint64_t ctoid(
+	const std::vector<unsigned char>& buf,
+	const uint64_t idx, const int byte_width
+) {
+	return ctoid(buf.data(), idx, byte_width);
+}
+
 // bits must be < 8
 // data must be <= 1 byte
 std::vector<unsigned char> write_packed_bitstream(
