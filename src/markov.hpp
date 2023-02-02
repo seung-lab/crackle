@@ -117,7 +117,7 @@ namespace markov {
 
 	std::vector<uint8_t> decode_codepoints(
 		std::vector<unsigned char>& crack_code,
-		std::vector<std::vector<uint8_t>>& model
+		const std::vector<std::vector<uint8_t>>& model
 	) {
 		std::vector<uint8_t> data_stream;
 
@@ -204,49 +204,51 @@ namespace markov {
 	}
 
 	std::vector<unsigned char> encode_markov(
-		std::vector<std::vector<unsigned char>> &crack_codes,
-		std::vector<std::vector<uint8_t>>& model,
+		const std::vector<uint8_t> &codepoints,
+		const std::vector<std::vector<uint8_t>>& model,
 		int64_t model_order
 	) {
 		std::vector<unsigned char> bitstream;
 
+		if (codepoints.size() == 0) {
+			return bitstream;
+		}
+
 		CircularBuf buf(model_order);
 
-		for (auto code : crack_codes) {
-			int pos = 2;
-			uint16_t byte = code[0];
+		int pos = 2;
+		uint16_t byte = codepoints[0];
 
-			buf.push_back(code[0]);
-			for (uint64_t i = 1; i < code.size(); i++) {
-				uint8_t idx = model[buf.change_to_base_10()][code[i]];
+		buf.push_back(codepoints[0]);
+		for (uint64_t i = 1; i < codepoints.size(); i++) {
+			uint8_t idx = model[buf.change_to_base_10()][codepoints[i]];
 
-				if (idx == 0) {
-					pos++;
-				}
-				else if (idx == 1) {
-					byte |= (0b10 << pos);
-					pos += 2;
-				}
-				else if (idx == 2) {
-					byte |= (0b110 << pos);
-					pos += 3;
-				}
-				else {
-					byte |= (0b111 << pos);
-					pos += 3;
-				}
-
-				if (pos >= 8) {
-					bitstream.push_back(static_cast<uint8_t>(byte));
-					pos -= 8;
-					byte >>= 8;
-				}
-
-				buf.push_back(code[i]);
+			if (idx == 0) {
+				pos++;
 			}
-			if (pos > 0) {
+			else if (idx == 1) {
+				byte |= (0b10 << pos);
+				pos += 2;
+			}
+			else if (idx == 2) {
+				byte |= (0b110 << pos);
+				pos += 3;
+			}
+			else {
+				byte |= (0b111 << pos);
+				pos += 3;
+			}
+
+			if (pos >= 8) {
 				bitstream.push_back(static_cast<uint8_t>(byte));
+				pos -= 8;
+				byte >>= 8;
 			}
+
+			buf.push_back(codepoints[i]);
+		}
+		if (pos > 0) {
+			bitstream.push_back(static_cast<uint8_t>(byte));
 		}
 
 		return bitstream;
@@ -254,9 +256,10 @@ namespace markov {
 
 	std::vector<unsigned char>
 	compress(
-		const robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& codepoints,
+		robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& codepoints,
 		const std::vector<std::vector<uint8_t>>& model,
-		const int64_t model_order
+		const int64_t model_order,
+		const uint64_t sx, const uint64_t sy
 	) {
 		std::vector<uint64_t> nodes;
 		for (auto& [node, code] : codepoints) {

@@ -528,7 +528,7 @@ create_crack_codes(
 }
 
 std::vector<unsigned char> pack_codepoints(
-	const robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& chains,
+	robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& chains,
 	const uint64_t sx, const uint64_t sy
 ) {
 
@@ -541,7 +541,7 @@ std::vector<unsigned char> pack_codepoints(
 	std::vector<unsigned char> binary = write_boc_index(nodes, sx, sy);
 
 	for (uint64_t node : nodes) {
-		auto& chain = chains[node];
+		auto chain = chains[node];
 		uint64_t all_moves = chain.size();
 		all_moves -= (all_moves % 4);
 
@@ -595,7 +595,7 @@ codepoints_to_symbols(
 	robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> chains;
 
 	std::vector<unsigned char> symbols;
-	symbols.reserve(code.size() * 4 * 2);
+	symbols.reserve(codepoints.size() * 4 * 2);
 
 	uint64_t branches_taken = 0;
 	uint64_t node = 0;
@@ -606,17 +606,19 @@ codepoints_to_symbols(
 
 	for (uint64_t i = 0; i < codepoints.size(); i++) {
 		if (branches_taken == 0) {
-			if (node_i >= nodes.size()) {
+			if (node_i >= sorted_nodes.size()) {
 				throw std::runtime_error("corrupted crack code.");
 			}
-			node = nodes[node_i];
+			node = sorted_nodes[node_i];
 			node_i++;
 			i--; // b/c i will be incremented
 			branches_taken = 1;
 			continue;
 		}
 
-		if (symbols.size()) {
+		auto move = codepoints[i];
+
+		if (symbols.size()) {			
 			if (
 				(move == DirectionCode::UP && symbols.back() == 'd')
 				|| (move == DirectionCode::LEFT && symbols.back() == 'r')
