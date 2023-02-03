@@ -538,10 +538,12 @@ std::vector<unsigned char> pack_codepoints(
 		}
 	}
 
-	for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
-		codepoints[i] -= codepoints[i-1];
-		if (codepoints[i] > 3) {
-			codepoints[i] += 4;
+	if (codepoints.size() > 0) {
+		for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
+			codepoints[i] -= codepoints[i-1];
+			if (codepoints[i] > 3) {
+				codepoints[i] += 4;
+			}
 		}
 	}
 
