@@ -292,25 +292,38 @@ namespace markov {
 
 	std::vector<unsigned char>
 	compress(
-		robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& codepoints,
+		robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& chains,
 		const std::vector<std::vector<uint8_t>>& model,
 		const int64_t model_order,
 		const uint64_t sx, const uint64_t sy
 	) {
 		std::vector<uint64_t> nodes;
-		for (auto& [node, code] : codepoints) {
+		for (auto& [node, code] : chains) {
 			nodes.push_back(node);
 		}
 		std::sort(nodes.begin(), nodes.end());
 
-		std::vector<unsigned char> binary = crackle::crackcodes::write_boc_index(nodes, sx, sy);
-
+		std::vector<uint8_t> codepoints;
 		for (uint64_t node : nodes) {
-			std::vector<unsigned char> bitstream = encode_markov(
-				codepoints[node], model, model_order
-			);
-			binary.insert(binary.end(), bitstream.begin(), bitstream.end());
+			auto chain = chains[node];
+			for (uint8_t codepoint : chain) {
+				codepoints.push_back(codepoint);
+			}
 		}
+		if (codepoints.size() > 0) {
+			for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
+				codepoints[i] -= codepoints[i-1];
+				if (codepoints[i] > 3) {
+					codepoints[i] += 4;
+				}
+			}
+		}
+
+		std::vector<unsigned char> binary = crackle::crackcodes::write_boc_index(nodes, sx, sy);
+		std::vector<unsigned char> bitstream = encode_markov(
+			codepoints, model, model_order
+		);
+		binary.insert(binary.end(), bitstream.begin(), bitstream.end());
 		return binary;
 	}
 };
