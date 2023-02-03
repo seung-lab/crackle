@@ -540,27 +540,23 @@ std::vector<unsigned char> pack_codepoints(
 
 	std::vector<unsigned char> binary = write_boc_index(nodes, sx, sy);
 
+	uint8_t encoded = 0;
+	int pos = 0;
 	for (uint64_t node : nodes) {
 		auto chain = chains[node];
-		uint64_t all_moves = chain.size();
-		all_moves -= (all_moves % 4);
-
-		uint64_t i = 0;
-		uint8_t encoded = 0;
-		while (i < all_moves) {
-			encoded = 0;
-			for (uint64_t j = 0; j < 4; j++, i++) {
-				encoded |= (chain[i] << (2*j));
+		
+		for (uint64_t i = 0; i < chain.size(); i++) {
+			encoded |= (chain[i] << pos);
+			pos += 2;
+			if (pos == 8) {
+				binary.push_back(encoded);
+				encoded = 0;
+				pos = 0;
 			}
-			binary.push_back(encoded);
 		}
-		if (i < chain.size()) {
-			encoded = 0;
-			for (uint64_t j = 0; i < chain.size(); j++, i++) {
-				encoded |= (chain[i] << (2*j));
-			}
-			binary.push_back(encoded);
-		}
+	}
+	if (pos > 0) {
+		binary.push_back(encoded);
 	}
 
 	return binary;
