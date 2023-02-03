@@ -514,17 +514,7 @@ create_crack_codes(
     );
   }
 
-  auto codepoint_chains = symbols_to_codepoints(chains);
-  for (auto& [node, codepoints] : codepoint_chains) {
-		for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
-			codepoints[i] -= codepoints[i-1];
-			if (codepoints[i] > 3) {
-				codepoints[i] += 4;
-			}
-		}
-  }
-
-  return codepoint_chains;
+  return symbols_to_codepoints(chains);
 }
 
 std::vector<unsigned char> pack_codepoints(
@@ -540,21 +530,33 @@ std::vector<unsigned char> pack_codepoints(
 
 	std::vector<unsigned char> binary = write_boc_index(nodes, sx, sy);
 
-	uint8_t encoded = 0;
-	int pos = 0;
+	std::vector<uint8_t> codepoints;
 	for (uint64_t node : nodes) {
 		auto chain = chains[node];
-		
-		for (uint64_t i = 0; i < chain.size(); i++) {
-			encoded |= (chain[i] << pos);
-			pos += 2;
-			if (pos == 8) {
-				binary.push_back(encoded);
-				encoded = 0;
-				pos = 0;
-			}
+		for (uint8_t codepoint : chain) {
+			codepoints.push_back(codepoint);
 		}
 	}
+
+	for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
+		codepoints[i] -= codepoints[i-1];
+		if (codepoints[i] > 3) {
+			codepoints[i] += 4;
+		}
+	}
+
+	uint8_t encoded = 0;
+	int pos = 0;
+	for (uint64_t i = 0; i < codepoints.size(); i++) {
+		encoded |= (codepoints[i] << pos);
+		pos += 2;
+		if (pos == 8) {
+			binary.push_back(encoded);
+			encoded = 0;
+			pos = 0;
+		}
+	}
+
 	if (pos > 0) {
 		binary.push_back(encoded);
 	}
