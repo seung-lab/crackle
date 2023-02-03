@@ -329,5 +329,5 @@ def compress(labels:np.ndarray, allow_pins:bool = False) -> bytes:
 
   f_order = labels.flags.f_contiguous
   labels = np.asfortranarray(labels)
-  return fastcrackle.compress(labels, allow_pins, f_order)
+  return fastcrackle.compress(labels, allow_pins, f_order, 0)
 
