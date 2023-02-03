@@ -11,24 +11,27 @@ DTYPE = [
 ]
 
 @pytest.mark.parametrize('dtype', DTYPE)
-def test_compress_decompress_random(dtype):
+@pytest.mark.parametrize('markov_model_order', [1,2,3])
+def test_compress_decompress_random(dtype, markov_model_order):
   labels = np.random.randint(0,5,size=(4,4,1), dtype=dtype)
-  binary = crackle.compress(labels)
+  binary = crackle.compress(labels, markov_model_order=markov_model_order)
   recovered = crackle.decompress(binary)
+  print(labels.T)
+  print(recovered.T)
   assert np.all(labels == recovered)
 
   labels = np.random.randint(0,40,size=(1000,999,1), dtype=dtype)
-  binary = crackle.compress(labels)
+  binary = crackle.compress(labels, markov_model_order=markov_model_order)
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
   labels = np.random.randint(0,40,size=(100,100,10), dtype=dtype)
-  binary = crackle.compress(labels, allow_pins=True)
+  binary = crackle.compress(labels, allow_pins=True, markov_model_order=markov_model_order)
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
   labels = np.random.randint(0,40,size=(100,100,100), dtype=dtype)
-  binary = crackle.compress(labels)
+  binary = crackle.compress(labels, markov_model_order=markov_model_order)
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
