@@ -105,12 +105,13 @@ Encoding flat labels is fast.
 
 ### Condensed (Variable Width) Pins Label Format
 
-`| BACKGROUND COLOR (STORED_DATA_WIDTH) | NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | FMT_BYTE | PIN SECTION |`
-
-FMT_BYTE: `0000DDNN`
-
-DD: 2^(DD) is the depth width
-NN: 2^(NN) is the num pins width
+| Attribute        | Type                                | Description                                                                                                 |
+|------------------|-------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| background_color | stored_data_width                   | Background color of image.                                                                                  |
+| num_unique       | u64                                 | Number of unique labels in this volume.                                                                     |
+| unique_labels    | stored_type[num_unique]             | Sorted ascending array of all unique values in image, stored in the smallest data type that will hold them. |
+| fmt_byte         | u8                                  | 0000DDNN  DD: 2^(DD) is the depth width NN: 2^(NN) is the num pins width                                    |
+| pin_section      | Bitstream to end of labels section. | Contains pin information.                                                                                   |
 
 PIN SECTION: `| PINS FOR LABEL 0 | PINS FOR LABEL 1 | ... | PINS FOR LABEL N |`
 
