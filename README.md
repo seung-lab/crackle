@@ -92,7 +92,12 @@ R: Reserved
 
 ### Flat Label Format
 
-`| NUM_LABELS (u64) | UNIQUE LABELS (NUM_LABELS \* STORED_DATA_WIDTH) | NUM CONNECTED COMPONENTS PER A GRID (sizeof(sx \* sy) \* sz) | INDEX INTO UNIQUE LABELS FOR EACH CCL ID (sizeof(NUM_LABELS) \* ... to end of section) |`
+| Attribute     | Type                                        | Description                                                                                                 |
+|---------------|---------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| num_unique    | u64                                         | Number of unique labels in this volume.                                                                     |
+| unique_labels | stored_type[num_unique]                     | Sorted ascending array of all unique values in image, stored in the smallest data type that will hold them. |
+| cc_per_grid   | smallest_type(sx \* sy)[sz]                 | Array containing the number of CCL IDs in each grid (usually a z-slice).                                    |
+| cc_to_labels  | smallest_type(num_labels)[sum(cc_per_grid)] | Array mapping CCL IDs to their proper value by indexing the unique labels array.                            |
 
 Flat labels are random access read, allow efficient reading of unique labels, efficient remapping, and efficient search for a given label's existence. Since the connected component labels can often use a smaller byte width than the unique values, even noise arrays can see some value from compression.
 
