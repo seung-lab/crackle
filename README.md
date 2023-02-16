@@ -77,7 +77,7 @@ See benchmarks for more information on Crackle's size and compute effiency.
 | format_field      | bitfield          | u16     | See below.                 |
 | sx, sy, sz        | >= 0              | u32 x 3 | Size of array dimensions.                       |
 | grid_size         | log2(grid_size)   | u8      | Stores log2 of grid dimensions in voxels.          |
-| num_label_bytes   | Any.              | u8      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
+| num_label_bytes   | Any.              | u32      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
 
 
 Format Field (u16): DDSSCLLFGRRRRRRR (each letter represents a bit, left is LSB)
