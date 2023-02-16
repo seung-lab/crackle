@@ -115,13 +115,17 @@ Encoding flat labels is fast.
 
 PIN SECTION: `| PINS FOR LABEL 0 | PINS FOR LABEL 1 | ... | PINS FOR LABEL N |`
 
-PINS: `| num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N | DEPTH_0 | DEPTH_1 | ... | DEPTH_N |`
+PINS: `| num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N | DEPTH_0 | DEPTH_1 | ... | DEPTH_N | num_single_labels | CC 0 | CC 1 | ... | CC N |`
 
 Note that INDEX_0 to INDEX_N are stored with a difference filter applied to improve compressibility.
 
 A pin (color, position, depth) is a line segment that joins together multiple connected component IDs and labels them with a color (an index into UNIQUE LABELS) in order to use 3D information to compress the labels as compared with the flat label format. Pins are slow to compute but fast to decode, however random access is lost (a full scan of the labels section is needed to decode a subset of crack codes). The most frequent pin is replaced with a background color. Like with flat, efficient reading of unique labels, efficient remapping, and search are supported. 
 
 Depending on the image statistics and quality of the pin solver, pins can be much smaller than flat or larger (some heuristics are used to avoid this case). An excellent example of where pins do well is a binary image where remarkable savings can be achieved in the labels section (though overall it is probably a small part of the file).
+
+For very short pins (e.g. depth 0 or 1) that take more bytes to record than simply listing the corresponding CC label, we list the CC label instead. This calculation is made depending on the dimensions of the image and the max pin depth, and the byte width of the CCL labels.
+
+Example calculation. For a 512 x 512 x 32 file with an average of 1000 CCL's per a slice and a maximum pin depth of 30, a pin takes 4 index + 1 depth = 5 bytes while a CCL takes 2 bytes. Therefore, depth 1 and 2 pins can be efficiently replaced with 1 and 2 CCL labels for a 60\% and 20\% savings respectively. CCLs are also difference coded to enhance second stage compressibility.
 
 ### Fixed Width Pins (disabled)
 
