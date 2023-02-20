@@ -21,6 +21,10 @@ def run(labels):
     compress_time = time.time() - s
 
     s = time.time()
+    pin_binary = crackle.compress(labels, allow_pins=True)
+    pin_compress_time = time.time() - s
+
+    s = time.time()
     cpso_binary = compresso.compress(labels)
     cpso_time = time.time() - s
 
@@ -32,14 +36,17 @@ def run(labels):
 
     ccpso_binary = zlib.compress(cpso_binary)
     craw_binary = zlib.compress(raw_binary)
+    cpin_binary = zlib.compress(pin_binary)
 
     print(f"""
-      ckl:     {len(ckl_binary): 9}    
-      cpso:    {len(cpso_binary): 9}  ({len(ckl_binary)/len(cpso_binary)*100:.2f}%) 
-      raw:     {len(raw_binary): 9}  ({len(ckl_binary)/len(raw_binary)*100:.2f}%)
-      ckl.gz:  {len(cckl_binary): 9}   
-      cpso.gz  {len(ccpso_binary): 9}  ({len(cckl_binary)/len(ccpso_binary)*100:.2f}%)
-      raw:.gz  {len(craw_binary): 9}  ({len(cckl_binary)/len(craw_binary)*100:.2f}%)
+      ckl:         {len(ckl_binary): 9}
+      ckl(pin):    {len(pin_binary): 9}  ({len(pin_binary)/len(ckl_binary)*100:.2f}%) (vs flat)
+      cpso:        {len(cpso_binary): 9}  ({len(ckl_binary)/len(cpso_binary)*100:.2f}%) 
+      raw:         {len(raw_binary): 9}  ({len(ckl_binary)/len(raw_binary)*100:.2f}%)
+      ckl.gz:      {len(cckl_binary): 9}   
+      ckl.gz(pin): {len(cpin_binary): 9}   ({len(cpin_binary)/len(cckl_binary)*100:.2f}%) (vs flat)
+      cpso.gz      {len(ccpso_binary): 9}  ({len(cckl_binary)/len(ccpso_binary)*100:.2f}%)
+      raw:.gz      {len(craw_binary): 9}  ({len(cckl_binary)/len(craw_binary)*100:.2f}%)
     """, flush=True)
 
 N = 3
