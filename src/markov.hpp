@@ -62,6 +62,33 @@ namespace markov {
 		}
 	};
 
+	std::tuple<std::vector<uint64_t>, std::vector<uint8_t>> difference_codepoints(
+		robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& chains
+	) {
+		std::vector<uint64_t> nodes;
+		for (auto& [node, code] : chains) {
+			nodes.push_back(node);
+		}
+		std::sort(nodes.begin(), nodes.end());
+
+		std::vector<uint8_t> codepoints;
+		for (uint64_t node : nodes) {
+			auto chain = chains[node];
+			for (uint8_t codepoint : chain) {
+				codepoints.push_back(codepoint);
+			}
+		}
+		if (codepoints.size() > 0) {
+			for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
+				codepoints[i] -= codepoints[i-1];
+				if (codepoints[i] > 3) {
+					codepoints[i] += 4;
+				}
+			}
+		}
+		return std::make_tuple(nodes, codepoints);
+	}
+
 	std::vector<robin_hood::unordered_flat_map<uint8_t,int>> 
 	gather_statistics(
 		const std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> &crack_codes,
