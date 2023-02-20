@@ -69,7 +69,7 @@ public:
 		const uint32_t _grid_size,
 		const uint32_t _num_label_bytes,
 		const bool _fortran_order,
-		const bool _markov_model_order
+		const uint8_t _markov_model_order
 	) : 
 		format_version(_format_version),
 		label_format(_label_fmt),
