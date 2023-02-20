@@ -99,13 +99,12 @@ namespace markov {
 		);
 
 		for (auto slice : crack_codes) {
-			for (auto& [node, code] : slice) {
-				CircularBuf buf(model_order);
-				for (uint64_t i = 0; i < code.size() - model_order; i++) {
-					buf.push_back(static_cast<uint8_t>(code[i]));
-					int idx = buf.change_to_base_10();
-					stats[idx][code[i]]++;
-				}
+			auto [nodes, code] = difference_codepoints(slice);
+			CircularBuf buf(model_order);
+			for (uint64_t i = 0; i < code.size(); i++) {
+				int idx = buf.change_to_base_10();
+				stats[idx][code[i]]++;
+				buf.push_back(static_cast<uint8_t>(code[i]));
 			}
 		}
 
@@ -324,28 +323,7 @@ namespace markov {
 		const int64_t model_order,
 		const uint64_t sx, const uint64_t sy
 	) {
-		std::vector<uint64_t> nodes;
-		for (auto& [node, code] : chains) {
-			nodes.push_back(node);
-		}
-		std::sort(nodes.begin(), nodes.end());
-
-		std::vector<uint8_t> codepoints;
-		for (uint64_t node : nodes) {
-			auto chain = chains[node];
-			for (uint8_t codepoint : chain) {
-				codepoints.push_back(codepoint);
-			}
-		}
-		if (codepoints.size() > 0) {
-			for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
-				codepoints[i] -= codepoints[i-1];
-				if (codepoints[i] > 3) {
-					codepoints[i] += 4;
-				}
-			}
-		}
-
+		auto [nodes, codepoints] = difference_codepoints(chains);
 		std::vector<unsigned char> binary = crackle::crackcodes::write_boc_index(nodes, sx, sy);
 		std::vector<unsigned char> bitstream = encode_markov(
 			codepoints, model, model_order
