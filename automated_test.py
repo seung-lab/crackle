@@ -11,7 +11,7 @@ DTYPE = [
 ]
 
 @pytest.mark.parametrize('dtype', DTYPE)
-@pytest.mark.parametrize('markov_model_order', [1,2,3])
+@pytest.mark.parametrize('markov_model_order', [0,1,2,3])
 def test_compress_decompress_random(dtype, markov_model_order):
   labels = np.random.randint(0,5,size=(4,4,1), dtype=dtype)
   binary = crackle.compress(labels, markov_model_order=markov_model_order)
