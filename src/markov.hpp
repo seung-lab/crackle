@@ -19,11 +19,13 @@ namespace markov {
 		uint8_t* data;
 		int length;
 		int idx;
+		int base_10_cached;
 
 		CircularBuf(int model_order) {
 			data = new uint8_t[model_order]();
 			length = model_order;
 			idx = 0;
+			base_10_cached = 0;
 		}
 
 		~CircularBuf() {
@@ -38,6 +40,24 @@ namespace markov {
 			}
 		}
 
+		uint8_t front() const {
+			return data[idx];
+		}
+
+		uint8_t back() const {
+			return (idx == 0)
+				? data[length - 1]
+				: data[idx - 1];
+		}
+
+		int push_back_and_update(uint8_t elem) {
+			base_10_cached -= front();
+			base_10_cached >>= 2;
+			base_10_cached += static_cast<int>(elem) * pow(4,length-1);
+			push_back(elem);
+			return base_10_cached;
+		}
+
 		std::vector<uint8_t> read() const {
 			std::vector<uint8_t> out;
 			out.reserve(length);
@@ -50,7 +70,7 @@ namespace markov {
 			return out;
 		}
 
-		int change_to_base_10() const {
+		int change_to_base_10() {
 			int base_10 = 0;
 			for (int i = 0, j = idx; i < length; i++, j++) {
 				if (j >= length) {
@@ -58,6 +78,7 @@ namespace markov {
 				}
 				base_10 += pow(4, i) * static_cast<int>(data[j]);
 			}
+			base_10_cached = base_10;
 			return base_10;
 		}
 	};
@@ -101,10 +122,10 @@ namespace markov {
 		for (auto slice : crack_codes) {
 			auto [nodes, code] = difference_codepoints(slice);
 			CircularBuf buf(model_order);
+			int idx = 0;
 			for (uint64_t i = 0; i < code.size(); i++) {
-				int idx = buf.change_to_base_10();
 				stats[idx][code[i]]++;
-				buf.push_back(static_cast<uint8_t>(code[i]));
+				idx = buf.push_back_and_update(static_cast<uint8_t>(code[i]));
 			}
 		}
 
@@ -171,6 +192,7 @@ namespace markov {
 		data_stream.push_back(start_dir);
 		buf.push_back(start_dir);
 
+		int model_row = buf.change_to_base_10();
 		for (uint64_t i = 0; i < crack_code.size(); i++) {
 			uint16_t byte = crack_code[i]; 
 			if (i < crack_code.size() - 1) {
@@ -179,7 +201,6 @@ namespace markov {
 
 			while (pos < 8) {
 				uint8_t codepoint = (byte >> pos) & 0b111;
-				uint64_t model_row = buf.change_to_base_10();
 
 				if ((codepoint & 0b1) == 0) {
 					data_stream.push_back(model[model_row][0]);
@@ -198,7 +219,7 @@ namespace markov {
 					pos += 3;
 				}
 
-				buf.push_back(data_stream.back());
+				model_row = buf.push_back_and_update(data_stream.back());
 			}
 
 			pos -= 8;
@@ -282,8 +303,10 @@ namespace markov {
 		uint16_t byte = codepoints[0];
 
 		buf.push_back(codepoints[0]);
+		int model_row = buf.change_to_base_10();
+
 		for (uint64_t i = 1; i < codepoints.size(); i++) {
-			uint8_t idx = model[buf.change_to_base_10()][codepoints[i]];
+			uint8_t idx = model[model_row][codepoints[i]];
 
 			if (idx == 0) {
 				pos++;
@@ -307,7 +330,7 @@ namespace markov {
 				byte >>= 8;
 			}
 
-			buf.push_back(codepoints[i]);
+			model_row = buf.push_back_and_update(codepoints[i]);
 		}
 		if (pos > 0) {
 			bitstream.push_back(static_cast<uint8_t>(byte));
