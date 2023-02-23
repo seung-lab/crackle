@@ -1,5 +1,6 @@
 import os.path
 import gzip
+import lzma
 
 from .array import CrackleArray
 from .codec import compress, decompress
@@ -14,6 +15,12 @@ def _load(filelike):
     and os.path.splitext(filelike)[1] == '.gz'
   ):
     with gzip.open(filelike, 'rb') as f:
+      binary = f.read()
+  elif (
+    isinstance(filelike, str) 
+    and os.path.splitext(filelike)[1] in ('.lzma', '.xz')
+  ):
+    with lzma.open(filelike, 'rb') as f:
       binary = f.read()
   else:
     with open(filelike, 'rb') as f:
@@ -39,6 +46,12 @@ def save(labels:np.ndarray, filelike, **kwargs):
     and os.path.splitext(filelike)[1] == '.gz'
   ):
     with gzip.open(filelike, 'wb') as f:
+      f.write(binary)
+  elif (
+    isinstance(filelike, str) 
+    and os.path.splitext(filelike)[1] in ('.lzma', '.xz')
+  ):
+    with lzma.open(filelike, 'wb') as f:
       f.write(binary)
   else:
     with open(filelike, 'wb') as f:
