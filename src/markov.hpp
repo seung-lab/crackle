@@ -14,6 +14,25 @@
 
 namespace crackle {
 namespace markov {
+	// Lookup tables are generated from the following python code:
+	/*
+		from itertools import permutations
+		LUT = []
+		for p in list(permutations([0,1,2,3])):
+		    val = 0
+		    for i in range(4):
+		        val |= p[i] << 2*i
+		    LUT.append(val)
+
+		for x in LUT:
+			print(bin(x))
+		
+		ILUT = [255] * 255
+		for i, el in enumerate(LUT):
+			ILUT[el] = i
+
+		print(ILUT)
+	*/
 
 	// lookup tables for translating
 	// the 24 possible UDLR positions
