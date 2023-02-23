@@ -53,7 +53,8 @@ namespace markov {
 		int push_back_and_update(uint8_t elem) {
 			base_10_cached -= front();
 			base_10_cached >>= 2;
-			base_10_cached += static_cast<int>(elem) * pow(4,length-1);
+			// 4^(len-1) = 2^2^(len-1) = 2^(2 * (len-1))
+			base_10_cached += static_cast<int>(elem) * (1 << (2 * (length-1)));
 			push_back(elem);
 			return base_10_cached;
 		}
