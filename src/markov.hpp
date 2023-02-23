@@ -15,6 +15,63 @@
 namespace crackle {
 namespace markov {
 
+	// lookup tables for translating
+	// the 24 possible UDLR positions
+	// into a 5 bit representation
+	constexpr uint8_t LUT[24] = {
+		0b11100100,
+		0b10110100,
+		0b11011000,
+		0b1111000,
+		0b10011100,
+		0b1101100,
+		0b11100001,
+		0b10110001,
+		0b11001001,
+		0b111001,
+		0b10001101,
+		0b101101,
+		0b11010010,
+		0b1110010,
+		0b11000110,
+		0b110110,
+		0b1001110,
+		0b11110,
+		0b10010011,
+		0b1100011,
+		0b10000111,
+		0b100111,
+		0b1001011,
+		0b11011
+	};
+
+	constexpr uint8_t DNE = 255;
+	constexpr uint8_t ILUT[255] = {
+		DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, 23, DNE, DNE, 17, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE, 21, DNE, DNE, DNE, DNE, 
+		DNE, 11, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 15, 
+		DNE, DNE, 9, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 22, DNE, 
+		DNE, 16, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		19, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 5, DNE, 
+		DNE, DNE, DNE, DNE, 13, DNE, DNE, DNE, DNE, DNE, 3, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, 20, DNE, DNE, DNE, DNE, DNE, 10, DNE, DNE, 
+		DNE, DNE, DNE, 18, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, 4, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		7, DNE, DNE, 1, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 14, DNE, 
+		DNE, 8, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 12, DNE, 
+		DNE, DNE, DNE, DNE, 2, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, 6, DNE, DNE, 0, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, DNE, 
+		DNE, DNE, DNE, DNE, DNE, DNE
+	};
+
 	struct CircularBuf {
 		uint8_t* data;
 		int length;
@@ -239,7 +296,8 @@ namespace markov {
 	std::vector<unsigned char> to_stored_model(
 		const std::vector<std::vector<uint8_t>>& model
 	) {
-		std::vector<unsigned char> stored_model(model.size());
+		std::vector<unsigned char> stored_model;
+		stored_model.reserve(model.size());
 
 		// invert keys and values for model to make decoding faster.
 		// assumption: reading occurs more often than writing
@@ -252,6 +310,8 @@ namespace markov {
 			}
 		} CmpValue;
 
+		int pos = 0;
+		uint16_t encode_bytes = 0;
 		for (uint64_t i = 0; i < model.size(); i++) {
 			std::vector<robin_hood::pair<uint8_t, uint8_t>> decode_row;
 			decode_row.reserve(4);
@@ -260,28 +320,69 @@ namespace markov {
 			}
 			std::sort(decode_row.begin(), decode_row.end(), CmpValue);
 
-			stored_model[i] = (
+			int model_idx = ILUT[(
 				  (decode_row[0].first & 0b11)
 				| ((decode_row[1].first & 0b11) << 2)
 				| ((decode_row[2].first & 0b11) << 4)
 				| ((decode_row[3].first & 0b11) << 6)
-			);
+			)];
+
+			if (model_idx == DNE) {
+				throw std::runtime_error("Corrupted model.");
+			}
+
+			encode_bytes |= (model_idx << pos);
+			pos += 5;
+
+			if (pos > 8) {
+				stored_model.push_back(static_cast<uint8_t>(encode_bytes));
+				pos -= 8;
+				encode_bytes >>= 8;
+			}
+		}
+
+		if (pos > 0) {
+			stored_model.push_back(static_cast<uint8_t>(encode_bytes));
 		}
 
 		return stored_model;
 	}
 
 	std::vector<std::vector<uint8_t>> from_stored_model(
-		const std::vector<unsigned char>& model_stream
+		const std::vector<unsigned char>& model_stream,
+		const int markov_model_order
 	) {
-		std::vector<std::vector<uint8_t>> model(model_stream.size());
+		std::vector<std::vector<uint8_t>> model;
+		model.reserve(pow(4, markov_model_order));
 
-		for (uint64_t i = 0; i < model_stream.size(); i++) {
-			model[i].resize(4);
-			model[i][0] = model_stream[i] & 0b11;
-			model[i][1] = (model_stream[i] >> 2) & 0b11;
-			model[i][2] = (model_stream[i] >> 4) & 0b11;
-			model[i][3] = (model_stream[i] >> 6) & 0b11;
+		const uint64_t stream_size = model_stream.size();
+
+		int pos = 0;
+		for (uint64_t i = 0; i < stream_size; i++) {
+
+			while (pos < 8) {
+				int decoded = 0;
+				if (pos + 5 > 8 && i < stream_size - 1) {
+					decoded = (model_stream[i] >> pos) & 0b11111;
+					decoded |= (model_stream[i+1] >> (pos + 5 - 8)) << (8 - pos);
+					decoded &= 0b11111;
+				}
+				else {
+					decoded = (model_stream[i] >> pos) & 0b11111;
+				}
+
+				uint8_t model_row = LUT[decoded];
+
+				std::vector<uint8_t> row(4);
+				row[0] = model_row & 0b11;
+				row[1] = (model_row >> 2) & 0b11;
+				row[2] = (model_row >> 4) & 0b11;
+				row[3] = (model_row >> 6) & 0b11;
+				model.push_back(std::move(row));
+
+				pos += 5;
+			}
+			pos -= 8;
 		}
 
 		return model;

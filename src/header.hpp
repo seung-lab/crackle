@@ -190,12 +190,15 @@ public:
 		if (markov_model_order == 0) {
 			return 0;
 		}
-		return pow(4, 
+		uint64_t model_size = pow(4, 
 			std::min(
 				static_cast<uint64_t>(markov_model_order), 
 				static_cast<uint64_t>(15)
 			)
 		);
+		// model is packed so only 5 bits are used
+		// for each row. Round up.
+		return ((model_size * 5) + 4) / 8;
 	}
 
 	static bool valid_header(unsigned char* buf) {

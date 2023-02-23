@@ -272,7 +272,7 @@ std::vector<std::vector<uint8_t>> decode_markov_model(
 		binary.begin() + model_offset,
 		binary.begin() + model_offset + header.markov_model_bytes()
 	);
-	return crackle::markov::from_stored_model(stored_model);
+	return crackle::markov::from_stored_model(stored_model, header.markov_model_order);
 }
 
 template <typename CCL>
