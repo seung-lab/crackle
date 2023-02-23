@@ -71,7 +71,7 @@ def decompress_file(src):
 		print(f"crackle: {src} could not be decoded.")
 		return
 
-	dest = src.replace(".ckl", "").replace(".gz", "")
+	dest = src.replace(".ckl", "").replace(".gz", "").replace(".xz", "").replace(".lzma", "")
 	_, ext = os.path.splitext(dest)
 	
 	if ext != ".npy":
