@@ -320,12 +320,14 @@ namespace markov {
 			}
 			std::sort(decode_row.begin(), decode_row.end(), CmpValue);
 
-			int model_idx = ILUT[(
+			unsigned int model_key = (
 				  (decode_row[0].first & 0b11)
 				| ((decode_row[1].first & 0b11) << 2)
 				| ((decode_row[2].first & 0b11) << 4)
 				| ((decode_row[3].first & 0b11) << 6)
-			)];
+			);
+
+			int model_idx = ILUT[model_key];
 
 			if (model_idx == DNE) {
 				throw std::runtime_error("Corrupted model.");
@@ -364,7 +366,7 @@ namespace markov {
 				int decoded = 0;
 				if (pos + 5 > 8 && i < stream_size - 1) {
 					decoded = (model_stream[i] >> pos) & 0b11111;
-					decoded |= (model_stream[i+1] >> (pos + 5 - 8)) << (8 - pos);
+					decoded |= (model_stream[i+1] & ~(~0u << (pos + 5 - 8))) << (8 - pos);
 					decoded &= 0b11111;
 				}
 				else {
