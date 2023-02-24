@@ -3,6 +3,7 @@
 ```bash
 # Command Line Interface
 crackle data.npy # creates data.ckl
+crackle -m 5 data.npy # use a 5th order context model
 crackle -d data.ckl # recovers data.npy
 ```
 
@@ -12,7 +13,7 @@ import numpy
 
 labels = np.load("example.npy") # a 2D or 3D dense segmentation
 
-binary = crackle.compress(labels)
+binary = crackle.compress(labels, allow_pins=False, markov_model_order=0)
 labels = crackle.decompress(binary)
 
 # get unique labels without decompressing
