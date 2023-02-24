@@ -310,7 +310,11 @@ def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -
 
   return labels
 
-def compress(labels:np.ndarray, allow_pins:bool = False) -> bytes:
+def compress(
+  labels:np.ndarray, 
+  allow_pins:bool = False,
+  markov_model_order:int = 0
+) -> bytes:
   """
   Compress the 3D labels array into a Crackle bytestream.
 
@@ -329,5 +333,5 @@ def compress(labels:np.ndarray, allow_pins:bool = False) -> bytes:
 
   f_order = labels.flags.f_contiguous
   labels = np.asfortranarray(labels)
-  return fastcrackle.compress(labels, allow_pins, f_order)
+  return fastcrackle.compress(labels, allow_pins, f_order, markov_model_order)
 

@@ -34,6 +34,7 @@ class CrackleHeader:
     fortran_order:bool,
     grid_size:int,
     signed:bool,
+    markov_model_order:int
   ):
     self.label_format = label_format
     self.crack_format = crack_format
@@ -46,6 +47,7 @@ class CrackleHeader:
     self.fortran_order = fortran_order
     self.grid_size = int(grid_size)
     self.signed = bool(signed)
+    self.markov_model_order = int(markov_model_order)
 
   @classmethod
   def frombytes(kls, buffer:bytes):
@@ -56,8 +58,11 @@ class CrackleHeader:
     if buffer[4] != CrackleHeader.FORMAT_VERSION:
     	raise FormatError(f"Wrong format version. Got: {buffer[4]} Expected: {CrackleHeader.FORMAT_VERSION}")
 
-    values = unpack_bits(int(buffer[5]), [
-      2, 2, 1, 2, 1
+    values = unpack_bits(
+      int.from_bytes(buffer[5:7], byteorder='little', signed=False), 
+    [
+      2, 2, 1, 2, 1,
+      1, 4
     ])
 
     return CrackleHeader(
@@ -71,7 +76,8 @@ class CrackleHeader:
       grid_size=(2 ** int(buffer[19])),
     	num_label_bytes=int.from_bytes(buffer[20:24], byteorder='little', signed=False),
       fortran_order=bool(values[4]),
-      signed=(buffer[6] & 0b1),
+      signed=bool(values[5]),
+      markov_model_order=int(values[6]),
     )
 
   def tobytes(self) -> bytes:
@@ -83,13 +89,18 @@ class CrackleHeader:
       (self.fortran_order, 1),
     ])
 
+    fmt_byte2 = pack_bits([
+      (int(self.signed), 1),
+      (int(self.markov_model_order), 4),
+    ])
+
     log_grid_size = int(np.log2(self.grid_size))
 
     return b''.join([
       self.MAGIC,
       self.FORMAT_VERSION.to_bytes(1, 'little'),
       fmt_byte.to_bytes(1, 'little'),
-      self.signed.to_bytes(1, 'little'),
+      fmt_byte2.to_bytes(1, 'little'),
       self.sx.to_bytes(4, 'little'),
       self.sy.to_bytes(4, 'little'),
       self.sz.to_bytes(4, 'little'),

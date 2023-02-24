@@ -80,7 +80,7 @@ See benchmarks for more information on Crackle's size and compute effiency.
 | num_label_bytes   | Any.              | u32      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
 
 
-Format Field (u16): DDSSCLLFGRRRRRRR (each letter represents a bit, left is LSB)
+Format Field (u16): DDSSCLLFGOOOORRR (each letter represents a bit, left is LSB)
 
 DD: 2^(DD) = byte width of returned array (1,2,4,8 bytes)  
 SS: 2^(SS) = byte width of stored labels (sometimes you can store values in 2 bytes when the final array is 8 bytes)  
@@ -88,6 +88,7 @@ C: 1: crack codes denote impermissible boundaries 0: they denote permissible bou
 LL: 0: "flat" label format, 1: fixed width pins (unused?) 2: variable width pins 3: reserved  
 F: whether the array is to be rendered as C (0) or F (1) order
 G: Signed (if (1), data are signed int, otherwise unsigned int)
+OOOO: Nth-Order of Markov Chain (as an unsigned integer, typical values 0, or 3 to 7). If 0, markov compression is disabled.
 R: Reserved
 
 ### Flat Label Format
@@ -138,10 +139,11 @@ A fixed width variant of pins has also been developed but is not enabled. It fre
 
 ### Crack Code Format
 
-
-CRACK CODE: `| CHAIN 0 | CHAIN 1 | ... | CHAIN N |`
+CRACK CODE: `MARKOV MODEL | CHAIN 0 | CHAIN 1 | ... | CHAIN N |`
 
 CHAIN: `| BEGINNING OF CHAIN INDEX (sizeof(sx * sy)) | BIT PACKED MOVES (2 bits each) |`
+
+MARKOV MODEL (if enabled): `priority order of moves UDLR packed per a byte`. 4^order bytes.
 
 The BEGINNING OF CHAIN INDEX (BOC) locates the grid vertex where the crack code will begin. Vertices are the corners of the pixel grid, with 0 at the top left and sx\*sy-1 at the bottom right (fortran order). 
 

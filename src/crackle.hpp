@@ -18,6 +18,7 @@
 #include "lib.hpp"
 #include "labels.hpp"
 #include "pins.hpp"
+#include "markov.hpp"
 
 namespace crackle {
 
@@ -28,7 +29,8 @@ std::vector<unsigned char> compress_helper(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const bool allow_pins = false,
-	const bool fortran_order = true
+	const bool fortran_order = true,
+	const uint64_t markov_model_order = 0
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -69,18 +71,52 @@ std::vector<unsigned char> compress_helper(
 		/*grid_size*/2147483648,
 		
 		/*num_label_bytes=*/0,
-		/*fortran_order*/fortran_order
+		/*fortran_order*/fortran_order,
+		/*markov_model_order=*/markov_model_order // 0 is disabled
 	);
 
 	if (voxels == 0) {
 		return header.tobytes();
 	}
 
-	std::vector<std::vector<unsigned char>> 
-		crack_codes = crackle::crackcodes::encode_boundaries(
+	std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> 
+		crack_codepoints = crackle::crackcodes::encode_boundaries(
 			labels, sx, sy, sz, 
 			/*permissible=*/(crack_format == CrackFormat::PERMISSIBLE)
 		);
+
+	if (header.markov_model_order > 0) {
+		bool empty_cracks = true;
+		for (auto& code : crack_codepoints) {
+			if (code.size()) {
+				empty_cracks = false;
+				break;
+			}
+		}
+		if (empty_cracks) {
+			header.markov_model_order = 0;
+		}
+	}
+
+	std::vector<unsigned char> stored_model; // only needed for markov
+	std::vector<std::vector<unsigned char>> crack_codes(crack_codepoints.size());
+	if (header.markov_model_order > 0) {
+		auto stats = crackle::markov::gather_statistics(crack_codepoints, header.markov_model_order);
+		auto model = crackle::markov::stats_to_model(stats);
+		stored_model = crackle::markov::to_stored_model(model);
+
+		for (uint64_t z = 0; z < crack_codepoints.size(); z++) {
+			crack_codes[z] = crackle::markov::compress(
+				crack_codepoints[z], model, header.markov_model_order,
+				sx, sy
+			);
+		}
+	}
+	else {
+		for (uint64_t z = 0; z < crack_codepoints.size(); z++) {
+			crack_codes[z] = crackle::crackcodes::pack_codepoints(crack_codepoints[z], sx, sy);
+		}
+	}
 	
 	std::vector<unsigned char> labels_binary;
 	if (label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
@@ -116,6 +152,9 @@ std::vector<unsigned char> compress_helper(
 	final_binary.insert(final_binary.end(), header_binary.begin(), header_binary.end());
 	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
 	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
+	if (header.markov_model_order > 0) {
+		final_binary.insert(final_binary.end(), stored_model.begin(), stored_model.end());
+	}
 	for (auto& code : crack_codes) {
 		final_binary.insert(final_binary.end(), code.begin(), code.end());
 	}
@@ -128,7 +167,8 @@ std::vector<unsigned char> compress(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const bool allow_pins = false,
-	const bool fortran_order = true
+	const bool fortran_order = true,
+	const uint64_t markov_model_order = 0
 ) {
 	const int64_t voxels = sx * sy * sz;
 	uint8_t stored_data_width = crackle::lib::compute_byte_width(
@@ -136,16 +176,16 @@ std::vector<unsigned char> compress(
 	);
 
 	if (stored_data_width == 1) {
-		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
 	}
 	else if (stored_data_width == 2) {
-		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
 	}
 	else if (stored_data_width == 4) {
-		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
 	}
 	else {
-		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, allow_pins, fortran_order);
+		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
 	}
 }
 
@@ -174,8 +214,17 @@ std::vector<uint64_t> get_crack_code_offsets(
 	for (uint64_t z = 0; z < header.sz; z++) {
 		z_index[z+1] += z_index[z];
 	}
+
+	uint64_t markov_model_offset = 0;
+	if (header.markov_model_order > 0) {
+		markov_model_offset = header.markov_model_bytes();
+	}
+
 	for (uint64_t i = 0; i < header.sz + 1; i++) {
-		z_index[i] += offset + zindex_bytes + header.num_label_bytes;
+		z_index[i] += (
+			offset + zindex_bytes + 
+			header.num_label_bytes + markov_model_offset
+		);
 	}
 	return z_index;
 }
@@ -206,20 +255,59 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 	return crack_codes;
 }
 
+std::vector<std::vector<uint8_t>> decode_markov_model(
+	const CrackleHeader &header,
+	const std::vector<unsigned char> &binary
+) {
+	if (header.markov_model_order == 0) {
+		return std::vector<std::vector<uint8_t>>();
+	}
+
+	uint64_t model_offset = header.header_size + header.num_label_bytes;
+	const uint64_t z_width = sizeof(uint32_t);
+	const uint64_t zindex_bytes = z_width * header.sz;
+	model_offset += zindex_bytes;
+
+	std::vector<unsigned char> stored_model(
+		binary.begin() + model_offset,
+		binary.begin() + model_offset + header.markov_model_bytes()
+	);
+	return crackle::markov::from_stored_model(stored_model, header.markov_model_order);
+}
+
 template <typename CCL>
 std::vector<CCL> crack_codes_to_cc_labels(
   const std::vector<std::vector<unsigned char>>& crack_codes,
   const uint64_t sx, const uint64_t sy, const uint64_t sz,
-  const bool permissible, uint64_t &N
+  const bool permissible, uint64_t &N,
+  const std::vector<std::vector<uint8_t>>& markov_model
 ) {
 	const uint64_t sxy = sx * sy;
 
 	std::vector<uint8_t> edges(sx*sy*sz);
 
 	for (uint64_t z = 0; z < crack_codes.size(); z++) {
-		auto code = crackle::crackcodes::unpack_binary(crack_codes[z], sx, sy);
+		if (crack_codes[z].size() == 0) {
+			continue;
+		}
+
+		auto code = crack_codes[z];
+
+		std::vector<uint64_t> nodes = crackle::crackcodes::read_boc_index(code, sx, sy);
+
+		std::vector<uint8_t> codepoints;
+		if (markov_model.size() == 0) {
+			codepoints = crackle::crackcodes::unpack_codepoints(code, sx, sy);
+		}
+		else {
+			uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
+			std::vector<uint8_t> markov_stream(code.begin() + index_size, code.end());
+			codepoints = crackle::markov::decode_codepoints(markov_stream, markov_model);
+		}
+
+		auto symbol_stream = crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
 		std::vector<uint8_t> slice_edges = crackle::crackcodes::decode_crack_code(
-			code, sx, sy, permissible
+			symbol_stream, sx, sy, permissible
 		);
 		for (uint64_t i = 0; i < sxy; i++) {
 			edges[i + sxy*z] = slice_edges[i];
@@ -279,12 +367,16 @@ LABEL* decompress(
 
 	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
 
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 	uint64_t N = 0;
 	std::vector<uint32_t> cc_labels = crack_codes_to_cc_labels<uint32_t>(
 		crack_codes, header.sx, header.sy, szr, 
 		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
-		/*N=*/N
+		/*N=*/N,
+		/*markov_model*/markov_model
 	);
 
 	std::vector<LABEL> label_map;

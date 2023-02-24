@@ -14,10 +14,10 @@ namespace crackle {
 namespace crackcodes {
 
 enum DirectionCode {
-	LEFT = 0b10,
+	LEFT = 0b11,
 	RIGHT = 0b01,
 	UP = 0b00,
-	DOWN = 0b11
+	DOWN = 0b10
 };
 
 inline std::pair<int64_t, int64_t> mkedge(int64_t a, int64_t b){
@@ -177,11 +177,11 @@ struct Graph {
 	}
 };
 
-std::vector<std::vector<uint64_t>>
-symbols_to_integers(
+robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>
+symbols_to_codepoints(
 	std::vector<std::pair<int64_t, std::vector<char>>> &chains
 ) {
-	std::vector<std::vector<uint64_t>> encoded_chains;
+	robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>> encoded_chains;
 
 	const uint64_t BRANCH[2] = { DirectionCode::UP, DirectionCode::DOWN };
 	const uint64_t BRANCH2[2] = { DirectionCode::LEFT, DirectionCode::RIGHT };
@@ -189,9 +189,9 @@ symbols_to_integers(
 	const uint64_t TERM2[2] = { DirectionCode::RIGHT, DirectionCode::LEFT };
 
 	for (auto [node, chain] : chains) {
-		std::vector<uint64_t> code;
+		std::vector<uint8_t> code;
 		code.reserve(chain.size());
-		code.push_back(node);
+
 		for (uint64_t i = 0; i < chain.size(); i++) {
 			char symbol = chain[i];
 			if (symbol == 's') {
@@ -233,7 +233,7 @@ symbols_to_integers(
 				throw std::runtime_error("Invalid symbol.");
 			}
 		}
-		encoded_chains.push_back(code);
+		encoded_chains[node] = std::move(code);
 	}
 
 	return encoded_chains;
@@ -298,6 +298,97 @@ void remove_initial_branch(
 	node = pos_x + sxe * pos_y;
 }
 
+std::vector<uint64_t> read_boc_index(
+	const std::vector<unsigned char>& binary,
+	const uint64_t sx, const uint64_t sy
+) {
+	std::vector<uint64_t> nodes;
+
+	const uint64_t sxe = sx + 1;
+
+	const uint64_t x_width = crackle::lib::compute_byte_width(sx+1);
+	const uint64_t y_width = crackle::lib::compute_byte_width(sy+1);
+
+	uint64_t idx = 4; // skip over index size
+	uint64_t num_y = crackle::lib::ctoid(binary, idx, y_width);
+	idx += y_width;
+
+	uint64_t y = 0; 
+
+	for (uint64_t yi = 0; yi < num_y; yi++) {
+		y += crackle::lib::ctoid(binary, idx, y_width);
+		idx += y_width;
+
+		uint64_t num_x = crackle::lib::ctoid(binary, idx, x_width);
+		idx += x_width;
+
+		uint64_t x = 0;
+		for (uint64_t xi = 0; xi < num_x; xi++) {
+			x += crackle::lib::ctoid(binary, idx, x_width);
+			idx += x_width;
+			nodes.push_back(x + sxe * y);
+		}
+	}
+
+	return nodes;
+}
+
+std::vector<unsigned char> write_boc_index(
+	const std::vector<uint64_t>& sorted_nodes,
+	const uint64_t sx, const uint64_t sy
+) {
+	const uint64_t sxe = sx + 1;
+	const uint64_t sye = sy + 1;
+
+	const uint64_t x_width = crackle::lib::compute_byte_width(sx+1);
+	const uint64_t y_width = crackle::lib::compute_byte_width(sy+1);
+
+	// beginning of chain index
+	robin_hood::unordered_node_map<uint64_t, std::vector<uint64_t>> boc(sye);
+
+	for (uint64_t node : sorted_nodes) {
+		uint64_t y = node / sxe;
+		uint64_t x = node - sxe * y;
+		boc[y].push_back(x);
+	}
+
+	std::vector<uint64_t> all_y;
+	for (auto pair : boc) {
+		all_y.push_back(pair.first);
+	}
+	std::sort(all_y.begin(), all_y.end());
+
+	uint64_t index_size = y_width;
+	for (uint64_t y : all_y) {
+		index_size += y_width;
+		index_size += (boc[y].size() + 1) * x_width;
+	}
+
+	std::vector<unsigned char> binary(4 + index_size);
+
+	uint64_t idx = 0;
+	idx += crackle::lib::itocd(index_size, binary, idx, 4);
+	idx += crackle::lib::itocd(all_y.size(), binary, idx, y_width);
+	
+	for (uint64_t i = 0; i < all_y.size(); i++) {
+		if (i == 0) {
+			idx += crackle::lib::itocd(all_y[0], binary, idx, y_width);
+		}
+		else {
+			idx += crackle::lib::itocd(all_y[i] - all_y[i-1], binary, idx, y_width);
+		}
+		uint64_t y = all_y[i];
+		idx += crackle::lib::itocd(boc[y].size(), binary, idx, x_width);
+		uint64_t last_x = 0;
+		for (uint64_t x : boc[y]) {
+			idx += crackle::lib::itocd(x - last_x, binary, idx, x_width);
+			last_x = x;
+		}
+	}
+
+	return binary;
+}
+
 struct pair_hash {
 	size_t operator()(const std::pair<int64_t, int64_t>& p) const {
 		return p.first + 31 * p.second;
@@ -306,7 +397,7 @@ struct pair_hash {
 
 
 template <typename LABEL>
-std::vector<std::vector<uint64_t>>
+robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>
 create_crack_codes(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy,
@@ -323,7 +414,7 @@ create_crack_codes(
   std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
 
   if (n_clusters == 0) {
-    return symbols_to_integers(chains);
+    return symbols_to_codepoints(chains);
   }
 
   std::vector<int64_t> neighbors;
@@ -341,7 +432,7 @@ create_crack_codes(
   	int64_t start_node = start_edge.first;
 
     std::vector<char> code;
-    std::unordered_map<int64_t, std::vector<int64_t>> branch_nodes;
+    robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
     int64_t branches_taken = 1;
 
     while (!remaining.empty() || !revisit.empty()) {
@@ -423,127 +514,131 @@ create_crack_codes(
     );
   }
 
-  return symbols_to_integers(chains);
+  return symbols_to_codepoints(chains);
 }
 
-std::vector<unsigned char> pack_codes(
-	const std::vector<std::vector<uint64_t>>& chains,
+std::vector<unsigned char> pack_codepoints(
+	robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>& chains,
 	const uint64_t sx, const uint64_t sy
 ) {
-	uint64_t byte_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
 
-	std::vector<unsigned char> binary;
+	std::vector<uint64_t> nodes;
+	for (auto& [node, code] : chains) {
+		nodes.push_back(node);
+	}
+	std::sort(nodes.begin(), nodes.end());
 
-	for (auto& chain : chains) {
-		// serialize node
-		for (uint64_t i = 0; i < byte_width; i++) {
-			binary.push_back((chain[0] >> (8*i)) & 0xff);
+	std::vector<unsigned char> binary = write_boc_index(nodes, sx, sy);
+
+	std::vector<uint8_t> codepoints;
+	for (uint64_t node : nodes) {
+		auto chain = chains[node];
+		for (uint8_t codepoint : chain) {
+			codepoints.push_back(codepoint);
 		}
+	}
 
-		uint64_t all_moves = chain.size() - 1;
-		all_moves -= (all_moves % 4);
-
-		uint64_t i = 1;
-		uint8_t encoded = 0;
-		while (i < all_moves) {
-			encoded = 0;
-			for (uint64_t j = 0; j < 4; j++, i++) {
-				encoded |= (chain[i] << (2*j));
+	if (codepoints.size() > 0) {
+		for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
+			codepoints[i] -= codepoints[i-1];
+			if (codepoints[i] > 3) {
+				codepoints[i] += 4;
 			}
-			binary.push_back(encoded);
 		}
-		if (i < chain.size()) {
+	}
+
+	uint8_t encoded = 0;
+	int pos = 0;
+	for (uint64_t i = 0; i < codepoints.size(); i++) {
+		encoded |= (codepoints[i] << pos);
+		pos += 2;
+		if (pos == 8) {
+			binary.push_back(encoded);
 			encoded = 0;
-			for (uint64_t j = 0; i < chain.size(); j++, i++) {
-				encoded |= (chain[i] << (2*j));
-			}
-			binary.push_back(encoded);
+			pos = 0;
 		}
+	}
+
+	if (pos > 0) {
+		binary.push_back(encoded);
 	}
 
 	return binary;
 }
 
 template <typename LABEL>
-std::vector<std::vector<unsigned char>> 
+std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> 
 encode_boundaries(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const bool permissible
 ) {
-	std::vector<std::vector<unsigned char>> binary_components;
+	std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> binary_components;
 
 	const int64_t sxy = sx * sy;
 
 	for (int64_t z = 0; z < sz; z++) {
 		binary_components.push_back(
-			pack_codes(
-				create_crack_codes(labels + z * sxy, sx, sy, permissible),
-				sx, sy
-			)
+				create_crack_codes(labels + z * sxy, sx, sy, permissible)
 		);
 	}
 
 	return binary_components;
 }
 
-std::unordered_map<uint64_t, std::vector<unsigned char>> 
-unpack_binary(
-	const std::vector<unsigned char> &code, 
-	const uint64_t sx, const uint64_t sy
+robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> 
+codepoints_to_symbols(
+	const std::vector<uint64_t>& sorted_nodes,
+	const std::vector<uint8_t>& codepoints
 ) {
-	std::unordered_map<uint64_t, std::vector<unsigned char>> chains;
 
-	if (code.size() == 0) {
-		return chains;
-	}
-
-	uint64_t index_width = crackle::lib::compute_byte_width((sx+1) * (sy+1));
+	robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> chains;
 
 	std::vector<unsigned char> symbols;
-	symbols.reserve(code.size() * 4 * 2);
+	symbols.reserve(codepoints.size() * 4 * 2);
 
 	uint64_t branches_taken = 0;
 	uint64_t node = 0;
 
-	char remap[4] = { 'u', 'r', 'l', 'd' };
+	char remap[4] = { 'u', 'r', 'd', 'l' };
 
-	for (uint64_t i = 0; i < code.size(); i++) {
+	uint64_t node_i = 0;
+
+	for (uint64_t i = 0; i < codepoints.size(); i++) {
 		if (branches_taken == 0) {
-			node = crackle::lib::ctoid(code.data(), i, index_width);
-			i += index_width - 1; // -1 b/c it will be incremented by for loop
+			if (node_i >= sorted_nodes.size()) {
+				break;
+			}
+			node = sorted_nodes[node_i];
+			node_i++;
+			i--; // b/c i will be incremented
 			branches_taken = 1;
 			continue;
 		}
 
-		for (uint64_t j = 0; j < 4; j++) {
-			uint8_t move = static_cast<uint8_t>((code[i] >> (2*j)) & 0b11);
+		auto move = codepoints[i];
 
-			if (symbols.size()) {
-				if (
-					(move == DirectionCode::UP && symbols.back() == 'd')
-					|| (move == DirectionCode::LEFT && symbols.back() == 'r')
-				) {
-					symbols.back() = 't';
-					branches_taken--;
-					if (branches_taken == 0) {
-						break;
-					}
-				}
-				else if (
-					(move == DirectionCode::DOWN && symbols.back() == 'u')
-					|| (move == DirectionCode::RIGHT && symbols.back() == 'l')
-				) {
-					symbols.back() = 'b';
-					branches_taken++;
-				}
-				else {
-					symbols.push_back(remap[move]);
-				}
+		if (symbols.size()) {			
+			if (
+				(move == DirectionCode::UP && symbols.back() == 'd')
+				|| (move == DirectionCode::LEFT && symbols.back() == 'r')
+			) {
+				symbols.back() = 't';
+				branches_taken--;
+			}
+			else if (
+				(move == DirectionCode::DOWN && symbols.back() == 'u')
+				|| (move == DirectionCode::RIGHT && symbols.back() == 'l')
+			) {
+				symbols.back() = 'b';
+				branches_taken++;
 			}
 			else {
 				symbols.push_back(remap[move]);
 			}
+		}
+		else {
+			symbols.push_back(remap[move]);
 		}
 
 		if (branches_taken == 0) {
@@ -557,8 +652,37 @@ unpack_binary(
 	return chains;
 }
 
+std::vector<uint8_t> unpack_codepoints(
+	const std::vector<unsigned char> &code, 
+	const uint64_t sx, const uint64_t sy
+) {
+	if (code.size() == 0) {
+		return std::vector<uint8_t>();
+	}
+
+	uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
+
+	std::vector<uint8_t> codepoints;
+	codepoints.reserve(4 * (code.size() - index_size));
+
+	for (uint64_t i = index_size; i < code.size(); i++) {
+		for (uint64_t j = 0; j < 4; j++) {
+			uint8_t codepoint = static_cast<uint8_t>((code[i] >> (2*j)) & 0b11);
+			codepoints.push_back(codepoint);
+		}
+	}
+	for (uint64_t i = 1; i < codepoints.size(); i++) {
+		codepoints[i] += codepoints[i-1];
+		if (codepoints[i] > 3) {
+			codepoints[i] -= 4;
+		}
+	}
+
+	return codepoints;
+}
+
 std::vector<uint8_t> decode_permissible_crack_code(
-	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
+	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
 	const int64_t sx, const int64_t sy
 ) {
 	// voxel connectivity
@@ -631,7 +755,7 @@ std::vector<uint8_t> decode_permissible_crack_code(
 }
 
 std::vector<uint8_t> decode_impermissible_crack_code(
-	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
+	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
 	const int64_t sx, const int64_t sy
 ) {
 	// voxel connectivity
@@ -705,7 +829,7 @@ std::vector<uint8_t> decode_impermissible_crack_code(
 }
 
 std::vector<uint8_t> decode_crack_code(
-	const std::unordered_map<uint64_t, std::vector<unsigned char>> &chains,
+	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
 	const uint64_t sx, const uint64_t sy,
 	const bool permissible
 ) {
