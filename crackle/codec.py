@@ -147,6 +147,32 @@ def components(binary:bytes):
 def component_lengths(binary:bytes):
   return { k:len(v) for k,v in components(binary).items() }
 
+def crack_codes(binary:bytes) -> np.ndarray:
+  header = CrackleHeader.frombytes(binary)
+  comps = components(binary)
+  z_index = np.frombuffer(comps["z_index"], dtype=np.uint32)
+  z_index = np.cumsum(z_index)
+  z_index += (
+    len(header.tobytes()) 
+    + header.num_label_bytes 
+    + header.sz * header.z_index_width()
+  )
+  z_index = np.concatenate((z_index, [ len(binary) ]))
+  z_index = z_index.astype(np.uint64)
+  
+  codes = []
+  for i in range(header.sz):
+    codes.append(
+      binary[z_index[i]:z_index[i+1]]
+    )
+  return codes
+
+def boc(crack_codes:bytes) -> np.ndarray:
+  """extract the beginning of chain region from the crack code"""
+  N = int.from_bytes(crack_codes[:4], byteorder='little')
+  print(N)
+  return crack_codes[:N+4]
+
 def background_color(binary:bytes) -> int:
   """For pin encodings only, extract the background color."""
   header = CrackleHeader.frombytes(binary)
