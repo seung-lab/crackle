@@ -95,7 +95,7 @@ class CrackleRemoteArray(CrackleArray):
 
   def _synthetic_crackle_file(self, z:int, crackcode:bytes) -> bytes:
     zindex = np.zeros((self.header.sz,), dtype=np.uint32)
-    zindex[z+1] = len(crackcode)
+    zindex[z] = len(crackcode)
     return b''.join([ 
       self.header_binary,
       zindex.tobytes(),
