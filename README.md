@@ -18,6 +18,8 @@ labels = crackle.decompress(binary)
 
 # get unique labels without decompressing
 uniq = crackle.labels(binary) 
+# get num labels w/o decompressing
+N = crackle.num_labels(binary) 
 
 # Remap labels without decompressing. Could
 # be useful for e.g. proofreading.
@@ -25,6 +27,11 @@ remapped = crackle.remap(
   binary, { 1: 2, 2: 3, ... },
   preserve_missing_labels=True
 )
+
+# change dtype to smallest possible w/o precision loss
+remapped = crackle.refit(binary)
+# renumber array and change dtype to smallest possible
+remapped = crackle.renumber(binary, start=0)
 
 # for working with files
 # if .gz is appended to the filename, the file will be
