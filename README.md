@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/crackle-codec.svg)](https://badge.fury.io/py/crackle-codec)
+
 # Crackle: Next gen. 3D segmentation compression codec.
 
 ```bash
