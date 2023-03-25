@@ -72,6 +72,7 @@ class CrackleRemoteArray(CrackleArray):
     self.header = header(self.header_binary)
     self.z_index = self.fetch_z_index()
     self.labels = self.fetch_all_labels()
+    self.markov_model = self.fetch_markov_model()
 
   def fetch_z_index(self):
     hb = CrackleHeader.HEADER_BYTES
@@ -83,8 +84,18 @@ class CrackleRemoteArray(CrackleArray):
       hb
       + self.header.num_label_bytes 
       + self.header.sz * self.header.z_index_width()
+      + self.header.num_markov_model_bytes
     )
     return z_index.astype(np.uint64, copy=False)
+
+  def fetch_markov_model(self):
+    if self.header.markov_model_order == 0:
+      return b''
+
+    hb = CrackleHeader.HEADER_BYTES
+    off = hb + self.header.sz * 4
+    off += self.header.num_label_bytes
+    return self.cf[off:off+self.header.num_markov_model_bytes]
 
   def fetch_all_labels(self) -> bytes:
     hb = CrackleHeader.HEADER_BYTES
@@ -101,8 +112,10 @@ class CrackleRemoteArray(CrackleArray):
       self.header_binary,
       zindex.tobytes(),
       self.labels,
+      self.markov_model,
       crackcode
     ])
+  
   def __getitem__(self, z:int) -> np.ndarray:
     crackcode = self.fetch_crack_code(z)
     binary = self._synthetic_crackle_file(z, crackcode)
