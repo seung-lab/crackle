@@ -66,7 +66,7 @@ def contains(binary:bytes, label:int) -> bool:
   offset = hb + head.sz * 4
 
   # bgcolor, num labels (u64), N labels, pins
-  if head.label_format == LabelFormat.PINS_FIXED_WIDTH:
+  if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
     bgcolor = background_color(binary)
     if bgcolor == label:
       return True
@@ -79,10 +79,8 @@ def contains(binary:bytes, label:int) -> bool:
     dtype=head.stored_dtype
   )
   idx = np.searchsorted(uniq, label)
-  if 0 < idx < uniq.size:
-    return True
-  elif idx == 0:
-    return uniq[0] == label
+  if 0 <= idx < uniq.size:
+    return uniq[idx] == label
   else:
     return False
 

@@ -128,6 +128,12 @@ class CrackleHeader:
   def voxels(self) -> int:
     return self.sx * self.sy * self.sz
 
+  @property
+  def num_markov_model_bytes(self) -> int:
+    if self.markov_model_order == 0:
+      return 0
+    return (4 ** self.markov_model_order) * 5 // 8
+
   def details(self) -> str:
     label_fmt = 'FLAT'
     if self.label_format == LabelFormat.PINS_FIXED_WIDTH:

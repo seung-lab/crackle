@@ -19,6 +19,9 @@ symbols encoded using impossible direction pairs
 encoded as an integer index to the start position
 on the crack grid.
 
+The crack codes can be futher compressed using
+a finite context model.
+
 Labels are encoded as a set of unique labels
 in sorted order followed by an index of connected
 component ids into the unique labels. This gives
@@ -29,16 +32,16 @@ components are much fewer than the labels themselves.
 There is also an alternative label encoding called
 "pins" that draws a line segment connecting several
 connected components at once that works well for
-simpler images, but can be slightly more expensive
+simpler images, but can be more expensive
 on more complicated images. The pin encoding method is
 experimental and its format is subject to change and
 is by default disabled.
 
 Author: William Silversmith
 Affiliation: Princeton Neuroscience Institute
-Date: December 2022
+Date: December 2022 - March 2023
 """
-from .array import CrackleArray
+from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
 	compress, decompress, labels, remap, 
 	nbytes, components, component_lengths,
