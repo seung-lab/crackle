@@ -42,7 +42,8 @@ from .array import CrackleArray
 from .codec import (
 	compress, decompress, labels, remap, 
 	nbytes, components, component_lengths,
-	header, contains, crack_codes, refit
+	header, contains, crack_codes, refit,
+	renumber
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load

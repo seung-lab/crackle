@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from collections import namedtuple
 
 import numpy as np
@@ -136,6 +136,20 @@ def refit(binary:bytes) -> bytes:
     head.tobytes(), 
     binary[CrackleHeader.HEADER_BYTES:] 
   ])
+
+def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
+  """Renumber the array and resize the data type to be the smallest one to fit."""
+  head = header(binary)
+  uniq = labels(binary)
+  mapping = { u: start+i for i,u in enumerate(uniq) }
+  binary = remap(binary, mapping)
+  dtype = fastremap.fit_dtype(head.dtype, uniq.size)
+  head.data_width = np.dtype(dtype).itemsize
+  binary = b''.join([ 
+    head.tobytes(), 
+    binary[CrackleHeader.HEADER_BYTES:] 
+  ])
+  return (binary, mapping)
 
 def nbytes(binary:bytes) -> np.ndarray:
   """Compute the size in bytes of the decompressed array."""
