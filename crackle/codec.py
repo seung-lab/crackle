@@ -63,10 +63,8 @@ def contains(binary:bytes, label:int) -> bool:
     dtype=head.stored_dtype
   )
   idx = np.searchsorted(uniq, label)
-  if 0 < idx < uniq.size:
-    return True
-  elif idx == 0:
-    return uniq[0] == label
+  if 0 <= idx < uniq.size:
+    return uniq[idx] == label
   else:
     return False
 
