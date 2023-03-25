@@ -124,6 +124,19 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   binary[offset:offset+uniq_bytes] = list(all_labels.view(np.uint8))
   return bytes(binary)
 
+def refit(binary:bytes) -> bytes:
+  """
+  Change the rendered dtype to the smallest
+  dtype needed to render the image without
+  loss of precision.
+  """
+  head = header(binary)
+  head.data_width = head.stored_data_width
+  return b''.join([ 
+    head.tobytes(), 
+    binary[CrackleHeader.HEADER_BYTES:] 
+  ])
+
 def nbytes(binary:bytes) -> np.ndarray:
   """Compute the size in bytes of the decompressed array."""
   header = CrackleHeader.frombytes(binary)
