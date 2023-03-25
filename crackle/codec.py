@@ -50,7 +50,7 @@ def contains(binary:bytes, label:int) -> bool:
   offset = hb + head.sz * 4
 
   # bgcolor, num labels (u64), N labels, pins
-  if head.label_format == LabelFormat.PINS_FIXED_WIDTH:
+  if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
     bgcolor = background_color(binary)
     if bgcolor == label:
       return True
