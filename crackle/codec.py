@@ -43,6 +43,22 @@ def labels(binary:bytes) -> np.ndarray:
     labels.sort()
     return labels.astype(head.dtype, copy=False)
 
+def num_labels(binary:bytes) -> int:
+  """Returns the number of unique labels."""
+  head = header(binary)
+  hb = CrackleHeader.HEADER_BYTES
+
+  if head.voxels() == 0:
+    return 0
+
+  offset = hb + head.sz * 4
+  N = 0
+  if head.label_format != LabelFormat.FLAT:
+    offset += head.stored_data_width
+    N += 1 # bgcolor
+  N += int.from_bytes(binary[offset:offset+8], 'little')
+  return N
+
 def contains(binary:bytes, label:int) -> bool:
   """Rapidly check if a label exists in a Crackle bytestream."""
   head = header(binary)

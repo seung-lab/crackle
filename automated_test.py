@@ -166,6 +166,20 @@ def test_labels():
   uniq2 = crackle.labels(binary)
   assert np.all(uniq == uniq2)
 
+def test_num_labels():
+  labels = np.random.randint(0,100, size=(100,100,10), dtype=np.uint32)
+  binary = crackle.compress(labels, allow_pins=False)
+  num_labels_1 = np.unique(labels).size  
+  num_labels_2 = crackle.num_labels(binary)
+  assert num_labels_1 == num_labels_2
+
+  labels = np.ones((20,20,20), dtype=np.uint32)
+  labels[2,2,2:5] = 4
+  binary = crackle.compress(labels, allow_pins=True)
+  num_labels_1 = np.unique(labels).size  
+  num_labels_2 = crackle.num_labels(binary)
+  assert num_labels_1 == num_labels_2
+
 def test_contains():
   labels = np.random.randint(0,4, size=(100,100,10), dtype=np.uint32)
   binary = crackle.compress(labels)
