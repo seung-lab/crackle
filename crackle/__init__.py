@@ -42,7 +42,6 @@ from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
 	compress, decompress, labels, remap, 
 	nbytes, components, component_lengths,
-	header, contains, crack_codes
 	header, contains, crack_codes, refit,
 	renumber, num_labels
 )
