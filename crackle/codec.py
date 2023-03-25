@@ -147,24 +147,23 @@ def refit(binary:bytes) -> bytes:
   loss of precision.
   """
   head = header(binary)
-  head.data_width = head.stored_data_width
+  dtype = fastremap.fit_dtype(head.dtype, num_labels(binary))
+  head.data_width = np.dtype(dtype).itemsize
   return b''.join([ 
     head.tobytes(), 
     binary[CrackleHeader.HEADER_BYTES:] 
   ])
 
 def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
-  """Renumber the array and resize the data type to be the smallest one to fit."""
+  """
+  Renumber the array and resize the data type
+  to be the smallest one to fit without loss of
+  precision.
+  """
   head = header(binary)
   uniq = labels(binary)
   mapping = { u: start+i for i,u in enumerate(uniq) }
-  binary = remap(binary, mapping)
-  dtype = fastremap.fit_dtype(head.dtype, uniq.size)
-  head.data_width = np.dtype(dtype).itemsize
-  binary = b''.join([ 
-    head.tobytes(), 
-    binary[CrackleHeader.HEADER_BYTES:] 
-  ])
+  binary = refit(remap(binary, mapping))
   return (binary, mapping)
 
 def nbytes(binary:bytes) -> np.ndarray:
