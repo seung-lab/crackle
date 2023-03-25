@@ -39,7 +39,7 @@ is by default disabled.
 
 Author: William Silversmith
 Affiliation: Princeton Neuroscience Institute
-Date: December 2022
+Date: December 2022 - March 2023
 """
 from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
