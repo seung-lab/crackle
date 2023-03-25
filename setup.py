@@ -15,6 +15,11 @@ else:
 setuptools.setup(
   setup_requires=['pbr','pybind11','numpy'],
   cmdclass={"build_ext": build_ext},
+  extras_require={
+    "remote": [
+      "cloud-files",
+    ],
+  },
   ext_modules=[
     Pybind11Extension(
         "fastcrackle",

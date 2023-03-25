@@ -2,7 +2,7 @@ from .headers import CrackleHeader
 from .codec import (
   compress, decompress_range, 
   remap, labels, nbytes, contains, 
-  header
+  header, crack_codes
 )
 import numpy as np
 
@@ -62,6 +62,50 @@ class CrackleArray:
       zslc = 0
     slices = (slcs[0], slcs[1], zslc)
     return img[slices]
+
+class CrackleRemoteArray(CrackleArray):
+  def __init__(self, cloudpath):
+    from cloudfiles import CloudFile
+    self.cloudpath = cloudpath
+    self.cf = CloudFile(cloudpath)
+    self.header_binary = self.cf[:CrackleHeader.HEADER_BYTES]
+    self.header = header(self.header_binary)
+    self.z_index = self.fetch_z_index()
+    self.labels = self.fetch_all_labels()
+
+  def fetch_z_index(self):
+    hb = CrackleHeader.HEADER_BYTES
+    offset = self.header.sz * 4
+    z_index = np.frombuffer(self.cf[hb:hb+offset], dtype=np.uint32)
+    z_index = np.cumsum(z_index)
+    z_index += (
+      hb
+      + self.header.num_label_bytes 
+      + self.header.sz * self.header.z_index_width()
+    )
+    return z_index
+
+  def fetch_all_labels(self) -> bytes:
+    hb = CrackleHeader.HEADER_BYTES
+    off = hb + self.header.sz * 4
+    return self.cf[off:off+self.header.num_label_bytes]
+
+  def fetch_crack_code(self, z:int) -> bytes:
+    return self.cf[self.z_index[z]:self.z_index[z+1]]
+
+  def _synthetic_crackle_file(self, z:int, crackcode:bytes) -> bytes:
+    zindex = np.zeros((self.header.sz,), dtype=np.uint32)
+    zindex[z+1] = len(crackcode)
+    return b''.join([ 
+      self.header_binary,
+      zindex.tobytes(),
+      self.labels,
+      crackcode
+    ])
+  def __getitem__(self, z:int):
+    crackcode = self.fetch_crack_code(z)
+    binary = self._synthetic_crackle_file(z, crackcode)
+    return CrackleArray(binary)[:,:,z]
 
 def reify_slices(slices, sx, sy, sz):
   """

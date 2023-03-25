@@ -170,7 +170,6 @@ def crack_codes(binary:bytes) -> np.ndarray:
 def boc(crack_codes:bytes) -> np.ndarray:
   """extract the beginning of chain region from the crack code"""
   N = int.from_bytes(crack_codes[:4], byteorder='little')
-  print(N)
   return crack_codes[:N+4]
 
 def background_color(binary:bytes) -> int:

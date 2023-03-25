@@ -38,7 +38,7 @@ Author: William Silversmith
 Affiliation: Princeton Neuroscience Institute
 Date: December 2022
 """
-from .array import CrackleArray
+from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
 	compress, decompress, labels, remap, 
 	nbytes, components, component_lengths,
