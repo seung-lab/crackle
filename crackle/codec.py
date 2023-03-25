@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from collections import namedtuple
 
 import numpy as np
@@ -42,6 +42,22 @@ def labels(binary:bytes) -> np.ndarray:
     labels = np.concatenate(([ bgcolor ], labels))
     labels.sort()
     return labels.astype(head.dtype, copy=False)
+
+def num_labels(binary:bytes) -> int:
+  """Returns the number of unique labels."""
+  head = header(binary)
+  hb = CrackleHeader.HEADER_BYTES
+
+  if head.voxels() == 0:
+    return 0
+
+  offset = hb + head.sz * 4
+  N = 0
+  if head.label_format != LabelFormat.FLAT:
+    offset += head.stored_data_width
+    N += 1 # bgcolor
+  N += int.from_bytes(binary[offset:offset+8], 'little')
+  return N
 
 def contains(binary:bytes, label:int) -> bool:
   """Rapidly check if a label exists in a Crackle bytestream."""
@@ -121,6 +137,32 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   )
   binary[offset:offset+uniq_bytes] = list(all_labels.view(np.uint8))
   return bytes(binary)
+
+def refit(binary:bytes) -> bytes:
+  """
+  Change the rendered dtype to the smallest
+  dtype needed to render the image without
+  loss of precision.
+  """
+  head = header(binary)
+  dtype = fastremap.fit_dtype(head.dtype, num_labels(binary))
+  head.data_width = np.dtype(dtype).itemsize
+  return b''.join([ 
+    head.tobytes(), 
+    binary[CrackleHeader.HEADER_BYTES:] 
+  ])
+
+def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
+  """
+  Renumber the array and resize the data type
+  to be the smallest one to fit without loss of
+  precision.
+  """
+  head = header(binary)
+  uniq = labels(binary)
+  mapping = { u: start+i for i,u in enumerate(uniq) }
+  binary = refit(remap(binary, mapping))
+  return (binary, mapping)
 
 def nbytes(binary:bytes) -> np.ndarray:
   """Compute the size in bytes of the decompressed array."""

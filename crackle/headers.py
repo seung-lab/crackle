@@ -52,11 +52,11 @@ class CrackleHeader:
   @classmethod
   def frombytes(kls, buffer:bytes):
     if len(buffer) < CrackleHeader.HEADER_BYTES:
-    	raise FormatError(f"Bytestream too short. Got: {buffer}")
+      raise FormatError(f"Bytestream too short. Got: {buffer}")
     if buffer[:4] != CrackleHeader.MAGIC:
-    	raise FormatError(f"Incorrect magic number. Got: {buffer[:4]} Expected: {CrackleHeader.MAGIC}")
+      raise FormatError(f"Incorrect magic number. Got: {buffer[:4]} Expected: {CrackleHeader.MAGIC}")
     if buffer[4] != CrackleHeader.FORMAT_VERSION:
-    	raise FormatError(f"Wrong format version. Got: {buffer[4]} Expected: {CrackleHeader.FORMAT_VERSION}")
+      raise FormatError(f"Wrong format version. Got: {buffer[4]} Expected: {CrackleHeader.FORMAT_VERSION}")
 
     values = unpack_bits(
       int.from_bytes(buffer[5:7], byteorder='little', signed=False), 
