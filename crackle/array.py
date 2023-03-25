@@ -74,6 +74,7 @@ class CrackleArray:
     return img[slices]
 
 class CrackleRemoteArray(CrackleArray):
+  """EXPERIMENTAL DO NOT RELY ON THIS INTERFACE."""
   def __init__(self, cloudpath):
     from cloudfiles import CloudFile
     self.cloudpath = cloudpath
