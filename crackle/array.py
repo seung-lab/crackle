@@ -78,12 +78,13 @@ class CrackleRemoteArray(CrackleArray):
     offset = self.header.sz * 4
     z_index = np.frombuffer(self.cf[hb:hb+offset], dtype=np.uint32)
     z_index = np.cumsum(z_index)
+    z_index = np.concatenate(([ 0 ], z_index))
     z_index += (
       hb
       + self.header.num_label_bytes 
       + self.header.sz * self.header.z_index_width()
     )
-    return z_index
+    return z_index.astype(np.uint64, copy=False)
 
   def fetch_all_labels(self) -> bytes:
     hb = CrackleHeader.HEADER_BYTES
@@ -102,7 +103,7 @@ class CrackleRemoteArray(CrackleArray):
       self.labels,
       crackcode
     ])
-  def __getitem__(self, z:int):
+  def __getitem__(self, z:int) -> np.ndarray:
     crackcode = self.fetch_crack_code(z)
     binary = self._synthetic_crackle_file(z, crackcode)
     return CrackleArray(binary)[:,:,z]
