@@ -78,6 +78,10 @@ class CrackleRemoteArray(CrackleArray):
     binary = self._synthetic_crackle_file(0, b'')
     return CrackleArray(binary).labels()
 
+  def __contains__(self, elem):
+    binary = self._synthetic_crackle_file(0, b'')
+    return elem in CrackleArray(binary)
+  
   def fetch_z_index(self):
     hb = CrackleHeader.HEADER_BYTES
     offset = self.header.sz * 4
