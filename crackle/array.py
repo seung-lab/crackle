@@ -2,7 +2,7 @@ from .headers import CrackleHeader
 from .codec import (
   compress, decompress_range, 
   remap, labels, nbytes, contains, 
-  header, refit, renumber
+  header, refit, renumber, num_labels
 )
 import numpy as np
 
@@ -37,6 +37,9 @@ class CrackleArray:
 
   def labels(self):
     return labels(self.binary)
+
+  def num_labels(self):
+    return num_labels(self.binary)
 
   def remap(self, buf, mapping, preserve_missing_labels=False):
     return CrackleArray(remap(buf, mapping, preserve_missing_labels))
