@@ -46,7 +46,7 @@ from .codec import (
 	compress, decompress, labels, remap, 
 	nbytes, components, component_lengths,
 	header, contains, crack_codes, refit,
-	renumber, num_labels
+	renumber, num_labels, min, max
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load

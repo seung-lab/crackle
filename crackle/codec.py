@@ -89,6 +89,40 @@ def raw_labels(binary:bytes) -> bytes:
   offset = header.HEADER_BYTES + header.sz * 4
   return binary[offset:offset+header.num_label_bytes]
 
+def min(binary:bytes) -> int:
+  header = CrackleHeader.frombytes(binary)
+  lbls = raw_labels(binary)
+
+  if header.label_format == LabelFormat.FLAT:
+    # N = int.from_bytes(lbls[:8], byteorder='little')
+    return int.from_bytes(lbls[8:8+header.stored_data_width], byteorder='little')
+  else:
+    bgcolor = background_color(binary)
+    sdw = header.stored_data_width
+    # N = int.from_bytes(lbls[sdw:sdw+8], byteorder='little')
+    arrmin = int.from_bytes(lbls[sdw+8:sdw+8+header.stored_data_width], byteorder='little')
+    if bgcolor < arrmin:
+      return bgcolor
+    return arrmin
+
+def max(binary:bytes) -> int:
+  header = CrackleHeader.frombytes(binary)
+  lbls = raw_labels(binary)
+
+  if header.label_format == LabelFormat.FLAT:
+    N = num_labels(binary)
+    offset = 8 + (N-1) * header.stored_data_width
+    return int.from_bytes(lbls[offset:offset+header.stored_data_width], byteorder='little')
+  else:
+    bgcolor = background_color(binary)
+    sdw = header.stored_data_width
+    N = num_labels(binary) - 1
+    offset = sdw + 8 + (N-1) * sdw
+    arrmin = int.from_bytes(lbls[offset:offset+sdw], byteorder='little')
+    if bgcolor > arrmin:
+      return bgcolor
+    return arrmin
+
 def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   """
   Remap the labels in a crackle bystream without decompressing.
