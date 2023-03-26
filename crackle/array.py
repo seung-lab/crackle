@@ -5,6 +5,7 @@ from .codec import (
   header, crack_codes, refit, 
   renumber, num_labels
 )
+from . import codec
 import numpy as np
 
 class CrackleArray:
@@ -41,6 +42,12 @@ class CrackleArray:
 
   def num_labels(self):
     return num_labels(self.binary)
+
+  def min(self):
+    return codec.min(self.binary)
+
+  def max(self):
+    return codec.max(self.binary)
 
   def remap(self, buf, mapping, preserve_missing_labels=False):
     return CrackleArray(remap(buf, mapping, preserve_missing_labels))
