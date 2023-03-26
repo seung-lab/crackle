@@ -20,8 +20,11 @@ labels = crackle.decompress(binary)
 
 # get unique labels without decompressing
 uniq = crackle.labels(binary) 
-# get num labels w/o decompressing
+# get num labels without decompressing
 N = crackle.num_labels(binary) 
+# get min and max without decompressing
+mn = crackle.min(binary)
+mx = crackle.max(binary)
 
 # Remap labels without decompressing. Could
 # be useful for e.g. proofreading.
