@@ -71,8 +71,12 @@ py::bytes compress_helper(
 	const uint64_t markov_model_order = 0
 ) {
 	const uint64_t sx = labels.shape()[0];
-	const uint64_t sy = labels.shape()[1];
-	const uint64_t sz = labels.shape()[2];
+	const uint64_t sy = labels.ndim() < 2
+		? 1 
+		: labels.shape()[1];
+	const uint64_t sz = labels.ndim() < 3 
+		? 1 
+		: labels.shape()[2];
 
 	std::vector<unsigned char> buf = crackle::compress<LABEL>(
 		reinterpret_cast<LABEL*>(const_cast<void*>(labels.data())),
