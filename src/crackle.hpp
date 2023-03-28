@@ -275,6 +275,31 @@ std::vector<std::vector<uint8_t>> decode_markov_model(
 	return crackle::markov::from_stored_model(stored_model, header.markov_model_order);
 }
 
+// vcg: voxel connectivity graph
+std::vector<uint8_t> crack_code_to_vcg(
+  const std::vector<unsigned char>& code,
+  const uint64_t sx, const uint64_t sy,
+  const bool permissible, 
+  const std::vector<std::vector<uint8_t>>& markov_model
+) {
+	std::vector<uint64_t> nodes = crackle::crackcodes::read_boc_index(code, sx, sy);
+
+	std::vector<uint8_t> codepoints;
+	if (markov_model.size() == 0) {
+		codepoints = crackle::crackcodes::unpack_codepoints(code, sx, sy);
+	}
+	else {
+		uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
+		std::vector<uint8_t> markov_stream(code.begin() + index_size, code.end());
+		codepoints = crackle::markov::decode_codepoints(markov_stream, markov_model);
+	}
+
+	auto symbol_stream = crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
+	return crackle::crackcodes::decode_crack_code(
+		symbol_stream, sx, sy, permissible
+	);
+}
+
 template <typename CCL>
 std::vector<CCL> crack_codes_to_cc_labels(
   const std::vector<std::vector<unsigned char>>& crack_codes,
@@ -292,22 +317,9 @@ std::vector<CCL> crack_codes_to_cc_labels(
 		}
 
 		auto code = crack_codes[z];
-
-		std::vector<uint64_t> nodes = crackle::crackcodes::read_boc_index(code, sx, sy);
-
-		std::vector<uint8_t> codepoints;
-		if (markov_model.size() == 0) {
-			codepoints = crackle::crackcodes::unpack_codepoints(code, sx, sy);
-		}
-		else {
-			uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
-			std::vector<uint8_t> markov_stream(code.begin() + index_size, code.end());
-			codepoints = crackle::markov::decode_codepoints(markov_stream, markov_model);
-		}
-
-		auto symbol_stream = crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
-		std::vector<uint8_t> slice_edges = crackle::crackcodes::decode_crack_code(
-			symbol_stream, sx, sy, permissible
+		std::vector<uint8_t> slice_edges = crack_code_to_vcg(
+			code, sx, sy,
+			permissible, markov_model
 		);
 		for (uint64_t i = 0; i < sxy; i++) {
 			edges[i + sxy*z] = slice_edges[i];
