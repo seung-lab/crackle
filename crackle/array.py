@@ -88,9 +88,11 @@ class CrackleRemoteArray(CrackleArray):
     self.cf = CloudFile(cloudpath)
     self.header_binary = self.cf[:CrackleHeader.HEADER_BYTES]
     self.header = header(self.header_binary)
-    self.z_index = self.fetch_z_index()
-    self.labels_binary = self.fetch_all_labels()
-    self.markov_model = self.fetch_markov_model()
+    (
+      self.z_index, 
+      self.labels_binary,
+      self.markov_model
+    ) = self.fetch_z_index_labels_markov_model()
 
   def labels(self):
     binary = self._synthetic_crackle_file(0, b'')
@@ -100,10 +102,22 @@ class CrackleRemoteArray(CrackleArray):
     binary = self._synthetic_crackle_file(0, b'')
     return elem in CrackleArray(binary)
   
-  def fetch_z_index(self):
+  def fetch_z_index_labels_markov_model(self):
     hb = CrackleHeader.HEADER_BYTES
-    offset = self.header.sz * 4
-    z_index = np.frombuffer(self.cf[hb:hb+offset], dtype=np.uint32)
+    z_offset = self.header.sz * 4
+    offset = (
+      z_offset 
+      + self.header.num_label_bytes 
+      + self.header.num_markov_model_bytes
+    )
+    binary = self.cf[hb:hb+offset]
+
+    z_index = np.frombuffer(binary[:z_offset], dtype=np.uint32)
+    lo = z_offset+self.header.num_label_bytes
+    labels_binary = binary[z_offset:lo]
+    markov_binary = binary[lo:lo+self.header.num_markov_model_bytes]
+    del binary
+
     z_index = np.cumsum(z_index)
     z_index = np.concatenate(([ 0 ], z_index))
     z_index += (
@@ -112,7 +126,8 @@ class CrackleRemoteArray(CrackleArray):
       + self.header.sz * self.header.z_index_width()
       + self.header.num_markov_model_bytes
     )
-    return z_index.astype(np.uint64, copy=False)
+    z_index = z_index.astype(np.uint64, copy=False)
+    return (z_index, labels_binary, markov_binary)
 
   def fetch_markov_model(self):
     if self.header.markov_model_order == 0:
