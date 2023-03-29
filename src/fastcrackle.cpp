@@ -229,6 +229,34 @@ auto compute_pins(const py::array &labels) {
 	}
 }
 
+py::array crack_code_to_vcg(
+	py::bytes& buffer, py::bytes& crack_code_buffer
+) {
+	crackle::CrackleHeader head(buffer);
+
+	std::vector<unsigned char> code;
+	std::string buf = crack_code_buffer;
+	code.reserve(buf.size());
+	for (uint64_t i = 0; i < buf.size(); i++) {
+		code.push_back(buf[i]);
+	}
+
+	std::vector<std::vector<uint8_t>> markov_model;
+	std::vector<uint8_t> vcg = crackle::crack_code_to_vcg(
+		code, head.sx, head.sy,
+		head.crack_format == crackle::CrackFormat::PERMISSIBLE,
+		markov_model
+	);
+	const uint64_t sxy = head.sx * head.sy;
+	py::array arr = py::array_t<uint8_t>(sxy);
+	uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<void*>(arr.data()));
+	for (uint64_t i = 0; i < sxy; i++) {
+		data[i] = vcg[i];
+	}
+
+	return arr;
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -239,6 +267,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 		"Perform 4-connected components in layers on a 3D array."
 	);
 	m.def("compute_pins", &compute_pins, "Compute a pinset.");
+	m.def("crack_code_to_vcg", &crack_code_to_vcg, "Converts crack codes for a z-slice into a voxel connectivity graph.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 	    .def(py::init<>())
