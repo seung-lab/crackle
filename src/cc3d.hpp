@@ -32,6 +32,8 @@
 #include <cstdint>
 #include <stdexcept>
 
+#include "threadpool.hpp"
+
 namespace crackle {
 namespace cc3d {
 
@@ -148,57 +150,72 @@ template <typename OUT>
 std::vector<OUT> color_connectivity_graph(
   const std::vector<uint8_t> &vcg, // voxel connectivity graph
   const int64_t sx, const int64_t sy, const int64_t sz,
-  uint64_t &N = _dummy_N
+  const std::vector<uint64_t> &components,
+  uint64_t &N = _dummy_N, const int parallel = 4
 ) {
 
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = static_cast<uint64_t>(voxels) + 1; // + 1L for an array with no zeros
+  std::vector<uint64_t> z_start_labels(components.begin(), components.end());
+  for (int i = 1; i < z_start_labels.size(); i++) {
+    z_start_labels[i] += z_start_labels[i-1];
+  }
+
+  uint64_t max_labels = z_start_labels[z_start_labels.size() - 1];
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
+
+  for (int i = z_start_labels.size() - 1; i >= 1; i--) {
+    z_start_labels[i] = z_start_labels[i-1];
+  }
+  z_start_labels[0] = 0;
 
   DisjointSet<OUT> equivalences(max_labels);
   std::vector<OUT> out_labels(voxels);
 
-  OUT new_label = 0;
+  ThreadPool pool(parallel);
+
   for (int64_t z = 0; z < sz; z++) {
-    new_label++;
-    equivalences.add(new_label);
+    pool.enqueue(
+      [sx, sy, sz, sxy, z, &vcg, &z_start_labels, &equivalences, &out_labels](){
+      OUT new_label = z_start_labels[z] + 1;
+      equivalences.add(new_label);
 
-    for (int64_t x = 0; x < sx; x++) {
-      if (x > 0 && (vcg[x + sxy * z] & 0b0010) == 0) {
-        new_label++;
-        equivalences.add(new_label);
-      }
-      out_labels[x + sxy * z] = new_label;
-    }
-
-    const int64_t B = -1;
-    const int64_t C = -sx;
-
-    for (int64_t y = 1; y < sy; y++) {
       for (int64_t x = 0; x < sx; x++) {
-        int64_t loc = x + sx * y + sxy * z;
-
-        if (x > 0 && (vcg[loc] & 0b0010)) {
-          out_labels[loc] = out_labels[loc+B];
-          if (y > 0 && (vcg[loc + C] & 0b0010) == 0 && (vcg[loc] & 0b1000)) {
-            equivalences.unify(out_labels[loc], out_labels[loc+C]);
-          }
-        }
-        else if (y > 0 && vcg[loc] & 0b1000) {
-          out_labels[loc] = out_labels[loc+C];
-        }
-        else {
+        if (x > 0 && (vcg[x + sxy * z] & 0b0010) == 0) {
           new_label++;
-          out_labels[loc] = new_label;
           equivalences.add(new_label);
         }
+        out_labels[x + sxy * z] = new_label;
       }
-    }
+
+      const int64_t B = -1;
+      const int64_t C = -sx;
+
+      for (int64_t y = 1; y < sy; y++) {
+        for (int64_t x = 0; x < sx; x++) {
+          int64_t loc = x + sx * y + sxy * z;
+
+          if (x > 0 && (vcg[loc] & 0b0010)) {
+            out_labels[loc] = out_labels[loc+B];
+            if (y > 0 && (vcg[loc + C] & 0b0010) == 0 && (vcg[loc] & 0b1000)) {
+              equivalences.unify(out_labels[loc], out_labels[loc+C]);
+            }
+          }
+          else if (y > 0 && vcg[loc] & 0b1000) {
+            out_labels[loc] = out_labels[loc+C];
+          }
+          else {
+            new_label++;
+            out_labels[loc] = new_label;
+            equivalences.add(new_label);
+          }
+        }
+      }
+    });
   }
 
-  relabel<OUT>(out_labels.data(), voxels, new_label, equivalences, N);
+  relabel<OUT>(out_labels.data(), voxels, max_labels, equivalences, N);
   return out_labels;
 }
 

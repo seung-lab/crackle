@@ -423,6 +423,63 @@ decode_components(
 	return std::make_tuple(components, component_left_offset, component_right_offset);
 }
 
+template <typename STORED_LABEL>
+std::vector<uint64_t> decode_components_simple_helper(	
+	const crackle::CrackleHeader &header,
+	const std::vector<unsigned char> &binary
+) {
+	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	const uint64_t num_labels = decode_num_labels(header, labels_binary);
+	const uint64_t component_width = crackle::lib::compute_byte_width(header.sx * header.sy);
+
+	if (header.label_format == LabelFormat::FLAT) {
+		const int cc_label_width = crackle::lib::compute_byte_width(num_labels);
+		uint64_t offset = 8 + sizeof(STORED_LABEL) * num_labels;
+		auto [components, component_left_offset, component_right_offset] = decode_components(
+			header, labels_binary.data(), 
+			offset, header.num_grids(), component_width,
+			0, header.sz
+		);
+		return components;
+	}
+	else if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
+		std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
+		// bgcolor, num labels (u64), N labels, fmt depth num_pins, 
+		// [num_pins][idx_1][depth_1]...[idx_n][depth_n][num_cc][cc_1][cc_2]...[cc_n]
+		const uint64_t index_width = header.pin_index_width();
+		uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1);
+		auto [components, component_left_offset, component_right_offset] = decode_components(
+			header, labels_binary.data(), offset, 
+			header.num_grids(), component_width,
+			0, header.sz
+		);
+		return components;
+	}
+	else {
+		throw new std::runtime_error("Unsupported format.");
+	}
+}
+
+std::vector<uint64_t> decode_components_simple(	
+	const crackle::CrackleHeader &header,
+	const std::vector<unsigned char> &binary
+) {
+	if (header.stored_data_width == 1) {
+		return decode_components_simple_helper<uint8_t>(header, binary);
+	}
+	else if (header.stored_data_width == 2) {
+		return decode_components_simple_helper<uint16_t>(header, binary);
+	}
+	else if (header.stored_data_width == 4) {
+		return decode_components_simple_helper<uint32_t>(header, binary);
+	}
+	else if (header.stored_data_width == 8) {
+		return decode_components_simple_helper<uint64_t>(header, binary);
+	}
+
+	throw new std::runtime_error("invalid data width");
+}
+
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_flat(
 	const crackle::CrackleHeader &header,

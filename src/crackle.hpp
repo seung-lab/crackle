@@ -305,7 +305,8 @@ std::vector<CCL> crack_codes_to_cc_labels(
   const std::vector<std::vector<unsigned char>>& crack_codes,
   const uint64_t sx, const uint64_t sy, const uint64_t sz,
   const bool permissible, uint64_t &N,
-  const std::vector<std::vector<uint8_t>>& markov_model
+  const std::vector<std::vector<uint8_t>>& markov_model,
+  std::vector<uint64_t> &components
 ) {
 	const uint64_t sxy = sx * sy;
 
@@ -327,7 +328,7 @@ std::vector<CCL> crack_codes_to_cc_labels(
 	}
 
 	return crackle::cc3d::color_connectivity_graph<CCL>(
-		edges, sx, sy, sz, N
+		edges, sx, sy, sz, components, N
 	);
 }
 
@@ -384,11 +385,15 @@ LABEL* decompress(
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 	uint64_t N = 0;
+
+	std::vector<uint64_t> components = crackle::labels::decode_components_simple(header, binary);
+
 	std::vector<uint32_t> cc_labels = crack_codes_to_cc_labels<uint32_t>(
 		crack_codes, header.sx, header.sy, szr, 
 		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
 		/*N=*/N,
-		/*markov_model*/markov_model
+		/*markov_model=*/markov_model,
+		/*components=*/components
 	);
 
 	std::vector<LABEL> label_map;
