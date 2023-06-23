@@ -26,8 +26,9 @@ class Tuple3(click.ParamType):
 @click.option('-i', "--info", default=False, is_flag=True, help="Print the header for the file.", show_default=True)
 @click.option('--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
 @click.option('-m', '--markov', default=0, help="If >0, use this order of markov compression for the crack code.", show_default=True)
+@click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
 @click.argument("source", nargs=-1)
-def main(compress, info, allow_pins, markov, source):
+def main(compress, info, allow_pins, markov, source, gzip):
 	"""
 	Compress and decompress crackle (.ckl) files to and from numpy (.npy) files.
 
@@ -43,7 +44,7 @@ def main(compress, info, allow_pins, markov, source):
 			continue
 
 		if compress:
-			compress_file(src, allow_pins, markov)
+			compress_file(src, allow_pins, markov, gzip)
 		else:
 			decompress_file(src)
 
@@ -89,7 +90,7 @@ def decompress_file(src):
 		print(f"crackle: Unable to write {dest}. Aborting.")
 		sys.exit()
 
-def compress_file(src, allow_pins, markov):
+def compress_file(src, allow_pins, markov, gzip):
 	try:
 		data = np.load(src)
 	except ValueError:
@@ -100,6 +101,8 @@ def compress_file(src, allow_pins, markov):
 		return
 
 	dest = f"{src}.ckl"
+	if gzip:
+		dest += ".gz"
 	crackle.save(data, dest, allow_pins=allow_pins, markov_model_order=int(markov))
 	del data
 
