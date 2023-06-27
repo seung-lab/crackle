@@ -1,6 +1,6 @@
 from .headers import CrackleHeader
 from .codec import (
-  compress, decompress_range, 
+  compress, decompress, decompress_range, 
   remap, labels, nbytes, contains, 
   header, crack_codes, refit, 
   renumber, num_labels
@@ -14,7 +14,6 @@ class CrackleArray:
 
     head = header(self.binary)
     self.shape = (head.sx, head.sy, head.sz)
-
 
   def __len__(self):
     return len(self.binary)
