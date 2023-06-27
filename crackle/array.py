@@ -12,6 +12,10 @@ class CrackleArray:
   def __init__(self, binary):
     self.binary = binary
 
+    head = header(self.binary)
+    self.shape = (head.sx, head.sy, head.sz)
+
+
   def __len__(self):
     return len(self.binary)
 
@@ -25,17 +29,16 @@ class CrackleArray:
     return shape[0] * shape[1] * shape[2]
 
   @property
+  def ndim(self):
+    return sum([ dim >= 0 for dim in self.shape ])
+
+  @property
   def nbytes(self):
     return nbytes(self.binary)
 
   @property
   def dtype(self):
     return header(self.binary).dtype
-
-  @property
-  def shape(self):
-    head = header(self.binary)
-    return (head.sx, head.sy, head.sz)
 
   def labels(self):
     return labels(self.binary)
@@ -65,7 +68,11 @@ class CrackleArray:
     return contains(self.binary, elem)
 
   def __getitem__(self, slcs):
-    slices = reify_slices(slcs, *self.shape)
+    if slcs == (Ellipsis, np.newaxis):
+      self.shape = self.shape + (1,)
+      return self
+
+    slices = reify_slices(slcs, *self.shape[:3])
 
     if isinstance(slcs, (slice, int)):
       slcs = (slcs,)
@@ -78,7 +85,13 @@ class CrackleArray:
     if hasattr(slcs, "__getitem__") and isinstance(slcs[2], int):
       zslc = 0
     slices = (slcs[0], slcs[1], zslc)
-    return img[slices]
+    cutout = img[slices]
+
+    while cutout.ndim < self.ndim:
+      cutout = cutout[...,np.newaxis]
+
+    return cutout
+
 
 class CrackleRemoteArray(CrackleArray):
   """EXPERIMENTAL DO NOT RELY ON THIS INTERFACE."""
@@ -205,7 +218,10 @@ def reify_slices(slices, sx, sy, sz):
 
   while len(slices) < ndim:
     slices.append( slice(None, None, None) )
-  
+
+  while len(slices) > ndim and slices[-1] == slice(None, None, None):
+    slices.pop()
+
   # First three slices are x,y,z, last is channel. 
   # Handle only x,y,z here, channel seperately
   for index, slc in enumerate(slices):
