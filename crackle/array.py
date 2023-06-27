@@ -86,11 +86,10 @@ class CrackleArray:
     slices = (slcs[0], slcs[1], zslc)
     cutout = img[slices]
 
-    while cutout.ndim < self.ndim:
-      cutout = cutout[...,np.newaxis]
+    for _ in range(self.ndim - 3):
+      cutout = cutout[..., np.newaxis]
 
     return cutout
-
 
 class CrackleRemoteArray(CrackleArray):
   """EXPERIMENTAL DO NOT RELY ON THIS INTERFACE."""
