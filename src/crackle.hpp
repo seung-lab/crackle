@@ -488,6 +488,44 @@ LABEL* decompress(
 	);
 }
 
+void decompress(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	unsigned char* output, const int64_t out_num_bytes,
+	const int64_t z_start = -1, const int64_t z_end = -1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.nbytes() > out_num_bytes) {
+		throw new std::runtime_error("Output buffer too small.");
+	}
+
+	if (header.data_width == 1) {
+		decompress<uint8_t>(
+			buffer, num_bytes, reinterpret_cast<uint8_t*>(output), 
+			z_start, z_end
+		);
+	}
+	else if (header.data_width == 2) {
+		decompress<uint16_t>(
+			buffer, num_bytes, reinterpret_cast<uint16_t*>(output), 
+			z_start, z_end
+		);
+	}
+	else if (header.data_width == 4) {
+		decompress<uint32_t>(
+			buffer, num_bytes, reinterpret_cast<uint32_t*>(output), 
+			z_start, z_end
+		);
+	}
+	else {
+		decompress<uint64_t>(
+			buffer, num_bytes, reinterpret_cast<uint64_t*>(output), 
+			z_start, z_end
+		);
+	}
+}
+
 };
 
 #endif
