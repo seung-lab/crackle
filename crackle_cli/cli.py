@@ -1,9 +1,7 @@
 import os
-import os.path
 import sys
 
 import click
-import crackle
 import numpy as np
 
 import crackle
