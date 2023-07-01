@@ -90,13 +90,18 @@ def decompress_file(src):
 
 def compress_file(src, allow_pins, markov, gzip):
 	try:
-		data = np.load(src)
+		data = crackle.util.load_numpy(src)
 	except ValueError:
 		print(f"crackle: {src} is not a numpy file.")
 		return
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
+
+	src = src \
+		.removesuffix(".lzma") \
+		.removesuffix(".gz") \
+		.removesuffix(".xz")
 
 	dest = f"{src}.ckl"
 	if gzip:

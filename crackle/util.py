@@ -1,4 +1,5 @@
-import os.path
+import io
+import os
 import gzip
 import lzma
 
@@ -35,6 +36,10 @@ def aload(filelike) -> CrackleArray:
 def load(filelike) -> np.ndarray:
   """Load an image from a file-like object or file path."""
   return decompress(_load(filelike))
+
+def load_numpy(filelike):
+  f = io.BytesIO(_load(filelike))
+  return np.load(f)
 
 def save(labels:np.ndarray, filelike, **kwargs):
   """Save labels into the file-like object or file path."""
