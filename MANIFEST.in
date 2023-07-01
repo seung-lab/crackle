@@ -1,0 +1,7 @@
+include LICENSE
+recursive-include src *
+include requirements.txt
+exclude cracklepy/*
+exclude *.cpso.gz
+exclude benchmarks/*
+exclude wasm/*
