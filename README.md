@@ -49,7 +49,7 @@ res = arr[:10,:10,:10] # array slicing (efficient z ranges)
 20 in arr # highly efficient search
 ```
 
-*This repository is currently Beta. It works and the format is reasonably fixed. There may be some improvements down the line, but they will be a new format version number.*
+*This repository is currently Beta. It works and the format is reasonably fixed. There may be some improvements down the line (such as 3d compression of crack codes), but they will be a new format version number.*
 
 Crackle is a compression codec for 3D dense segmentation (labeled) images. The algorithm accepts both signed and unsigned integer labels (though the implementation currently has some restrictions on signed integers). It is written in C++ and has Python bindings. Crackle uses a two pass compression strategy where the output of crackle may be further comrpessed with a bitstream compressor like gzip, bzip2, zstd, or lzma. However, if the Crackle binary, which is already small, is not further compressed, it supports several efficient operations:
 
