@@ -49,5 +49,5 @@ from .codec import (
 	renumber, num_labels, min, max
 )
 from .headers import FormatError, CrackleHeader
-from .util import save, load
+from .util import save, load, aload
 
