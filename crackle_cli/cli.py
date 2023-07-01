@@ -98,10 +98,9 @@ def compress_file(src, allow_pins, markov, gzip):
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
 
-	src = src \
-		.removesuffix(".lzma") \
-		.removesuffix(".gz") \
-		.removesuffix(".xz")
+	src = removesuffix(src, ".lzma")
+	src = removesuffix(src, ".gz")
+	src = removesuffix(src, ".xz")
 
 	dest = f"{src}.ckl"
 	if gzip:
@@ -119,3 +118,7 @@ def compress_file(src, allow_pins, markov, gzip):
 		print(f"crackle: Unable to write {dest}. Aborting.")
 		sys.exit()
 
+def removesuffix(x:str, suffix:str) -> str:
+  if x.endswith(suffix):
+    x = x[:-4]
+  return x
