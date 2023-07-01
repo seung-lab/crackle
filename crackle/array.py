@@ -18,6 +18,9 @@ class CrackleArray:
   def __len__(self):
     return len(self.binary)
 
+  def header(self):
+    return header(self.binary)
+
   @property
   def random_access(self):
     return True

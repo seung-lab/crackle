@@ -22,11 +22,12 @@ class Tuple3(click.ParamType):
 @click.command()
 @click.option("-c/-d", "--compress/--decompress", default=True, is_flag=True, help="Compress from or decompress to a numpy .npy file.", show_default=True)
 @click.option('-i', "--info", default=False, is_flag=True, help="Print the header for the file.", show_default=True)
+@click.option('-l', "--labels", default=False, is_flag=True, help="Print unique labels contained in the image.", show_default=True)
 @click.option('--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
 @click.option('-m', '--markov', default=0, help="If >0, use this order of markov compression for the crack code.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
 @click.argument("source", nargs=-1)
-def main(compress, info, allow_pins, markov, source, gzip):
+def main(compress, info, labels, allow_pins, markov, source, gzip):
 	"""
 	Compress and decompress crackle (.ckl) files to and from numpy (.npy) files.
 
@@ -40,21 +41,33 @@ def main(compress, info, allow_pins, markov, source, gzip):
 		if info:
 			print_header(src)
 			continue
+		elif labels:
+			print_labels(src)
+			continue
 
 		if compress:
 			compress_file(src, allow_pins, markov, gzip)
 		else:
 			decompress_file(src)
 
-def print_header(src):
+def print_labels(src):
 	try:
-		with open(src, "rb") as f:
-			binary = f.read()
+		arr = crackle.aload(src)
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
 
-	head = crackle.header(binary)
+	labels = arr.labels()
+	print("\n".join(( str(l) for l in labels )))
+
+def print_header(src):
+	try:
+		arr = crackle.aload(src)
+	except FileNotFoundError:
+		print(f"crackle: File \"{src}\" does not exist.")
+		return
+
+	head = arr.header()
 	print(f"Filename: {src}")
 	for key,val in head.__dict__.items():
 		print(f"{key}: {val}")
