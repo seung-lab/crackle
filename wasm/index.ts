@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import crackleWasmDataUrl from './libcrackle.wasm';
+const crackleWasmDataUrl = './libcrackle.wasm';
+
+type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Uint8ClampedArray | Float32Array | Float64Array;
 
 const libraryEnv = {
   emscripten_notify_memory_growth: function () {},
@@ -23,7 +25,7 @@ const libraryEnv = {
   },
 };
 
-let wasmModule:wasmModuleInstance|null = null;
+let wasmModule:any|null = null;
 
 async function loadCrackleModule () {
   if (wasmModule !== null) {
@@ -69,6 +71,21 @@ function readHeader(buffer: Uint8Array)
   return {sx,sy,sz,dataWidth};
 }
 
+function arrayType (dataWidth:number) : any {
+  if (dataWidth === 1) {
+    return Uint8Array;
+  }
+  else if (dataWidth === 2) {
+    return Uint16Array;
+  }
+  else if (dataWidth === 4) {
+    return Uint32Array;
+  }
+  else if (dataWidth === 8) {
+    return BigUint64Array;
+  }
+}
+
 export async function compressCrackle(
   buffer: Uint8Array,
   dataWidth:number,
@@ -93,7 +110,7 @@ export async function compressCrackle(
   const streamSize = (m.instance.exports.crackle_compress as Function)(
     bufPtr, dataWidth, 
     sx, sy, sz,
-    imagePtr, buffer.byteLength
+    streamPtr, buffer.byteLength
   );
 
   try {
@@ -150,13 +167,16 @@ export async function decompressCrackle(
     // Likewise, we reference memory.buffer instead of heap.buffer
     // because memory growth during decompress could have detached
     // the buffer.
-    const image = new Uint8Array(
+    let image = new Uint8Array(
       (m.instance.exports.memory as WebAssembly.Memory).buffer,
       imagePtr, nbytes
     );
     // copy the array so it can be memory managed by JS
     // and we can free the emscripten buffer
-    return image.slice(0);
+    image = image.slice(0);
+
+    let ArrayType = arrayType(dataWidth);
+    return new ArrayType(image.buffer);
   }
   finally {
     (m.instance.exports.free as Function)(bufPtr);
