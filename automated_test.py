@@ -127,6 +127,14 @@ def test_arange_field(allow_pins):
   assert np.all(labels == reconstituted)
   assert np.all(np.unique(labels) == crackle.labels(compressed))
 
+  shape = [100,100,50]
+  labels = np.arange(100*100*50, dtype=np.uint32).reshape(shape, order="F")
+  compressed = crackle.compress(labels, allow_pins=allow_pins)
+  reconstituted = crackle.decompress(compressed)
+
+  assert np.all(labels == reconstituted)
+  assert np.all(np.unique(labels) == crackle.labels(compressed))
+
 @pytest.mark.parametrize('allow_pins', [False,True])
 def test_2d_arange_field(allow_pins):
   labels = np.arange(0,16*16).reshape((16,16,1)).astype(np.uint32)
