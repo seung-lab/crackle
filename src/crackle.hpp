@@ -496,7 +496,7 @@ void decompress(
 ) {
 	CrackleHeader header(buffer);
 
-	if (header.nbytes() > out_num_bytes) {
+	if (header.nbytes() > static_cast<uint64_t>(out_num_bytes)) {
 		throw new std::runtime_error("Output buffer too small.");
 	}
 
