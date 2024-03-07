@@ -466,7 +466,7 @@ std::vector<LABEL> decode_flat(
 		}
 		else if (cc_label_width == 4) {
 			label_map[i] = static_cast<LABEL>(
-				uniq[crackle::lib::ctoid(buf, j, component_width)]
+				uniq[crackle::lib::ctoi<uint32_t>(buf, j)]
 			);
 		}
 		else {
