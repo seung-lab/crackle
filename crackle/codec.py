@@ -263,7 +263,7 @@ def decode_pins(binary:bytes) -> np.ndarray:
   if header.label_format == LabelFormat.PINS_FIXED_WIDTH:
     return decode_fixed_pins(binary)
   elif header.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
-    return decode_condensed_pins(binary)
+    return decode_condensed_pins(binary)[0]
   else:
     raise FormatError("Cannot decode pins from flat format.")
 
@@ -308,6 +308,7 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
   PinTuple = namedtuple('Pin', ['index', 'depth'])
 
   pins = {}
+  single_labels = {}
 
   offset = 0
   for label in range(num_labels):
@@ -327,9 +328,9 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     cc_labels = np.frombuffer(pinset[offset:offset+num_cc_labels*cc_labels_width], dtype=width2dtype[cc_label_dtype])
     offset += num_cc_labels * cc_labels_width
 
-    # how to handle cc_labels
+    single_labels[uniq[label]] = cc_labels
 
-  return pins
+  return pins, single_labels
 
 def decode_fixed_pins(binary:bytes) -> np.ndarray:
   """For pin encodings only, extract the pins."""
@@ -481,8 +482,19 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
 
-  all_pins = decode_pins(binary)
-  label_pins = pins[label]
+  offset += 1 # fmt byte, not read
+
+  component_dtype = width2dtype[head.component_width()]
+  component_bytes = head.num_grids() * head.component_width()
+  components_per_grid = np.frombuffer(
+    labels_binary[offset:offset+component_bytes], 
+    dtype=component_dtype
+  )
+  components_per_grid = np.cumsum(components_per_grid)
+
+  all_pins, all_single_labels = decode_condensed_pins(binary)
+  label_pins = all_pins[label]
+  single_labels = all_single_labels[label]
 
   z_start = head.sz - 1
   z_end = 0
@@ -493,6 +505,16 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     z = pin.index // sxy
     z_start = min(z_start, z)
     z_end = max(z_end, z+pin.depth)
+
+  if len(single_labels) == 0:
+    return (z_start, z_end)
+
+  for lbl in [ single_labels[0], single_labels[-1] ]:
+    z = np.searchsorted(components_per_grid, lbl) - 1
+    z = max(z, 0)
+    z = min(z, head.sz - 1)
+    z_start = min(z_start, z)
+    z_end = max(z_end, z)
 
   return (z_start, z_end)
 
