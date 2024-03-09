@@ -69,6 +69,18 @@ def test_compress_decompress_z_range(allow_pins):
   recovered = arr[2:100,5:83,-1]
   assert np.all(cutout[2:100,5:83,-1] == recovered)
 
+@pytest.mark.parametrize('label', [9999999999, 63408621, 63408621, 28792756])
+def test_decompress_binary_label(label):
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels)
+
+  recovered = crackle.decompress(binary)
+  binimg1 = recovered == label
+  binimg2 = crackle.decompress(binary, label)
+
+  assert np.all(labels == recovered)
+  assert np.all(binimg1 == binimg2)
+
 def test_connectomics_npy():
   labels = compresso.load("connectomics.npy.cpso.gz")
   binary = crackle.compress(labels, allow_pins=False)
