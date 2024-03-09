@@ -288,6 +288,7 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
 
   num_pins_width = 2 ** (combined_width & 0b11)
   depth_width = 2 ** ((combined_width >> 2) & 0b11)
+  cc_labels_width = 2 ** ((combined_width >> 4) & 0b11)
   index_width = header.index_width()
 
   offset += 1
@@ -311,6 +312,13 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     depth_arr = np.frombuffer(pinset[offset:offset+n_pins*ddtype.itemsize], dtype=ddtype)
     offset += n_pins * ddtype.itemsize
     pins[uniq[label]] = [ PinTuple(i,d) for i,d in zip(index_arr, depth_arr) ]
+
+    num_cc_labels = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
+    offset += num_pins_width
+    cc_labels = np.frombuffer(pinset[offset:offset+num_cc_labels*cc_labels_width], dtype=width2dtype[cc_label_dtype])
+    offset += num_cc_labels * cc_labels_width
+
+    # how to deal with the cc_labels?
     
   return pins
 
@@ -389,6 +397,15 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
 
 def z_range_for_label(binary:bytes, label:int) -> Tuple[int,int]:
   head = header(binary)
+  if head.label_format == LabelFormat.FLAT:
+    return z_range_for_label_flat(binary, label)
+  elif head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+    return z_range_for_label_condensed_pins(binary, label)
+  else:
+    raise ValueError("Label format not supported.")
+
+def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
+  head = header(binary)
   labels_binary = raw_labels(binary)
  
   num_labels = int.from_bytes(labels_binary[:8], 'little')
@@ -436,9 +453,42 @@ def z_range_for_label(binary:bytes, label:int) -> Tuple[int,int]:
 
   return (z_start, z_end+1)
 
+def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
+  head = header(binary)
+  labels_binary = raw_labels(binary)
+
+  bgcolor = background_color(binary)
+  if bgcolor == label:
+    return (0, head.sz)
+  
+  offset = head.stored_data_width
+  num_labels = int.from_bytes(labels_binary[offset:offset+8], 'little')
+  offset += 8
+  uniq = np.frombuffer(
+    labels_binary[offset:offset+num_labels*head.stored_data_width],
+    dtype=head.stored_dtype
+  )
+  idx = np.searchsorted(uniq, label)
+  if idx < 0 or idx >= uniq.size or uniq[idx] != label:
+    return (-1, -1)
+
+  all_pins = decode_pins(binary)
+  label_pins = pins[label]
+
+  z_start = head.sz - 1
+  z_end = 0
+
+  sxy = head.sx * head.sy
+
+  for pin in label_pins:
+    z = pin.index // sxy
+    z_start = min(z_start, z)
+    z_end = max(z_end, z+pin.depth)
+
+  return (z_start, z_end)
+
 def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
-  print(z_start, z_end)
   header = CrackleHeader.frombytes(binary)
   order = "F" if header.fortran_order else "C"
   image = np.zeros([header.sx, header.sy, header.sz], dtype=bool, order=order)

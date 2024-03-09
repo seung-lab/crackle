@@ -124,12 +124,14 @@ Encoding flat labels is fast.
 | background_color | stored_data_width                   | Background color of image.                                                                                  |
 | num_unique       | u64                                 | Number of unique labels in this volume.                                                                     |
 | unique_labels    | stored_type[num_unique]             | Sorted ascending array of all unique values in image, stored in the smallest data type that will hold them. |
-| fmt_byte         | u8                                  | 0000DDNN  DD: 2^(DD) is the depth width NN: 2^(NN) is the num pins width                                    |
+| fmt_byte         | u8                                  | 00CCDDNN  DD: 2^(DD) is the depth width NN: 2^(NN) is the num pins width, CC: 2^(CC) is the single components width.  |
 | pin_section      | Bitstream to end of labels section. | Contains pin information.                                                                                   |
 
 PIN SECTION: `| PINS FOR LABEL 0 | PINS FOR LABEL 1 | ... | PINS FOR LABEL N |`
 
 PINS: `| num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N | DEPTH_0 | DEPTH_1 | ... | DEPTH_N | num_single_labels | CC 0 | CC 1 | ... | CC N |`
+
+Both `num_pins` and `num_single_labels` use the `num_pins_width`.
 
 Note that INDEX_0 to INDEX_N are stored with a difference filter applied to improve compressibility.
 
