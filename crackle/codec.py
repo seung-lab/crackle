@@ -370,9 +370,83 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
   cc_map = np.frombuffer(labels_binary[8+uniq_bytes+4*sz:], dtype=cc_label_dtype)
   return uniq[cc_map]
 
-def decompress(binary:bytes) -> np.ndarray:
-  """Decompress a Crackle binary into a Numpy array."""
-  return decompress_range(binary, None, None)
+def z_range_for_label(binary:bytes, label:int) -> Tuple[int,int]:
+  head = header(binary)
+  hb = CrackleHeader.HEADER_BYTES
+  offset = hb + head.sz * 4
+
+  # bgcolor, num labels (u64), N labels, pins
+  if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+    bgcolor = background_color(binary)
+    if bgcolor == label:
+      return True
+    offset += head.stored_data_width
+
+  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+  offset += 8
+  uniq = np.frombuffer(
+    binary[offset:offset+num_labels*head.stored_data_width],
+    dtype=head.stored_dtype
+  )
+  idx = np.searchsorted(uniq, label)
+
+  if idx < 0:
+    return (-1, -1)
+
+  offset += num_labels * head.stored_data_width
+  next_offset = offset + head.num_grids() * head.component_width()
+
+  dtype = width2dtype[head.component_width()]
+  components_per_grid = np.frombuffer(binary[offset:next_offset], dtype=dtype)
+  components_per_grid = np.cumsum(components_per_grid)
+
+  offset = next_offset
+  next_offset = head.num_label_bytes - offset
+
+  dtype = compute_dtype(num_labels)
+  cc_labels = np.frombuffer(binary[offset:next_offset], dtype=dtype)
+
+  cc_idxs = np.where(cc_labels == idx)
+  min_cc = cc_idxs[0][0]
+  max_cc = cc_idxs[0][-1]
+
+  z_start = 0
+  z_end = head.sz - 1
+
+  for z in range(head.sz):
+    if components_per_grid[z] >= min_cc:
+      z_start = z
+      break
+
+  for z in range(head.sz - 1, -1, -1):
+    if components_per_grid[z] <= max_cc:
+      z_end = z
+      break
+
+  return (z_start, z_end)
+
+def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
+  z_start, z_end = z_range_for_label(binary, label)
+  print(z_start, z_end)
+  header = CrackleHeader.frombytes(binary)
+  order = "F" if header.fortran_order else "C"
+  image = np.zeros([header.sx, header.sy, header.sz], dtype=bool, order=order)
+
+  if z_start == -1 and z_end == -1:
+    return image
+
+  cutout = decompress_range(binary, z_start, z_end)
+  image[:,:,z_start:z_end] = (cutout == label)
+  return image
+
+def decompress(binary:bytes, label:Optional[int] = None) -> np.ndarray:
+  """
+  Decompress a Crackle binary into a Numpy array. 
+  If label is provided, decompress into  a binary (bool) image.
+  """
+  if label is None:
+    return decompress_range(binary, None, None)
+  return decompress_binary_image(binary, label)
 
 def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -> np.ndarray:
   """
