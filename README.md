@@ -125,6 +125,7 @@ Encoding flat labels is fast.
 | num_unique       | u64                                 | Number of unique labels in this volume.                                                                     |
 | unique_labels    | stored_type[num_unique]             | Sorted ascending array of all unique values in image, stored in the smallest data type that will hold them. |
 | fmt_byte         | u8                                  | 00CCDDNN  DD: 2^(DD) is the depth width NN: 2^(NN) is the num pins width, CC: 2^(CC) is the single components width.  |
+| cc_per_grid   | smallest_type(sx \* sy)[sz]                 | Array containing the number of CCL IDs in each grid (usually a z-slice).                                    |
 | pin_section      | Bitstream to end of labels section. | Contains pin information.                                                                                   |
 
 PIN SECTION: `| PINS FOR LABEL 0 | PINS FOR LABEL 1 | ... | PINS FOR LABEL N |`

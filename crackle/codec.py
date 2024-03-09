@@ -285,13 +285,22 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
   )
   offset += num_labels * header.stored_data_width  
   combined_width = binary[offset]
+  offset += 1
 
   num_pins_width = 2 ** (combined_width & 0b11)
   depth_width = 2 ** ((combined_width >> 2) & 0b11)
   cc_labels_width = 2 ** ((combined_width >> 4) & 0b11)
   index_width = header.index_width()
 
-  offset += 1
+  component_dtype = width2dtype[head.component_width()]
+  component_bytes = head.num_grids() * head.component_width()
+  components_per_grid = np.frombuffer(
+    labels_binary[offset:offset+component_bytes], 
+    dtype=component_dtype
+  )
+  components_per_grid = np.cumsum(components_per_grid)
+  offset += component_bytes
+
   pinset = binary[offset:labels_end]
   idtype = np.dtype(width2dtype[header.index_width()])
   ddtype = np.dtype(width2dtype[depth_width])
@@ -318,8 +327,8 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     cc_labels = np.frombuffer(pinset[offset:offset+num_cc_labels*cc_labels_width], dtype=width2dtype[cc_label_dtype])
     offset += num_cc_labels * cc_labels_width
 
-    # how to deal with the cc_labels?
-    
+    # how to handle cc_labels
+
   return pins
 
 def decode_fixed_pins(binary:bytes) -> np.ndarray:
