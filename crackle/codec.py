@@ -363,29 +363,38 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
   offset = 8
 
   uniq_bytes = num_labels * np.dtype(stored_dtype).itemsize
-  uniq = np.frombuffer(labels_binary[8:8+uniq_bytes], dtype=stored_dtype)
+  uniq = np.frombuffer(labels_binary[offset:offset+uniq_bytes], dtype=stored_dtype)
   uniq = uniq.astype(dtype, copy=False)
 
+  offset += uniq_bytes
+  component_dtype = width2dtype[head.component_width()]
+  component_bytes = head.num_grids() * head.component_width()
+  components_per_grid = np.frombuffer(
+    labels_binary[offset:offset+component_bytes], 
+    dtype=component_dtype
+  )
+  components_per_grid = np.cumsum(components_per_grid)
+
+  offset += component_bytes
+
   cc_label_dtype = compute_dtype(num_labels)
-  cc_map = np.frombuffer(labels_binary[8+uniq_bytes+4*sz:], dtype=cc_label_dtype)
-  return uniq[cc_map]
+  cc_map = np.frombuffer(labels_binary[offset:], dtype=cc_label_dtype)
+  
+  return {
+    "num_labels": num_labels,
+    "unique": uniq,
+    "components_per_grid": components_per_grid,
+    "cc_map": cc_map,
+  }
 
 def z_range_for_label(binary:bytes, label:int) -> Tuple[int,int]:
   head = header(binary)
-  hb = CrackleHeader.HEADER_BYTES
-  offset = hb + head.sz * 4
-
-  # bgcolor, num labels (u64), N labels, pins
-  if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
-    bgcolor = background_color(binary)
-    if bgcolor == label:
-      return True
-    offset += head.stored_data_width
-
-  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
-  offset += 8
+  labels_binary = raw_labels(binary)
+ 
+  num_labels = int.from_bytes(labels_binary[:8], 'little')
+  offset = 8
   uniq = np.frombuffer(
-    binary[offset:offset+num_labels*head.stored_data_width],
+    labels_binary[offset:offset+num_labels*head.stored_data_width],
     dtype=head.stored_dtype
   )
   idx = np.searchsorted(uniq, label)
@@ -394,20 +403,23 @@ def z_range_for_label(binary:bytes, label:int) -> Tuple[int,int]:
 
   offset += num_labels * head.stored_data_width
   next_offset = offset + head.num_grids() * head.component_width()
-
   dtype = width2dtype[head.component_width()]
-  components_per_grid = np.frombuffer(binary[offset:next_offset], dtype=dtype)
+
+  components_per_grid = np.frombuffer(labels_binary[offset:next_offset], dtype=dtype)
   components_per_grid = np.cumsum(components_per_grid)
 
   offset = next_offset
-  next_offset = head.num_label_bytes - offset
 
   dtype = compute_dtype(num_labels)
-  cc_labels = np.frombuffer(binary[offset:next_offset], dtype=dtype)
+  cc_labels = np.frombuffer(labels_binary[offset:], dtype=dtype)
 
-  cc_idxs = np.where(cc_labels == idx)
-  min_cc = cc_idxs[0][0]
-  max_cc = cc_idxs[0][-1]
+  cc_idxs = np.where(cc_labels == idx)[0]
+
+  if cc_idxs.size == 0:
+    return (-1, -1)
+
+  min_cc = cc_idxs[0]
+  max_cc = cc_idxs[-1]
 
   z_start = 0
   z_end = head.sz - 1
@@ -419,10 +431,10 @@ def z_range_for_label(binary:bytes, label:int) -> Tuple[int,int]:
 
   for z in range(head.sz - 1, -1, -1):
     if components_per_grid[z] <= max_cc:
-      z_end = z
+      z_end = z + 1
       break
 
-  return (z_start, z_end)
+  return (z_start, z_end+1)
 
 def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
