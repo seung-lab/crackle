@@ -389,8 +389,7 @@ def z_range_for_label(binary:bytes, label:int) -> Tuple[int,int]:
     dtype=head.stored_dtype
   )
   idx = np.searchsorted(uniq, label)
-
-  if idx < 0:
+  if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
 
   offset += num_labels * head.stored_data_width
