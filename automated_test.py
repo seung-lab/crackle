@@ -1,3 +1,5 @@
+import random
+
 import crackle
 import numpy as np
 
@@ -70,9 +72,29 @@ def test_compress_decompress_z_range(allow_pins):
   assert np.all(cutout[2:100,5:83,-1] == recovered)
 
 @pytest.mark.parametrize('label', [9999999999, 63408621, 63408621, 28792756])
-def test_decompress_binary_label(label):
+def test_decompress_binary_label_flat(label):
   labels = compresso.load("connectomics.npy.cpso.gz")
   binary = crackle.compress(labels)
+
+  recovered = crackle.decompress(binary)
+  binimg1 = recovered == label
+  binimg2 = crackle.decompress(binary, label)
+
+  assert np.all(labels == recovered)
+  assert np.all(binimg1 == binimg2)
+
+@pytest.mark.parametrize('allow_pins', [False,True])
+# @pytest.mark.parametrize('label', [9999999999, 63408621, 63408621, 28792756])
+def test_decompress_binary_label_random(allow_pins):
+  labels = compresso.load("connectomics.npy.cpso.gz")
+
+  x,y,z = tuple(np.random.randint(128,256, size=(3,)))
+  print(x,y,z)
+  labels = np.asfortranarray(labels[x:x+256,y:y+256,z:z+32])
+
+  binary = crackle.compress(labels, allow_pins=allow_pins)
+
+  label = random.choice(np.unique(labels))
 
   recovered = crackle.decompress(binary)
   binimg1 = recovered == label

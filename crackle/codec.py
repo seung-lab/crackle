@@ -268,30 +268,24 @@ def decode_pins(binary:bytes) -> np.ndarray:
     raise FormatError("Cannot decode pins from flat format.")
 
 def decode_condensed_pins(binary:bytes) -> np.ndarray:
-  header = CrackleHeader.frombytes(binary)
+  head = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
 
-  if header.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
+  if head.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
     raise FormatError("This function can only extract pins from variable width streams.")
 
   # bgcolor, num labels (u64), N labels, pins
-  offset = hb + header.sz * 4 + header.stored_data_width
-  labels_end = hb + header.sz * 4 + header.num_label_bytes
-  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+  labels_binary = raw_labels(binary)
+  bgcolor = background_color(binary)
+  offset = head.stored_data_width
+  num_labels = int.from_bytes(labels_binary[offset:offset+8], 'little')
   offset += 8
   uniq = np.frombuffer(
-    binary[offset:offset+num_labels*header.stored_data_width],
-    dtype=header.stored_dtype
+    labels_binary[offset:offset+num_labels*head.stored_data_width],
+    dtype=head.stored_dtype
   )
-  offset += num_labels * header.stored_data_width  
-  combined_width = binary[offset]
-  offset += 1
-
-  num_pins_width = 2 ** (combined_width & 0b11)
-  depth_width = 2 ** ((combined_width >> 2) & 0b11)
-  cc_labels_width = 2 ** ((combined_width >> 4) & 0b11)
-  index_width = header.index_width()
-
+  offset += num_labels * head.stored_data_width  
+  
   component_dtype = width2dtype[head.component_width()]
   component_bytes = head.num_grids() * head.component_width()
   components_per_grid = np.frombuffer(
@@ -301,9 +295,18 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
   components_per_grid = np.cumsum(components_per_grid)
   offset += component_bytes
 
-  pinset = binary[offset:labels_end]
-  idtype = np.dtype(width2dtype[header.index_width()])
+  combined_width = labels_binary[offset]
+  offset += 1
+
+  num_pins_width = 2 ** (combined_width & 0b11)
+  depth_width = 2 ** ((combined_width >> 2) & 0b11)
+  cc_labels_width = 2 ** ((combined_width >> 4) & 0b11)
+  index_width = head.index_width()
+
+  pinset = labels_binary[offset:]
+  idtype = np.dtype(width2dtype[head.index_width()])
   ddtype = np.dtype(width2dtype[depth_width])
+  cdtype = np.dtype(width2dtype[cc_labels_width])
 
   PinTuple = namedtuple('Pin', ['index', 'depth'])
 
@@ -325,7 +328,7 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
 
     num_cc_labels = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
-    cc_labels = np.frombuffer(pinset[offset:offset+num_cc_labels*cc_labels_width], dtype=width2dtype[cc_label_dtype])
+    cc_labels = np.frombuffer(pinset[offset:offset+num_cc_labels*cc_labels_width], dtype=cdtype)
     offset += num_cc_labels * cc_labels_width
 
     single_labels[uniq[label]] = cc_labels
@@ -500,6 +503,8 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   z_end = 0
 
   sxy = head.sx * head.sy
+  min = __builtins__["min"]
+  max = __builtins__["max"]
 
   for pin in label_pins:
     z = pin.index // sxy
@@ -507,7 +512,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     z_end = max(z_end, z+pin.depth)
 
   if len(single_labels) == 0:
-    return (z_start, z_end)
+    return (z_start, z_end+1)
 
   for lbl in [ single_labels[0], single_labels[-1] ]:
     z = np.searchsorted(components_per_grid, lbl) - 1
@@ -516,7 +521,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     z_start = min(z_start, z)
     z_end = max(z_end, z)
 
-  return (z_start, z_end)
+  return (z_start, z_end+1)
 
 def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
