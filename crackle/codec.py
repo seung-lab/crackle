@@ -485,8 +485,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
 
-  offset += 1 # fmt byte, not read
-
+  offset += num_labels*head.stored_data_width
   component_dtype = width2dtype[head.component_width()]
   component_bytes = head.num_grids() * head.component_width()
   components_per_grid = np.frombuffer(
@@ -509,7 +508,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   for pin in label_pins:
     z = pin.index // sxy
     z_start = min(z_start, z)
-    z_end = max(z_end, z+pin.depth)
+    z_end = max(z_end, z+pin.depth + 1)
 
   if len(single_labels) == 0:
     return (z_start, z_end+1)
@@ -519,9 +518,9 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     z = max(z, 0)
     z = min(z, head.sz - 1)
     z_start = min(z_start, z)
-    z_end = max(z_end, z)
+    z_end = max(z_end, z + 1)
 
-  return (z_start, z_end+1)
+  return (z_start, z_end)
 
 def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
