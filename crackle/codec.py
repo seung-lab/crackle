@@ -263,44 +263,85 @@ def decode_pins(binary:bytes) -> np.ndarray:
   if header.label_format == LabelFormat.PINS_FIXED_WIDTH:
     return decode_fixed_pins(binary)
   elif header.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
-    return decode_condensed_pins(binary)
+    return decode_condensed_pins(binary)[0]
   else:
     raise FormatError("Cannot decode pins from flat format.")
 
-def decode_condensed_pins(binary:bytes) -> np.ndarray:
-  header = CrackleHeader.frombytes(binary)
+def decode_condensed_pins_components(binary:bytes) -> dict:
+  components = {}
+  head = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
 
-  if header.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
+  if head.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
     raise FormatError("This function can only extract pins from variable width streams.")
 
   # bgcolor, num labels (u64), N labels, pins
-  offset = hb + header.sz * 4 + header.stored_data_width
-  labels_end = hb + header.sz * 4 + header.num_label_bytes
-  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+  labels_binary = raw_labels(binary)
+  bgcolor = background_color(binary)
+  offset = head.stored_data_width
+  num_labels = int.from_bytes(labels_binary[offset:offset+8], 'little')
   offset += 8
   uniq = np.frombuffer(
-    binary[offset:offset+num_labels*header.stored_data_width],
-    dtype=header.stored_dtype
+    labels_binary[offset:offset+num_labels*head.stored_data_width],
+    dtype=head.stored_dtype
   )
-  offset += num_labels * header.stored_data_width  
-  combined_width = binary[offset]
+  offset += num_labels * head.stored_data_width  
+  
+  component_dtype = width2dtype[head.component_width()]
+  component_bytes = head.num_grids() * head.component_width()
+  components_per_grid = np.frombuffer(
+    labels_binary[offset:offset+component_bytes], 
+    dtype=component_dtype
+  )
+  offset += component_bytes
+
+  combined_width = labels_binary[offset]
+  offset += 1
 
   num_pins_width = 2 ** (combined_width & 0b11)
   depth_width = 2 ** ((combined_width >> 2) & 0b11)
-  index_width = header.index_width()
+  cc_labels_width = 2 ** ((combined_width >> 4) & 0b11)
 
-  offset += 1
-  pinset = binary[offset:labels_end]
-  idtype = np.dtype(width2dtype[header.index_width()])
+  pinset = labels_binary[offset:]
+
+  return {
+    "bgcolor": bgcolor,
+    "uniq": uniq,
+    "components_per_grid": components_per_grid,
+    "num_pins_width": num_pins_width,
+    "depth_width": depth_width,
+    "cc_labels_width": cc_labels_width,
+    "pinset": pinset,
+  }
+
+def decode_condensed_pins(binary:bytes) -> np.ndarray:
+  head = CrackleHeader.frombytes(binary)
+
+  if head.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
+    raise FormatError("This function can only extract pins from variable width streams.")
+
+  elems = decode_condensed_pins_components(binary)
+  components_per_grid = elems["components_per_grid"]
+  components_per_grid = np.cumsum(components_per_grid)
+
+  num_pins_width = elems["num_pins_width"]
+  depth_width = elems["depth_width"]
+  cc_labels_width = elems["cc_labels_width"]
+  uniq = elems["uniq"]
+
+  pinset = elems["pinset"]
+
+  idtype = np.dtype(width2dtype[head.index_width()])
   ddtype = np.dtype(width2dtype[depth_width])
+  cdtype = np.dtype(width2dtype[cc_labels_width])
 
   PinTuple = namedtuple('Pin', ['index', 'depth'])
 
   pins = {}
+  single_labels = {}
 
   offset = 0
-  for label in range(num_labels):
+  for label in range(uniq.size):
     n_pins = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
     index_arr = np.frombuffer(pinset[offset:offset+n_pins*idtype.itemsize], dtype=idtype)
@@ -311,8 +352,16 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     depth_arr = np.frombuffer(pinset[offset:offset+n_pins*ddtype.itemsize], dtype=ddtype)
     offset += n_pins * ddtype.itemsize
     pins[uniq[label]] = [ PinTuple(i,d) for i,d in zip(index_arr, depth_arr) ]
-    
-  return pins
+
+    num_cc_labels = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
+    offset += num_pins_width
+    cc_labels = np.frombuffer(pinset[offset:offset+num_cc_labels*cc_labels_width], dtype=cdtype)
+    cc_labels = np.cumsum(cc_labels)
+    offset += num_cc_labels * cc_labels_width
+
+    single_labels[uniq[label]] = cc_labels
+
+  return pins, single_labels
 
 def decode_fixed_pins(binary:bytes) -> np.ndarray:
   """For pin encodings only, extract the pins."""
@@ -363,16 +412,165 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
   offset = 8
 
   uniq_bytes = num_labels * np.dtype(stored_dtype).itemsize
-  uniq = np.frombuffer(labels_binary[8:8+uniq_bytes], dtype=stored_dtype)
+  uniq = np.frombuffer(labels_binary[offset:offset+uniq_bytes], dtype=stored_dtype)
   uniq = uniq.astype(dtype, copy=False)
 
-  cc_label_dtype = compute_dtype(num_labels)
-  cc_map = np.frombuffer(labels_binary[8+uniq_bytes+4*sz:], dtype=cc_label_dtype)
-  return uniq[cc_map]
+  offset += uniq_bytes
+  component_dtype = width2dtype[head.component_width()]
+  component_bytes = head.num_grids() * head.component_width()
+  components_per_grid = np.frombuffer(
+    labels_binary[offset:offset+component_bytes], 
+    dtype=component_dtype
+  )
+  components_per_grid = np.cumsum(components_per_grid)
 
-def decompress(binary:bytes) -> np.ndarray:
-  """Decompress a Crackle binary into a Numpy array."""
-  return decompress_range(binary, None, None)
+  offset += component_bytes
+
+  cc_label_dtype = compute_dtype(num_labels)
+  cc_map = np.frombuffer(labels_binary[offset:], dtype=cc_label_dtype)
+  
+  return {
+    "num_labels": num_labels,
+    "unique": uniq,
+    "components_per_grid": components_per_grid,
+    "cc_map": cc_map,
+  }
+
+def z_range_for_label(binary:bytes, label:int) -> Tuple[int,int]:
+  head = header(binary)
+  if head.label_format == LabelFormat.FLAT:
+    return z_range_for_label_flat(binary, label)
+  elif head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+    return z_range_for_label_condensed_pins(binary, label)
+  else:
+    raise ValueError("Label format not supported.")
+
+def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
+  head = header(binary)
+  labels_binary = raw_labels(binary)
+ 
+  num_labels = int.from_bytes(labels_binary[:8], 'little')
+  offset = 8
+  uniq = np.frombuffer(
+    labels_binary[offset:offset+num_labels*head.stored_data_width],
+    dtype=head.stored_dtype
+  )
+  idx = np.searchsorted(uniq, label)
+  if idx < 0 or idx >= uniq.size or uniq[idx] != label:
+    return (-1, -1)
+
+  offset += num_labels * head.stored_data_width
+  next_offset = offset + head.num_grids() * head.component_width()
+  dtype = width2dtype[head.component_width()]
+
+  components_per_grid = np.frombuffer(labels_binary[offset:next_offset], dtype=dtype)
+  components_per_grid = np.cumsum(components_per_grid)
+
+  offset = next_offset
+
+  dtype = compute_dtype(num_labels)
+  cc_labels = np.frombuffer(labels_binary[offset:], dtype=dtype)
+
+  cc_idxs = np.where(cc_labels == idx)[0]
+
+  if cc_idxs.size == 0:
+    return (-1, -1)
+
+  min_cc = cc_idxs[0]
+  max_cc = cc_idxs[-1]
+
+  z_start = 0
+  z_end = head.sz - 1
+
+  for z in range(head.sz):
+    if components_per_grid[z] >= min_cc:
+      z_start = z
+      break
+
+  for z in range(head.sz - 1, -1, -1):
+    if components_per_grid[z] <= max_cc:
+      z_end = z + 1
+      break
+
+  return (z_start, z_end+1)
+
+def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
+  head = header(binary)
+  labels_binary = raw_labels(binary)
+
+  bgcolor = background_color(binary)
+  if bgcolor == label:
+    return (0, head.sz)
+  
+  offset = head.stored_data_width
+  num_labels = int.from_bytes(labels_binary[offset:offset+8], 'little')
+  offset += 8
+  uniq = np.frombuffer(
+    labels_binary[offset:offset+num_labels*head.stored_data_width],
+    dtype=head.stored_dtype
+  )
+  idx = np.searchsorted(uniq, label)
+  if idx < 0 or idx >= uniq.size or uniq[idx] != label:
+    return (-1, -1)
+
+  offset += num_labels*head.stored_data_width
+  component_dtype = width2dtype[head.component_width()]
+  component_bytes = head.num_grids() * head.component_width()
+  components_per_grid = np.frombuffer(
+    labels_binary[offset:offset+component_bytes], 
+    dtype=component_dtype
+  )
+  components_per_grid = np.cumsum(components_per_grid)
+  all_pins, all_single_labels = decode_condensed_pins(binary)
+  label_pins = all_pins[label]
+  single_labels = all_single_labels[label]
+
+  z_start = head.sz - 1
+  z_end = 0
+
+  sxy = head.sx * head.sy
+  min = __builtins__["min"]
+  max = __builtins__["max"]
+
+  for pin in label_pins:
+    z = pin.index // sxy
+    z_start = min(z_start, z)
+    z_end = max(z_end, z+pin.depth + 1)
+
+  if len(single_labels) == 0:
+    return (z_start, z_end)
+
+  for lbl in  [ single_labels[0], single_labels[-1] ]:
+    z = np.searchsorted(components_per_grid, lbl) - 1
+    z_start = min(z_start, z)
+    z_end = max(z_end, z)
+
+  z_start = max(z_start, 0)
+  z_end = min(z_end + 2, head.sz)
+
+  return (z_start, z_end)
+
+def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
+  z_start, z_end = z_range_for_label(binary, label)
+  header = CrackleHeader.frombytes(binary)
+  order = "F" if header.fortran_order else "C"
+  image = np.zeros([header.sx, header.sy, header.sz], dtype=bool, order=order)
+
+  if z_start == -1 and z_end == -1:
+    return image
+
+  cutout = decompress_range(binary, z_start, z_end)
+  image[:,:,z_start:z_end] = (cutout == label)
+  return image
+
+def decompress(binary:bytes, label:Optional[int] = None) -> np.ndarray:
+  """
+  Decompress a Crackle binary into a Numpy array. 
+  If label is provided, decompress into  a binary (bool) image.
+  """
+  if label is None:
+    return decompress_range(binary, None, None)
+  return decompress_binary_image(binary, label)
 
 def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -> np.ndarray:
   """

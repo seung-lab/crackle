@@ -1,3 +1,5 @@
+from typing import Optional
+
 from .headers import CrackleHeader
 from .codec import (
   compress, decompress, decompress_range, 
@@ -9,7 +11,7 @@ from . import codec
 import numpy as np
 
 class CrackleArray:
-  def __init__(self, binary):
+  def __init__(self, binary:bytes):
     self.binary = binary
 
     head = header(self.binary)
@@ -63,8 +65,8 @@ class CrackleArray:
   def renumber(self, start:int = 0):
     return CrackleArray(renumber(self.binary, start))
 
-  def decompress(self):
-    return decompress(self.binary)
+  def decompress(self, label:Optional[int] = None):
+    return decompress(self.binary, label)
 
   def __contains__(self, elem):
     return contains(self.binary, elem)
@@ -96,7 +98,7 @@ class CrackleArray:
 
 class CrackleRemoteArray(CrackleArray):
   """EXPERIMENTAL DO NOT RELY ON THIS INTERFACE."""
-  def __init__(self, cloudpath):
+  def __init__(self, cloudpath:str):
     from cloudfiles import CloudFile
     self.cloudpath = cloudpath
     self.cf = CloudFile(cloudpath)
@@ -112,7 +114,7 @@ class CrackleRemoteArray(CrackleArray):
     binary = self._synthetic_crackle_file(0, b'')
     return CrackleArray(binary).labels()
 
-  def __contains__(self, elem):
+  def __contains__(self, elem:int):
     binary = self._synthetic_crackle_file(0, b'')
     return elem in CrackleArray(binary)
   

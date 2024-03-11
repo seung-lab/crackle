@@ -108,6 +108,17 @@ class CrackleHeader:
       self.num_label_bytes.to_bytes(4, 'little'),
     ])
 
+  def component_width(self): 
+    """The size of the flat encoding type components per a grid."""
+    return compute_byte_width(self.sx * self.sy)
+
+  def num_grids(self) -> int:
+    gsize = min(self.grid_size, max(self.sx, self.sy))
+    ngrids = ((self.sx + gsize - 1) // gsize) * ((self.sy + gsize - 1) // gsize)
+    ngrids = max(ngrids, 1)
+    ngrids *= self.sz
+    return int(ngrids)
+
   @property
   def stored_dtype(self):
     return width2dtype[self.stored_data_width]

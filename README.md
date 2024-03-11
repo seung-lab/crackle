@@ -18,6 +18,9 @@ labels = np.load("example.npy") # a 2D or 3D dense segmentation
 binary = crackle.compress(labels, allow_pins=False, markov_model_order=0)
 labels = crackle.decompress(binary)
 
+# faster extraction of binary images
+binary_image = crackle.decompress(binary, label=1241)
+
 # get unique labels without decompressing
 uniq = crackle.labels(binary) 
 # get num labels without decompressing
@@ -25,6 +28,8 @@ N = crackle.num_labels(binary)
 # get min and max without decompressing
 mn = crackle.min(binary)
 mx = crackle.max(binary)
+# check if label in array in log(N) time
+has_label = crackle.contains(binary, label)
 
 # Remap labels without decompressing. Could
 # be useful for e.g. proofreading.
@@ -46,7 +51,7 @@ labels = crackle.load("example.ckl.gz")
 
 arr = crackle.CrackleArray(binary)
 res = arr[:10,:10,:10] # array slicing (efficient z ranges)
-20 in arr # highly efficient search
+20 in arr # log(N) check
 ```
 
 *This repository is currently Beta. It works and the format is reasonably fixed. There may be some improvements down the line (such as 3d compression of crack codes), but they will be a new format version number.*
@@ -124,12 +129,15 @@ Encoding flat labels is fast.
 | background_color | stored_data_width                   | Background color of image.                                                                                  |
 | num_unique       | u64                                 | Number of unique labels in this volume.                                                                     |
 | unique_labels    | stored_type[num_unique]             | Sorted ascending array of all unique values in image, stored in the smallest data type that will hold them. |
-| fmt_byte         | u8                                  | 0000DDNN  DD: 2^(DD) is the depth width NN: 2^(NN) is the num pins width                                    |
+| cc_per_grid   | smallest_type(sx \* sy)[sz]                 | Array containing the number of CCL IDs in each grid (usually a z-slice).                                    |
+| fmt_byte         | u8                                  | 00CCDDNN  DD: 2^(DD) is the depth width NN: 2^(NN) is the num pins width, CC: 2^(CC) is the single components width.  |
 | pin_section      | Bitstream to end of labels section. | Contains pin information.                                                                                   |
 
 PIN SECTION: `| PINS FOR LABEL 0 | PINS FOR LABEL 1 | ... | PINS FOR LABEL N |`
 
 PINS: `| num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N | DEPTH_0 | DEPTH_1 | ... | DEPTH_N | num_single_labels | CC 0 | CC 1 | ... | CC N |`
+
+Both `num_pins` and `num_single_labels` use the `num_pins_width`.
 
 Note that INDEX_0 to INDEX_N are stored with a difference filter applied to improve compressibility.
 
