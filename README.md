@@ -18,6 +18,9 @@ labels = np.load("example.npy") # a 2D or 3D dense segmentation
 binary = crackle.compress(labels, allow_pins=False, markov_model_order=0)
 labels = crackle.decompress(binary)
 
+# faster extraction of binary images
+binary_image = crackle.decompress(binary, label=1241)
+
 # get unique labels without decompressing
 uniq = crackle.labels(binary) 
 # get num labels without decompressing
@@ -25,6 +28,8 @@ N = crackle.num_labels(binary)
 # get min and max without decompressing
 mn = crackle.min(binary)
 mx = crackle.max(binary)
+# check if label in array in log(N) time
+has_label = crackle.contains(binary, label)
 
 # Remap labels without decompressing. Could
 # be useful for e.g. proofreading.
@@ -46,7 +51,7 @@ labels = crackle.load("example.ckl.gz")
 
 arr = crackle.CrackleArray(binary)
 res = arr[:10,:10,:10] # array slicing (efficient z ranges)
-20 in arr # highly efficient search
+20 in arr # log(N) check
 ```
 
 *This repository is currently Beta. It works and the format is reasonably fixed. There may be some improvements down the line (such as 3d compression of crack codes), but they will be a new format version number.*
