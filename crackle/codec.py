@@ -356,6 +356,7 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     num_cc_labels = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
     cc_labels = np.frombuffer(pinset[offset:offset+num_cc_labels*cc_labels_width], dtype=cdtype)
+    cc_labels = np.cumsum(cc_labels)
     offset += num_cc_labels * cc_labels_width
 
     single_labels[uniq[label]] = cc_labels
@@ -520,11 +521,9 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     dtype=component_dtype
   )
   components_per_grid = np.cumsum(components_per_grid)
-
   all_pins, all_single_labels = decode_condensed_pins(binary)
   label_pins = all_pins[label]
   single_labels = all_single_labels[label]
-  single_labels = sorted(single_labels)
 
   z_start = head.sz - 1
   z_end = 0
@@ -539,16 +538,17 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     z_end = max(z_end, z+pin.depth + 1)
 
   if len(single_labels) == 0:
-    return (z_start, head.sz)
+    return (z_start, z_end)
 
-  for lbl in [ single_labels[0], single_labels[-1] ]:
+  for lbl in  [ single_labels[0], single_labels[-1] ]:
     z = np.searchsorted(components_per_grid, lbl) - 1
-    z = max(z, 0)
-    z = min(z, head.sz - 1)
     z_start = min(z_start, z)
-    z_end = max(z_end, z + 1)
+    z_end = max(z_end, z)
 
-  return (z_start, head.sz)
+  z_start = max(z_start, 0)
+  z_end = min(z_end + 2, head.sz)
+
+  return (z_start, z_end)
 
 def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
