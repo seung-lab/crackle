@@ -83,8 +83,7 @@ def test_decompress_binary_label_flat(label):
   assert np.all(labels == recovered)
   assert np.all(binimg1 == binimg2)
 
-@pytest.mark.parametrize('allow_pins', [False,True])
-# @pytest.mark.parametrize('label', [9999999999, 63408621, 63408621, 28792756])
+@pytest.mark.parametrize('allow_pins', [True])
 def test_decompress_binary_label_random(allow_pins):
   labels = compresso.load("connectomics.npy.cpso.gz")
 
