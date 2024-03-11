@@ -267,7 +267,8 @@ def decode_pins(binary:bytes) -> np.ndarray:
   else:
     raise FormatError("Cannot decode pins from flat format.")
 
-def decode_condensed_pins(binary:bytes) -> np.ndarray:
+def decode_condensed_pins_components(binary:bytes) -> dict:
+  components = {}
   head = CrackleHeader.frombytes(binary)
   hb = CrackleHeader.HEADER_BYTES
 
@@ -292,7 +293,6 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     labels_binary[offset:offset+component_bytes], 
     dtype=component_dtype
   )
-  components_per_grid = np.cumsum(components_per_grid)
   offset += component_bytes
 
   combined_width = labels_binary[offset]
@@ -301,9 +301,36 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
   num_pins_width = 2 ** (combined_width & 0b11)
   depth_width = 2 ** ((combined_width >> 2) & 0b11)
   cc_labels_width = 2 ** ((combined_width >> 4) & 0b11)
-  index_width = head.index_width()
 
   pinset = labels_binary[offset:]
+
+  return {
+    "bgcolor": bgcolor,
+    "uniq": uniq,
+    "components_per_grid": components_per_grid,
+    "num_pins_width": num_pins_width,
+    "depth_width": depth_width,
+    "cc_labels_width": cc_labels_width,
+    "pinset": pinset,
+  }
+
+def decode_condensed_pins(binary:bytes) -> np.ndarray:
+  head = CrackleHeader.frombytes(binary)
+
+  if head.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
+    raise FormatError("This function can only extract pins from variable width streams.")
+
+  elems = decode_condensed_pins_components(binary)
+  components_per_grid = elems["components_per_grid"]
+  components_per_grid = np.cumsum(components_per_grid)
+
+  num_pins_width = elems["num_pins_width"]
+  depth_width = elems["depth_width"]
+  cc_labels_width = elems["cc_labels_width"]
+  uniq = elems["uniq"]
+
+  pinset = elems["pinset"]
+
   idtype = np.dtype(width2dtype[head.index_width()])
   ddtype = np.dtype(width2dtype[depth_width])
   cdtype = np.dtype(width2dtype[cc_labels_width])
@@ -314,7 +341,7 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
   single_labels = {}
 
   offset = 0
-  for label in range(num_labels):
+  for label in range(uniq.size):
     n_pins = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
     index_arr = np.frombuffer(pinset[offset:offset+n_pins*idtype.itemsize], dtype=idtype)
