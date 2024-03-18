@@ -34,7 +34,8 @@ class CrackleHeader:
     fortran_order:bool,
     grid_size:int,
     signed:bool,
-    markov_model_order:int
+    markov_model_order:int,
+    is_sorted:bool,
   ):
     self.label_format = label_format
     self.crack_format = crack_format
@@ -48,6 +49,7 @@ class CrackleHeader:
     self.grid_size = int(grid_size)
     self.signed = bool(signed)
     self.markov_model_order = int(markov_model_order)
+    self.is_sorted = bool(is_sorted)
 
   @classmethod
   def frombytes(kls, buffer:bytes):
@@ -62,7 +64,7 @@ class CrackleHeader:
       int.from_bytes(buffer[5:7], byteorder='little', signed=False), 
     [
       2, 2, 1, 2, 1,
-      1, 4
+      1, 4, 1
     ])
 
     return CrackleHeader(
@@ -78,6 +80,7 @@ class CrackleHeader:
       fortran_order=bool(values[4]),
       signed=bool(values[5]),
       markov_model_order=int(values[6]),
+      is_sorted=(not bool(values[7])),
     )
 
   def tobytes(self) -> bytes:
@@ -92,6 +95,7 @@ class CrackleHeader:
     fmt_byte2 = pack_bits([
       (int(self.signed), 1),
       (int(self.markov_model_order), 4),
+      (int(not self.is_sorted), 1),
     ])
 
     log_grid_size = int(np.log2(self.grid_size))

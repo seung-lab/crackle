@@ -46,6 +46,7 @@ public:
 	uint32_t num_label_bytes;
 	bool fortran_order;
 	uint8_t markov_model_order;
+	bool is_sorted;
 
 	CrackleHeader() :
 		format_version(0),
@@ -55,7 +56,7 @@ public:
 		data_width(1), stored_data_width(1),
 		sx(1), sy(1), sz(1), grid_size(2147483648),
 		num_label_bytes(0), fortran_order(true),
-		markov_model_order(0)
+		markov_model_order(0), is_sorted(1)
 	{}
 
 	CrackleHeader(
@@ -69,7 +70,8 @@ public:
 		const uint32_t _grid_size,
 		const uint32_t _num_label_bytes,
 		const bool _fortran_order,
-		const uint8_t _markov_model_order
+		const uint8_t _markov_model_order,
+		const bool _is_sorted
 	) : 
 		format_version(_format_version),
 		label_format(_label_fmt),
@@ -80,7 +82,8 @@ public:
 		grid_size(_grid_size),
 		num_label_bytes(_num_label_bytes), 
 		fortran_order(_fortran_order), 
-		markov_model_order(_markov_model_order)
+		markov_model_order(_markov_model_order),
+		is_sorted(_is_sorted)
 	{}
 
 	void assign_from_buffer(const unsigned char* buf) {
@@ -107,6 +110,7 @@ public:
 		fortran_order = static_cast<bool>((format_bytes & 0b10000000) >> 7);
 		is_signed = static_cast<bool>((format_bytes >> 8) & 0b1);
 		markov_model_order = static_cast<uint8_t>((format_bytes >> 9) & 0b1111);
+		is_sorted = !static_cast<bool>((format_bytes >> 13) & 0b1);
 	}
 
 	CrackleHeader(const unsigned char* buf) {
@@ -159,6 +163,7 @@ public:
 		format_bytes |= static_cast<uint16_t>(fortran_order) << 7;
 		format_bytes |= static_cast<uint16_t>(is_signed) << 8;
 		format_bytes |= static_cast<uint16_t>((markov_model_order & 0b1111) << 9);
+		format_bytes |= static_cast<uint16_t>((!is_sorted) << 13); // is_sorted
 
 		i += lib::itoc(format_version, buf, i);
 		i += lib::itoc(format_bytes, buf, i);

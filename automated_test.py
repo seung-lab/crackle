@@ -255,12 +255,10 @@ def test_remap_sorted():
   new_labels = list(remap.values())
   new_labels.sort()
   remapped_binary_labels = list(crackle.labels(binary))
+  print(remapped_binary_labels)
   remapped_binary_labels.sort()
 
   assert remapped_binary_labels == new_labels
 
   for label in new_labels:
     assert crackle.contains(binary, label)
-
-
-

@@ -62,6 +62,10 @@ def num_labels(binary:bytes) -> int:
 def contains(binary:bytes, label:int) -> bool:
   """Rapidly check if a label exists in a Crackle bytestream."""
   head = header(binary)
+
+  if not head.is_sorted:
+    return label in labels(binary)
+
   hb = CrackleHeader.HEADER_BYTES
   offset = hb + head.sz * 4
 
@@ -91,6 +95,10 @@ def raw_labels(binary:bytes) -> bytes:
 
 def min(binary:bytes) -> int:
   header = CrackleHeader.frombytes(binary)
+
+  if not head.is_sorted:
+    return int(np.min(labels(binary)))
+
   off = header.HEADER_BYTES + header.sz * 4
 
   if header.label_format == LabelFormat.FLAT:
@@ -106,6 +114,10 @@ def min(binary:bytes) -> int:
 
 def max(binary:bytes) -> int:
   header = CrackleHeader.frombytes(binary)
+
+  if not head.is_sorted:
+    return int(np.max(labels(binary)))
+
   loff = header.HEADER_BYTES + header.sz * 4
 
   if header.label_format == LabelFormat.FLAT:
@@ -168,6 +180,11 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
     preserve_missing_labels=preserve_missing_labels, 
     in_place=True
   )
+  is_sorted = np.all(all_labels[:-1] <= all_labels[1:])
+  if is_sorted != head.is_sorted:
+    head.is_sorted = is_sorted
+    binary[:hb] = head.tobytes()
+
   binary[offset:offset+uniq_bytes] = list(all_labels.view(np.uint8))
   return bytes(binary)
 
@@ -195,6 +212,11 @@ def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
   uniq = labels(binary)
   mapping = { u: start+i for i,u in enumerate(uniq) }
   binary = refit(remap(binary, mapping))
+
+  if not head.is_sorted:
+    head.is_sorted = True
+    binary[:CrackleHeader.HEADER_BYTES] = head.tobytes()
+
   return (binary, mapping)
 
 def nbytes(binary:bytes) -> np.ndarray:

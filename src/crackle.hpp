@@ -72,7 +72,8 @@ std::vector<unsigned char> compress_helper(
 		
 		/*num_label_bytes=*/0,
 		/*fortran_order*/fortran_order,
-		/*markov_model_order=*/markov_model_order // 0 is disabled
+		/*markov_model_order=*/markov_model_order, // 0 is disabled
+		/*is_sorted=*/true
 	);
 
 	if (voxels == 0) {

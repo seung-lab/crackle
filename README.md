@@ -98,7 +98,7 @@ See benchmarks for more information on Crackle's size and compute effiency.
 | num_label_bytes   | Any.              | u32      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
 
 
-Format Field (u16): DDSSCLLFGOOOORRR (each letter represents a bit, left is LSB)
+Format Field (u16): DDSSCLLFGOOOOURR (each letter represents a bit, left is LSB)
 
 DD: 2^(DD) = byte width of returned array (1,2,4,8 bytes)  
 SS: 2^(SS) = byte width of stored labels (sometimes you can store values in 2 bytes when the final array is 8 bytes)  
@@ -107,6 +107,7 @@ LL: 0: "flat" label format, 1: fixed width pins (unused?) 2: variable width pins
 F: whether the array is to be rendered as C (0) or F (1) order
 G: Signed (if (1), data are signed int, otherwise unsigned int)
 OOOO: Nth-Order of Markov Chain (as an unsigned integer, typical values 0, or 3 to 7). If 0, markov compression is disabled.
+U: if 0, unique labels are sorted, else, unsorted
 R: Reserved
 
 ### Flat Label Format
