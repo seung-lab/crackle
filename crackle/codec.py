@@ -209,7 +209,7 @@ def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
   precision.
   """
   head = header(binary)
-  uniq = labels(binary)
+  uniq = fastremap.unique(labels(binary))
   mapping = { u: start+i for i,u in enumerate(uniq) }
   binary = refit(remap(binary, mapping))
 
