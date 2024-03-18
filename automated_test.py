@@ -245,3 +245,22 @@ def test_remap():
   labels = crackle.labels(binary)
   assert np.all(labels == np.arange(1,1001))
 
+def test_remap_sorted():
+  labels = np.random.randint(0,7, size=(10,10,10)).astype(np.uint32)
+  binary = crackle.compress(labels)
+
+  remap = {0:10, 1:40, 2:20, 3:90, 4:25, 5:70, 6:90}
+
+  binary = crackle.remap(binary, remap, preserve_missing_labels=True)
+  new_labels = list(remap.values())
+  new_labels.sort()
+  remapped_binary_labels = list(crackle.labels(binary))
+  remapped_binary_labels.sort()
+
+  assert remapped_binary_labels == new_labels
+
+  for label in new_labels:
+    assert crackle.contains(binary, label)
+
+
+
