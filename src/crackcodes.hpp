@@ -419,14 +419,14 @@ create_crack_codes(
 
   std::vector<int64_t> neighbors;
   for (int64_t cluster = 0; cluster < n_clusters; cluster++) {
-  	robin_hood::unordered_flat_set<std::pair<int64_t, int64_t>, pair_hash>
-  		remaining;
-
   	auto& cluster_edges = G.component_edge_list[cluster];
-  	remaining.reserve(cluster_edges.size());
-  	remaining.insert(cluster_edges.begin(), cluster_edges.end());
+  	uint64_t remaining = cluster_edges.size();
   	
-  	std::pair<int64_t, int64_t> start_edge = *remaining.begin();
+  	if (remaining == 0) {
+  		continue;
+  	}
+
+  	std::pair<int64_t, int64_t> start_edge = cluster_edges[0];
 
   	int64_t node = start_edge.first;
   	int64_t start_node = start_edge.first;
@@ -435,24 +435,19 @@ create_crack_codes(
     robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
     int64_t branches_taken = 1;
 
-    while (!remaining.empty() || !revisit.empty()) {
+    while (remaining > 0 || !revisit.empty()) {
     	G.neighbors(node, neighbors);
 
     	if (!G.adjacency[node]) {
     		code.push_back('t');
     		branches_taken--;
-    		if (!revisit.empty()) {
-	    		while (!revisit.empty()) {
-	    			node = revisit.back();
-	    			revisit.pop_back();
-	    			if (node > -1) {
-	    				revisit_ct[node]--;
-	    				break;
-	    			}
-	    		}
-	    	}
-    		else if (!remaining.empty()) {
-    			node = (*remaining.begin()).first;
+    		while (!revisit.empty()) {
+    			node = revisit.back();
+    			revisit.pop_back();
+    			if (node > -1) {
+    				revisit_ct[node]--;
+    				break;
+    			}
     		}
     		continue;
     	}
@@ -481,7 +476,7 @@ create_crack_codes(
     	}
 
     	auto edge = mkedge(node, next_node);
-    	remaining.erase(edge);
+    	remaining--;
     	G.erase_edge(edge);
     	node = next_node;
 
