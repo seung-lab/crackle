@@ -681,13 +681,14 @@ std::vector<uint8_t> unpack_codepoints(
 	return codepoints;
 }
 
-std::vector<uint8_t> decode_permissible_crack_code(
+void decode_permissible_crack_code(
 	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
-	const int64_t sx, const int64_t sy
+	const int64_t sx, const int64_t sy,
+	uint8_t* edges
 ) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
-	std::vector<uint8_t> edges(sx * sy);
+	std::fill(edges, edges + sx * sy, 0);
 
 	int64_t sxe = sx + 1;
 
@@ -750,17 +751,16 @@ std::vector<uint8_t> decode_permissible_crack_code(
 			}
 		}
 	}
-
-	return edges;
 }
 
-std::vector<uint8_t> decode_impermissible_crack_code(
+void decode_impermissible_crack_code(
 	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
-	const int64_t sx, const int64_t sy
+	const int64_t sx, const int64_t sy,
+	uint8_t* edges
 ) {
 	// voxel connectivity
 	// four bits: -y-x+y+x true is passable
-	std::vector<uint8_t> edges(sx * sy, 0b1111);
+	std::fill(edges, edges + sx * sy, 0b1111);
 
 	int64_t sxe = sx + 1;
 
@@ -824,20 +824,19 @@ std::vector<uint8_t> decode_impermissible_crack_code(
 			}
 		}
 	}
-
-	return edges;
 }
 
-std::vector<uint8_t> decode_crack_code(
+void decode_crack_code(
 	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
 	const uint64_t sx, const uint64_t sy,
-	const bool permissible
+	const bool permissible, 
+	uint8_t* slice_edges
 ) {
 	if (permissible) {
-		return decode_permissible_crack_code(chains, sx, sy);
+		decode_permissible_crack_code(chains, sx, sy, slice_edges);
 	}
 	else {
-		return decode_impermissible_crack_code(chains, sx, sy);
+		decode_impermissible_crack_code(chains, sx, sy, slice_edges);
 	}
 }
 
