@@ -403,87 +403,87 @@ create_crack_codes(
 	const int64_t sx, const int64_t sy,
 	bool permissible
 ) {
-  Graph G;
-  G.init(labels, sx, sy, permissible);
+	Graph G;
+	G.init(labels, sx, sy, permissible);
 
-  const int64_t n_clusters = G.num_components();
+	const int64_t n_clusters = G.num_components();
 
-  std::vector<std::pair<int64_t, std::vector<char>>> chains;
-  std::vector<int64_t> revisit;
-  revisit.reserve(sx);
-  std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
+	std::vector<std::pair<int64_t, std::vector<char>>> chains;
+	std::vector<int64_t> revisit;
+	revisit.reserve(sx);
+	std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
 
-  if (n_clusters == 0) {
-    return symbols_to_codepoints(chains);
-  }
+	if (n_clusters == 0) {
+		return symbols_to_codepoints(chains);
+	}
 
-  std::vector<int64_t> neighbors;
-  for (int64_t cluster = 0; cluster < n_clusters; cluster++) {
-  	auto& cluster_edges = G.component_edge_list[cluster];
-  	uint64_t remaining = cluster_edges.size();
-  	
-  	if (remaining == 0) {
-  		continue;
-  	}
+	std::vector<int64_t> neighbors;
+	for (int64_t cluster = 0; cluster < n_clusters; cluster++) {
+		auto& cluster_edges = G.component_edge_list[cluster];
+		uint64_t remaining = cluster_edges.size();
+		
+		if (remaining == 0) {
+			continue;
+		}
 
-  	std::pair<int64_t, int64_t> start_edge = cluster_edges[0];
+		std::pair<int64_t, int64_t> start_edge = cluster_edges[0];
 
-  	int64_t node = start_edge.first;
-  	int64_t start_node = start_edge.first;
+		int64_t node = start_edge.first;
+		int64_t start_node = start_edge.first;
 
-    std::vector<char> code;
-    robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
-    int64_t branches_taken = 1;
+		std::vector<char> code;
+		robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
+		int64_t branches_taken = 1;
 
-    while (remaining > 0 || !revisit.empty()) {
-    	G.neighbors(node, neighbors);
+		while (remaining > 0 || !revisit.empty()) {
+			G.neighbors(node, neighbors);
 
-    	if (!G.adjacency[node]) {
-    		code.push_back('t');
-    		branches_taken--;
-    		while (!revisit.empty()) {
-    			node = revisit.back();
-    			revisit.pop_back();
-    			if (node > -1) {
-    				revisit_ct[node]--;
-    				break;
-    			}
-    		}
-    		continue;
-    	}
-    	else if (neighbors.size() > 1) {
-    		code.push_back('b');
-    		revisit.push_back(node);
-    		revisit_ct[node]++;
-    		branch_nodes[node].push_back(code.size() - 1);
-    		branches_taken++;
-    	}
+			if (!G.adjacency[node]) {
+				code.push_back('t');
+				branches_taken--;
+				while (!revisit.empty()) {
+					node = revisit.back();
+					revisit.pop_back();
+					if (node > -1) {
+						revisit_ct[node]--;
+						break;
+					}
+				}
+				continue;
+			}
+			else if (neighbors.size() > 1) {
+				code.push_back('b');
+				revisit.push_back(node);
+				revisit_ct[node]++;
+				branch_nodes[node].push_back(code.size() - 1);
+				branches_taken++;
+			}
 
-    	int64_t next_node = neighbors[0];
-    	int64_t dir_taken = next_node - node;
+			int64_t next_node = neighbors[0];
+			int64_t dir_taken = next_node - node;
 
-    	if (dir_taken == 1) {
-    		code.push_back('r');
-    	}
-    	else if (dir_taken == -1) {
-    		code.push_back('l');
-    	}
-    	else if (dir_taken > 1) {
-    		code.push_back('d');
-    	}
-    	else {
-    		code.push_back('u');
-    	}
+			if (dir_taken == 1) {
+				code.push_back('r');
+			}
+			else if (dir_taken == -1) {
+				code.push_back('l');
+			}
+			else if (dir_taken > 1) {
+				code.push_back('d');
+			}
+			else {
+				code.push_back('u');
+			}
 
-    	auto edge = mkedge(node, next_node);
-    	remaining--;
-    	G.erase_edge(edge);
-    	node = next_node;
+			auto edge = mkedge(node, next_node);
+			remaining--;
+			G.erase_edge(edge);
+			node = next_node;
 
-    	// if we reencounter a node we've already visited,
-    	// remove it from revisit and replace the branch. 
-    	// with a skip.
-    	if (revisit_ct[node]) {
+			// if we reencounter a node we've already visited,
+			// remove it from revisit and replace the branch. 
+			// with a skip.
+			if (revisit_ct[node]) {
 				int64_t pos = revisit.size() - 1;
 				for (; pos >= 0; pos--) {
 					if (revisit[pos] == node) {
@@ -496,20 +496,20 @@ create_crack_codes(
 				branch_nodes[node].pop_back();
 				revisit_ct[node]--;
 			}
-    }
+		}
 
-    while (branches_taken > 0) {
-    	code.push_back('t');
-    	branches_taken--;
-    }
+		while (branches_taken > 0) {
+			code.push_back('t');
+			branches_taken--;
+		}
 
-    remove_initial_branch(start_node, code, sx, sy);
-    chains.push_back(
-    	std::make_pair(start_node, code)
-    );
-  }
+		remove_initial_branch(start_node, code, sx, sy);
+		chains.push_back(
+			std::make_pair(start_node, code)
+		);
+	}
 
-  return symbols_to_codepoints(chains);
+	return symbols_to_codepoints(chains);
 }
 
 std::vector<unsigned char> pack_codepoints(
