@@ -29,9 +29,19 @@ inline std::pair<int64_t, int64_t> mkedge(int64_t a, int64_t b){
 
 struct Graph {
 	std::vector<uint8_t> adjacency;
-	std::vector<std::vector<std::pair<int64_t, int64_t>>> component_edge_list;
+	
 	int64_t sxe;
 	int64_t sye;
+
+	int64_t next_cluster(int64_t idx) {
+		for (int64_t i = idx; i < sxe * sye; i++) {
+			if (adjacency[i]) {
+				return i;
+			}
+		}
+
+		return -1;
+	}
 
 	void neighbors(int64_t node, std::vector<int64_t> &nbrs) {
 		nbrs.clear();
@@ -71,10 +81,6 @@ struct Graph {
 		}
 	}
 
-	int64_t num_components() {
-		return component_edge_list.size();
-	}
-
 	template <typename LABEL>
 	void init(
 		const LABEL* labels,
@@ -86,14 +92,6 @@ struct Graph {
 
 		adjacency.resize(sxe * sye);
 
-		crackle::cc3d::DisjointSet<uint32_t> equivalences(sxe * sye);
-		for (int64_t i = 0; i < sxe * sye; i++) {
-			equivalences.ids[i] = i;
-		}
-
-		std::vector<std::pair<int64_t, int64_t>> all_edges;
-		all_edges.reserve(sxe * sye / 10);
-
 		if (permissible) {
 			// assign vertical edges
 			for (int64_t y = 0; y < sy; y++) {
@@ -103,8 +101,6 @@ struct Graph {
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
-						equivalences.ids[node_down] = node_up;
-						all_edges.emplace_back(node_up,node_down);
 					}
 				}
 			}
@@ -117,8 +113,6 @@ struct Graph {
 						int64_t node_right = (x+1) + sxe * y;
 						adjacency[node_left] |= 0b0001;
 						adjacency[node_right] |= 0b0010;
-						equivalences.unify(node_left, node_right);
-						all_edges.emplace_back(node_left,node_right);
 					}
 				}
 			}
@@ -132,8 +126,6 @@ struct Graph {
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
-						equivalences.ids[node_down] = node_up;
-						all_edges.emplace_back(node_up,node_down);
 					}
 				}
 			}
@@ -146,34 +138,10 @@ struct Graph {
 						int64_t node_right = (x+1) + sxe * y;
 						adjacency[node_left] |= 0b0001;
 						adjacency[node_right] |= 0b0010;
-						equivalences.unify(node_left, node_right);
-						all_edges.emplace_back(node_left, node_right);
 					}
 				}
 			}			
 		}
-
-		component_edge_list.resize(all_edges.size() * 2);
-
-		std::vector<int64_t> renumber(sxe*sye);
-		int64_t next_label = 1;
-		int64_t label = 0;
-		int64_t membership = 0;
-		for (auto pair : all_edges) {
-			label = equivalences.root(pair.first);
-			if (renumber[label] == 0) {
-				renumber[label] = next_label;
-				membership = next_label;
-				next_label++;
-			}
-			else {
-				membership = renumber[label];
-			}
-
-			component_edge_list[membership - 1].push_back(mkedge(pair.first, pair.second));
-		}
-
-		component_edge_list.resize(next_label - 1);
 	}
 };
 
@@ -406,36 +374,23 @@ create_crack_codes(
 	Graph G;
 	G.init(labels, sx, sy, permissible);
 
-	const int64_t n_clusters = G.num_components();
-
 	std::vector<std::pair<int64_t, std::vector<char>>> chains;
 	std::vector<int64_t> revisit;
 	revisit.reserve(sx);
 	std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
 
-	if (n_clusters == 0) {
-		return symbols_to_codepoints(chains);
-	}
-
 	std::vector<int64_t> neighbors;
-	for (int64_t cluster = 0; cluster < n_clusters; cluster++) {
-		auto& cluster_edges = G.component_edge_list[cluster];
-		uint64_t remaining = cluster_edges.size();
-		
-		if (remaining == 0) {
-			continue;
-		}
+	int64_t start_node = 0;
 
-		std::pair<int64_t, int64_t> start_edge = cluster_edges[0];
-
-		int64_t node = start_edge.first;
-		int64_t start_node = start_edge.first;
+	while ((start_node = G.next_cluster(start_node)) != -1) {
+		printf("%d\n", start_node);
+		int64_t node = start_node;
 
 		std::vector<char> code;
 		robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
 		int64_t branches_taken = 1;
 
-		while (remaining > 0 || !revisit.empty()) {
+		while (G.adjacency[node] || !revisit.empty()) {
 			G.neighbors(node, neighbors);
 
 			if (!G.adjacency[node]) {
@@ -476,7 +431,6 @@ create_crack_codes(
 			}
 
 			auto edge = mkedge(node, next_node);
-			remaining--;
 			G.erase_edge(edge);
 			node = next_node;
 
