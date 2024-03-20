@@ -82,7 +82,7 @@ struct Graph {
 	}
 
 	template <typename LABEL>
-	void init(
+	bool init(
 		const LABEL* labels,
 		const int64_t sx, const int64_t sy,
 		const bool permissible
@@ -91,6 +91,8 @@ struct Graph {
 		sye = sy + 1; // sy edges
 
 		adjacency.resize(sxe * sye);
+
+		bool any_edges = false;
 
 		if (permissible) {
 			// assign vertical edges
@@ -101,6 +103,7 @@ struct Graph {
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
+						any_edges = true;
 					}
 				}
 			}
@@ -113,6 +116,7 @@ struct Graph {
 						int64_t node_right = (x+1) + sxe * y;
 						adjacency[node_left] |= 0b0001;
 						adjacency[node_right] |= 0b0010;
+						any_edges = true;
 					}
 				}
 			}
@@ -126,6 +130,7 @@ struct Graph {
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
+						any_edges = true;
 					}
 				}
 			}
@@ -138,10 +143,13 @@ struct Graph {
 						int64_t node_right = (x+1) + sxe * y;
 						adjacency[node_left] |= 0b0001;
 						adjacency[node_right] |= 0b0010;
+						any_edges = true;
 					}
 				}
 			}			
 		}
+
+		return any_edges;
 	}
 };
 
@@ -372,9 +380,14 @@ create_crack_codes(
 	bool permissible
 ) {
 	Graph G;
-	G.init(labels, sx, sy, permissible);
+	bool any_edges = G.init(labels, sx, sy, permissible);
 
 	std::vector<std::pair<int64_t, std::vector<char>>> chains;
+
+	if (!any_edges) {
+		return symbols_to_codepoints(chains);
+	}
+
 	std::vector<int64_t> revisit;
 	revisit.reserve(sx);
 	std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
