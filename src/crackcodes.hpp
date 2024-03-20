@@ -207,22 +207,22 @@ symbols_to_codepoints(
 	return encoded_chains;
 }
 
-void remove_initial_branch(
-	int64_t& node,
+int64_t remove_initial_branch(
+	int64_t node,
 	std::vector<char>& code,
 	const int64_t sx, const int64_t sy
 ) {
 	if (code.empty()) {
-		return;
+		return node;
 	}
 	else if (code[0] != 'b') {
-		return;
+		return node;
 	}
 
 	int64_t i = 1;
 	while (code[i] != 't') {
 		if (code[i] == 'b') {
-			return;
+			return node;
 		}
 		i++;
 	}
@@ -263,7 +263,7 @@ void remove_initial_branch(
 		std::swap(code[i], code[last - i + 1]);
 	}
 
-	node = pos_x + sxe * pos_y;
+	return pos_x + sxe * pos_y;
 }
 
 std::vector<uint64_t> read_boc_index(
@@ -383,7 +383,6 @@ create_crack_codes(
 	int64_t start_node = 0;
 
 	while ((start_node = G.next_cluster(start_node)) != -1) {
-		printf("%d\n", start_node);
 		int64_t node = start_node;
 
 		std::vector<char> code;
@@ -457,9 +456,11 @@ create_crack_codes(
 			branches_taken--;
 		}
 
-		remove_initial_branch(start_node, code, sx, sy);
+		int64_t adjusted_start_node = remove_initial_branch(
+			start_node, code, sx, sy
+		);
 		chains.push_back(
-			std::make_pair(start_node, code)
+			std::make_pair(adjusted_start_node, code)
 		);
 	}
 
