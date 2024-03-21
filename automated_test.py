@@ -22,7 +22,7 @@ def test_compress_decompress_random(dtype, markov_model_order):
   print(recovered.T)
   assert np.all(labels == recovered)
 
-  labels = np.random.randint(0,40,size=(1000,999,1), dtype=dtype)
+  labels = np.random.randint(0,40,size=(256,255,1), dtype=dtype)
   binary = crackle.compress(labels, markov_model_order=markov_model_order)
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)

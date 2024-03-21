@@ -29,9 +29,19 @@ inline std::pair<int64_t, int64_t> mkedge(int64_t a, int64_t b){
 
 struct Graph {
 	std::vector<uint8_t> adjacency;
-	std::vector<std::vector<std::pair<int64_t, int64_t>>> component_edge_list;
+	
 	int64_t sxe;
 	int64_t sye;
+
+	int64_t next_cluster(int64_t idx) {
+		for (int64_t i = idx; i < sxe * sye; i++) {
+			if (adjacency[i]) {
+				return i;
+			}
+		}
+
+		return -1;
+	}
 
 	void neighbors(int64_t node, std::vector<int64_t> &nbrs) {
 		nbrs.clear();
@@ -71,12 +81,8 @@ struct Graph {
 		}
 	}
 
-	int64_t num_components() {
-		return component_edge_list.size();
-	}
-
 	template <typename LABEL>
-	void init(
+	bool init(
 		const LABEL* labels,
 		const int64_t sx, const int64_t sy,
 		const bool permissible
@@ -86,13 +92,7 @@ struct Graph {
 
 		adjacency.resize(sxe * sye);
 
-		crackle::cc3d::DisjointSet<uint32_t> equivalences(sxe * sye);
-		for (int64_t i = 0; i < sxe * sye; i++) {
-			equivalences.ids[i] = i;
-		}
-
-		std::vector<std::pair<int64_t, int64_t>> all_edges;
-		all_edges.reserve(sxe * sye / 10);
+		bool any_edges = false;
 
 		if (permissible) {
 			// assign vertical edges
@@ -103,8 +103,7 @@ struct Graph {
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
-						equivalences.ids[node_down] = node_up;
-						all_edges.emplace_back(node_up,node_down);
+						any_edges = true;
 					}
 				}
 			}
@@ -117,8 +116,7 @@ struct Graph {
 						int64_t node_right = (x+1) + sxe * y;
 						adjacency[node_left] |= 0b0001;
 						adjacency[node_right] |= 0b0010;
-						equivalences.unify(node_left, node_right);
-						all_edges.emplace_back(node_left,node_right);
+						any_edges = true;
 					}
 				}
 			}
@@ -132,8 +130,7 @@ struct Graph {
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
-						equivalences.ids[node_down] = node_up;
-						all_edges.emplace_back(node_up,node_down);
+						any_edges = true;
 					}
 				}
 			}
@@ -146,34 +143,13 @@ struct Graph {
 						int64_t node_right = (x+1) + sxe * y;
 						adjacency[node_left] |= 0b0001;
 						adjacency[node_right] |= 0b0010;
-						equivalences.unify(node_left, node_right);
-						all_edges.emplace_back(node_left, node_right);
+						any_edges = true;
 					}
 				}
 			}			
 		}
 
-		component_edge_list.resize(all_edges.size() * 2);
-
-		std::vector<int64_t> renumber(sxe*sye);
-		int64_t next_label = 1;
-		int64_t label = 0;
-		int64_t membership = 0;
-		for (auto pair : all_edges) {
-			label = equivalences.root(pair.first);
-			if (renumber[label] == 0) {
-				renumber[label] = next_label;
-				membership = next_label;
-				next_label++;
-			}
-			else {
-				membership = renumber[label];
-			}
-
-			component_edge_list[membership - 1].push_back(mkedge(pair.first, pair.second));
-		}
-
-		component_edge_list.resize(next_label - 1);
+		return any_edges;
 	}
 };
 
@@ -188,26 +164,20 @@ symbols_to_codepoints(
 	const uint64_t TERM[2] = { DirectionCode::DOWN, DirectionCode::UP };
 	const uint64_t TERM2[2] = { DirectionCode::RIGHT, DirectionCode::LEFT };
 
+	uint8_t lookup[256];
+	lookup[static_cast<uint8_t>('u')] = DirectionCode::UP;
+	lookup[static_cast<uint8_t>('d')] = DirectionCode::DOWN;
+	lookup[static_cast<uint8_t>('l')] = DirectionCode::LEFT;
+	lookup[static_cast<uint8_t>('r')] = DirectionCode::RIGHT;
+
 	for (auto [node, chain] : chains) {
 		std::vector<uint8_t> code;
-		code.reserve(chain.size());
+		code.reserve(chain.size() * 3 / 2); // account for b and t
 
 		for (uint64_t i = 0; i < chain.size(); i++) {
 			char symbol = chain[i];
 			if (symbol == 's') {
 				continue;
-			}
-			else if (symbol == 'u') {
-				code.push_back(DirectionCode::UP);
-			}
-			else if (symbol == 'd') {
-				code.push_back(DirectionCode::DOWN);
-			}
-			else if (symbol == 'l') {
-				code.push_back(DirectionCode::LEFT);
-			}
-			else if (symbol == 'r') {
-				code.push_back(DirectionCode::RIGHT);
 			}
 			else if (symbol == 'b') {
 				if (i > 0 && code.back() != BRANCH[1]) {
@@ -230,7 +200,7 @@ symbols_to_codepoints(
 				}
 			}
 			else {
-				throw std::runtime_error("Invalid symbol.");
+				code.push_back(lookup[static_cast<uint8_t>(symbol)]);
 			}
 		}
 		encoded_chains[node] = std::move(code);
@@ -239,22 +209,22 @@ symbols_to_codepoints(
 	return encoded_chains;
 }
 
-void remove_initial_branch(
-	int64_t& node,
+int64_t remove_initial_branch(
+	int64_t node,
 	std::vector<char>& code,
 	const int64_t sx, const int64_t sy
 ) {
 	if (code.empty()) {
-		return;
+		return node;
 	}
 	else if (code[0] != 'b') {
-		return;
+		return node;
 	}
 
 	int64_t i = 1;
 	while (code[i] != 't') {
 		if (code[i] == 'b') {
-			return;
+			return node;
 		}
 		i++;
 	}
@@ -295,7 +265,7 @@ void remove_initial_branch(
 		std::swap(code[i], code[last - i + 1]);
 	}
 
-	node = pos_x + sxe * pos_y;
+	return pos_x + sxe * pos_y;
 }
 
 std::vector<uint64_t> read_boc_index(
@@ -404,38 +374,29 @@ create_crack_codes(
 	bool permissible
 ) {
 	Graph G;
-	G.init(labels, sx, sy, permissible);
-
-	const int64_t n_clusters = G.num_components();
+	bool any_edges = G.init(labels, sx, sy, permissible);
 
 	std::vector<std::pair<int64_t, std::vector<char>>> chains;
+
+	if (!any_edges) {
+		return symbols_to_codepoints(chains);
+	}
+
 	std::vector<int64_t> revisit;
 	revisit.reserve(sx);
 	std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
 
-	if (n_clusters == 0) {
-		return symbols_to_codepoints(chains);
-	}
-
 	std::vector<int64_t> neighbors;
-	for (int64_t cluster = 0; cluster < n_clusters; cluster++) {
-		auto& cluster_edges = G.component_edge_list[cluster];
-		uint64_t remaining = cluster_edges.size();
-		
-		if (remaining == 0) {
-			continue;
-		}
+	int64_t start_node = 0;
 
-		std::pair<int64_t, int64_t> start_edge = cluster_edges[0];
-
-		int64_t node = start_edge.first;
-		int64_t start_node = start_edge.first;
+	while ((start_node = G.next_cluster(start_node)) != -1) {
+		int64_t node = start_node;
 
 		std::vector<char> code;
 		robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
 		int64_t branches_taken = 1;
 
-		while (remaining > 0 || !revisit.empty()) {
+		while (G.adjacency[node] || !revisit.empty()) {
 			G.neighbors(node, neighbors);
 
 			if (!G.adjacency[node]) {
@@ -449,7 +410,12 @@ create_crack_codes(
 						break;
 					}
 				}
-				continue;
+				if (node > -1) {
+					continue;
+				}
+				else {
+					break;
+				}
 			}
 			else if (neighbors.size() > 1) {
 				code.push_back('b');
@@ -476,7 +442,6 @@ create_crack_codes(
 			}
 
 			auto edge = mkedge(node, next_node);
-			remaining--;
 			G.erase_edge(edge);
 			node = next_node;
 
@@ -503,9 +468,11 @@ create_crack_codes(
 			branches_taken--;
 		}
 
-		remove_initial_branch(start_node, code, sx, sy);
+		int64_t adjusted_start_node = remove_initial_branch(
+			start_node, code, sx, sy
+		);
 		chains.push_back(
-			std::make_pair(start_node, code)
+			std::make_pair(adjusted_start_node, code)
 		);
 	}
 
@@ -698,7 +665,9 @@ void decode_permissible_crack_code(
 		for (unsigned char symbol : symbols) {
 			int64_t loc = x + sx * y;
 			if (loc < 0 || loc >= (sx+1) * (sy+1)) {
-				throw std::runtime_error("crackle: decode_permissible_crack_code: index out of range.");
+				std::string err = std::string("crackle: decode_permissible_crack_code: index out of range. loc: ");
+				err += std::to_string(loc);
+				throw std::runtime_error(err);
 			}
 
 			if (symbol == 'u') {
