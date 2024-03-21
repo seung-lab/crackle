@@ -416,7 +416,12 @@ create_crack_codes(
 						break;
 					}
 				}
-				continue;
+				if (node > -1) {
+					continue;
+				}
+				else {
+					break;
+				}
 			}
 			else if (neighbors.size() > 1) {
 				code.push_back('b');
@@ -666,7 +671,9 @@ void decode_permissible_crack_code(
 		for (unsigned char symbol : symbols) {
 			int64_t loc = x + sx * y;
 			if (loc < 0 || loc >= (sx+1) * (sy+1)) {
-				throw std::runtime_error("crackle: decode_permissible_crack_code: index out of range.");
+				std::string err = std::string("crackle: decode_permissible_crack_code: index out of range. loc: ");
+				err += std::to_string(loc);
+				throw std::runtime_error(err);
 			}
 
 			if (symbol == 'u') {
