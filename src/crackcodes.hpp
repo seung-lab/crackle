@@ -604,9 +604,8 @@ codepoints_to_symbols(
 		}
 
 		if (branches_taken == 0) {
-			auto vec = chains[node];
+			auto& vec = chains[node];
 			vec.insert(vec.end(), symbols.begin(), symbols.end());
-			chains[node] = vec;
 			symbols.clear();
 		}
 	}
