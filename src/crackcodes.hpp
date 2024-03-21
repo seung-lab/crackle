@@ -164,26 +164,20 @@ symbols_to_codepoints(
 	const uint64_t TERM[2] = { DirectionCode::DOWN, DirectionCode::UP };
 	const uint64_t TERM2[2] = { DirectionCode::RIGHT, DirectionCode::LEFT };
 
+	uint8_t lookup[256];
+	lookup[static_cast<uint8_t>('u')] = DirectionCode::UP;
+	lookup[static_cast<uint8_t>('d')] = DirectionCode::DOWN;
+	lookup[static_cast<uint8_t>('l')] = DirectionCode::LEFT;
+	lookup[static_cast<uint8_t>('r')] = DirectionCode::RIGHT;
+
 	for (auto [node, chain] : chains) {
 		std::vector<uint8_t> code;
-		code.reserve(chain.size());
+		code.reserve(chain.size() * 3 / 2); // account for b and t
 
 		for (uint64_t i = 0; i < chain.size(); i++) {
 			char symbol = chain[i];
 			if (symbol == 's') {
 				continue;
-			}
-			else if (symbol == 'u') {
-				code.push_back(DirectionCode::UP);
-			}
-			else if (symbol == 'd') {
-				code.push_back(DirectionCode::DOWN);
-			}
-			else if (symbol == 'l') {
-				code.push_back(DirectionCode::LEFT);
-			}
-			else if (symbol == 'r') {
-				code.push_back(DirectionCode::RIGHT);
 			}
 			else if (symbol == 'b') {
 				if (i > 0 && code.back() != BRANCH[1]) {
@@ -206,7 +200,7 @@ symbols_to_codepoints(
 				}
 			}
 			else {
-				throw std::runtime_error("Invalid symbol.");
+				code.push_back(lookup[static_cast<uint8_t>(symbol)]);
 			}
 		}
 		encoded_chains[node] = std::move(code);
