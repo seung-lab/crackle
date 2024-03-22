@@ -15,8 +15,8 @@
 #  define popcount __popcnt
 
 // https://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code
-uint32_t ctz(uint32_t value) {
-    uint32_t trailing_zero = 0;
+unsigned long ctz(unsigned long value) {
+    unsigned long trailing_zero = 0;
     if (_BitScanForward(&trailing_zero, value)) {
         return trailing_zero;
     }
