@@ -95,23 +95,18 @@ struct Graph {
 		bool any_edges = false;
 
 		if (permissible) {
-			// assign vertical edges
 			for (int64_t y = 0; y < sy; y++) {
-				for (int64_t x = 1; x < sx; x++) {
-					if (labels[x + sx * y] == labels[(x-1) + sx * y]) {
+				for (int64_t x = 0; x < sx; x++) {
+					// assign vertical edges
+					if (x > 0 && labels[x + sx * y] == labels[(x-1) + sx * y]) {
 						int64_t node_up = x + sxe * y;
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
 						any_edges = true;
 					}
-				}
-			}
-
-			// assign horizontal edges
-			for (int64_t y = 1; y < sy; y++) {
-				for (int64_t x = 0; x < sx; x++) {
-					if (labels[x + sx * y] == labels[x + sx * (y-1)]) {
+					// assign horizontal edges
+					if (y > 0 && labels[x + sx * y] == labels[x + sx * (y-1)]) {
 						int64_t node_left = x + sxe * y;
 						int64_t node_right = (x+1) + sxe * y;
 						adjacency[node_left] |= 0b0001;
@@ -122,23 +117,18 @@ struct Graph {
 			}
 		}
 		else {
-			// assign vertical edges
 			for (int64_t y = 0; y < sy; y++) {
-				for (int64_t x = 1; x < sx; x++) {
-					if (labels[x + sx * y] != labels[(x-1) + sx * y]) {
+				for (int64_t x = 0; x < sx; x++) {
+					// assign vertical edges
+					if (x > 0 && labels[x + sx * y] != labels[(x-1) + sx * y]) {
 						int64_t node_up = x + sxe * y;
 						int64_t node_down = x + sxe * (y + 1);
 						adjacency[node_up] |= 0b0100;
 						adjacency[node_down] |= 0b1000;
 						any_edges = true;
 					}
-				}
-			}
-
-			// assign horizontal edges
-			for (int64_t y = 1; y < sy; y++) {
-				for (int64_t x = 0; x < sx; x++) {
-					if (labels[x + sx * y] != labels[x + sx * (y-1)]) {
+					// assign horizontal edges
+					if (y > 0 && labels[x + sx * y] != labels[x + sx * (y-1)]) {
 						int64_t node_left = x + sxe * y;
 						int64_t node_right = (x+1) + sxe * y;
 						adjacency[node_left] |= 0b0001;
@@ -146,7 +136,7 @@ struct Graph {
 						any_edges = true;
 					}
 				}
-			}			
+			}
 		}
 
 		return any_edges;
