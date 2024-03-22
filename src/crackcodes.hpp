@@ -16,7 +16,7 @@
 
 // https://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code
 uint32_t ctz(uint32_t value) {
-    DWORD trailing_zero = 0;
+    uint32_t trailing_zero = 0;
     if (_BitScanForward(&trailing_zero, value)) {
         return trailing_zero;
     }
