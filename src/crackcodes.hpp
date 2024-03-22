@@ -386,19 +386,20 @@ create_crack_codes(
 	revisit.reserve(sx);
 	std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
 
-	std::vector<int64_t> neighbors;
 	int64_t start_node = 0;
+
+	int64_t lookup_dir[4] = { 1, -1, sx+1, -(sx+1) };
+	char lookup_symbol[4] = { 'r', 'l', 'd', 'u' };
 
 	while ((start_node = G.next_cluster(start_node)) != -1) {
 		int64_t node = start_node;
 
 		std::vector<char> code;
+		code.reserve(sx >> 2);
 		robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
 		int64_t branches_taken = 1;
 
 		while (G.adjacency[node] || !revisit.empty()) {
-			G.neighbors(node, neighbors);
-
 			if (!G.adjacency[node]) {
 				code.push_back('t');
 				branches_taken--;
@@ -417,7 +418,7 @@ create_crack_codes(
 					break;
 				}
 			}
-			else if (neighbors.size() > 1) {
+			else if (__builtin_popcount(G.adjacency[node]) > 1) {
 				code.push_back('b');
 				revisit.push_back(node);
 				revisit_ct[node]++;
@@ -425,21 +426,10 @@ create_crack_codes(
 				branches_taken++;
 			}
 
-			int64_t next_node = neighbors[0];
-			int64_t dir_taken = next_node - node;
-
-			if (dir_taken == 1) {
-				code.push_back('r');
-			}
-			else if (dir_taken == -1) {
-				code.push_back('l');
-			}
-			else if (dir_taken > 1) {
-				code.push_back('d');
-			}
-			else {
-				code.push_back('u');
-			}
+			int next_neighbor_idx = __builtin_ctz(G.adjacency[node]);
+			int64_t dir_taken = lookup_dir[next_neighbor_idx];
+			int64_t next_node = node + dir_taken;
+			code.push_back(lookup_symbol[next_neighbor_idx]);
 
 			auto edge = mkedge(node, next_node);
 			G.erase_edge(edge);
