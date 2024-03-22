@@ -10,6 +10,25 @@
 #include "lib.hpp"
 #include "cc3d.hpp"
 
+#ifdef _MSC_VER
+#  include <intrin.h>
+#  define popcount __popcnt
+
+// https://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code
+uint32_t ctz(uint32_t value) {
+    DWORD trailing_zero = 0;
+    if (_BitScanForward(&trailing_zero, value)) {
+        return trailing_zero;
+    }
+    else {
+        return 32;
+    }
+}
+#else
+#  define popcount __builtin_popcount
+#  define ctz __builtin_ctz
+#endif
+
 namespace crackle {
 namespace crackcodes {
 
@@ -408,7 +427,7 @@ create_crack_codes(
 					break;
 				}
 			}
-			else if (__builtin_popcount(G.adjacency[node]) > 1) {
+			else if (popcount(G.adjacency[node]) > 1) {
 				code.push_back('b');
 				revisit.push_back(node);
 				revisit_ct[node]++;
@@ -416,7 +435,7 @@ create_crack_codes(
 				branches_taken++;
 			}
 
-			int next_neighbor_idx = __builtin_ctz(G.adjacency[node]);
+			int next_neighbor_idx = ctz(G.adjacency[node]);
 			int64_t dir_taken = lookup_dir[next_neighbor_idx];
 			int64_t next_node = node + dir_taken;
 			code.push_back(lookup_symbol[next_neighbor_idx]);
