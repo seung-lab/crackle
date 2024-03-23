@@ -652,17 +652,19 @@ void decode_permissible_crack_code(
 
 	int64_t sxe = sx + 1;
 
+	const int64_t pixels = (sx+1) * (sy+1);
+
 	// graph is of corners and edges
 	// origin is located at top left
 	// corner of the image
 	for (auto& [node, symbols]: chains) {
 		int64_t y = node / sxe;
 		int64_t x = node - (sxe * y);
+		uint64_t loc = x + sx * y;
 
 		std::stack<int64_t> revisit;
 		for (unsigned char symbol : symbols) {
-			int64_t loc = x + sx * y;
-			if (loc < 0 || loc >= (sx+1) * (sy+1)) {
+			if (loc >= pixels) {
 				std::string err = std::string("crackle: decode_permissible_crack_code: index out of range. loc: ");
 				err += std::to_string(loc);
 				throw std::runtime_error(err);
@@ -676,6 +678,7 @@ void decode_permissible_crack_code(
 					edges[loc - sx] |= 0b0010;
 				}
 				y--;
+				loc -= sx;
 			}
 			else if (symbol == 'd') {
 				if (x > 0) {
@@ -683,6 +686,7 @@ void decode_permissible_crack_code(
 				}
 				edges[loc] |= 0b0010;
 				y++;
+				loc += sx;
 			}
 			else if (symbol == 'l') {
 				if (x > 0 && y > 0) {
@@ -692,6 +696,7 @@ void decode_permissible_crack_code(
 					edges[loc-1] |= 0b1000;
 				}
 				x--;
+				loc--;
 			}
 			else if (symbol == 'r') {
 				if (y > 0) {
@@ -699,6 +704,7 @@ void decode_permissible_crack_code(
 				}
 				edges[loc] |= 0b1000;
 				x++;
+				loc++;
 			}
 			else if (symbol == 'b') {
 				revisit.push(loc);
@@ -726,18 +732,19 @@ void decode_impermissible_crack_code(
 
 	int64_t sxe = sx + 1;
 
+	const int64_t pixels = (sx+1) * (sy+1);
+
 	// graph is of corners and edges
 	// origin is located at top left
 	// corner of the image
 	for (auto& [node, symbols]: chains) {
 		int64_t y = node / sxe;
 		int64_t x = node - (sxe * y);
+		uint64_t loc = x + sx * y;
 
 		std::stack<int64_t> revisit;
 		for (unsigned char symbol : symbols) {
-			int64_t loc = x + sx * y;
-
-			if (loc < 0 || loc >= (sx+1) * (sy+1)) {
+			if (loc >= pixels) {
 				throw std::runtime_error("crackle: decode_impermissible_crack_code: index out of range.");
 			}
 
@@ -749,6 +756,7 @@ void decode_impermissible_crack_code(
 					edges[loc - sx] &= 0b1101;
 				}
 				y--;
+				loc -= sx;
 			}
 			else if (symbol == 'd') {
 				if (x > 0) {
@@ -756,6 +764,7 @@ void decode_impermissible_crack_code(
 				}
 				edges[loc] &= 0b1101;
 				y++;
+				loc += sx;
 			}
 			else if (symbol == 'l') {
 				if (x > 0 && y > 0) {
@@ -765,6 +774,7 @@ void decode_impermissible_crack_code(
 					edges[loc-1] &= 0b0111;
 				}
 				x--;
+				loc--;
 			}
 			else if (symbol == 'r') {
 				if (y > 0) {
@@ -772,6 +782,7 @@ void decode_impermissible_crack_code(
 				}
 				edges[loc] &= 0b0111;
 				x++;
+				loc++;
 			}
 			else if (symbol == 'b') {
 				revisit.push(loc);
