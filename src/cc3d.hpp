@@ -145,9 +145,10 @@ OUT* relabel(
 }
 
 template <typename OUT>
-std::vector<OUT> color_connectivity_graph(
+OUT* color_connectivity_graph(
   const std::vector<uint8_t> &vcg, // voxel connectivity graph
   const int64_t sx, const int64_t sy, const int64_t sz,
+  OUT* out_labels = NULL,
   uint64_t &N = _dummy_N
 ) {
 
@@ -157,8 +158,11 @@ std::vector<OUT> color_connectivity_graph(
   uint64_t max_labels = static_cast<uint64_t>(voxels) + 1; // + 1L for an array with no zeros
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
+  if (out_labels == NULL) {
+    out_labels = new OUT[voxels]();
+  }
+
   DisjointSet<OUT> equivalences(max_labels);
-  std::vector<OUT> out_labels(voxels);
 
   OUT new_label = 0;
   for (int64_t z = 0; z < sz; z++) {
@@ -198,7 +202,7 @@ std::vector<OUT> color_connectivity_graph(
     }
   }
 
-  relabel<OUT>(out_labels.data(), voxels, new_label, equivalences, N);
+  relabel<OUT>(out_labels, voxels, new_label, equivalences, N);
   return out_labels;
 }
 
