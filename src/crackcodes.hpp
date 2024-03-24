@@ -651,7 +651,7 @@ void decode_permissible_crack_code(
 
 	int64_t sxe = sx + 1;
 
-	const int64_t pixels = (sx+1) * (sy+1);
+	const uint64_t pixels = (sx+1) * (sy+1);
 
 	// graph is of corners and edges
 	// origin is located at top left
@@ -731,7 +731,7 @@ void decode_impermissible_crack_code(
 
 	int64_t sxe = sx + 1;
 
-	const int64_t pixels = (sx+1) * (sy+1);
+	const uint64_t pixels = (sx+1) * (sy+1);
 
 	// graph is of corners and edges
 	// origin is located at top left
