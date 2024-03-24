@@ -624,16 +624,15 @@ std::vector<uint8_t> unpack_codepoints(
 	std::vector<uint8_t> codepoints;
 	codepoints.reserve(4 * (code.size() - index_size));
 
+	uint8_t last = 0;
+
 	for (uint64_t i = index_size; i < code.size(); i++) {
 		for (uint64_t j = 0; j < 4; j++) {
 			uint8_t codepoint = static_cast<uint8_t>((code[i] >> (2*j)) & 0b11);
+			codepoint += last;
+			codepoint &= 0b11;
+			last = codepoint;
 			codepoints.push_back(codepoint);
-		}
-	}
-	for (uint64_t i = 1; i < codepoints.size(); i++) {
-		codepoints[i] += codepoints[i-1];
-		if (codepoints[i] > 3) {
-			codepoints[i] -= 4;
 		}
 	}
 
