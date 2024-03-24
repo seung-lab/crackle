@@ -36,7 +36,8 @@ enum DirectionCode {
 	LEFT = 0b11,
 	RIGHT = 0b01,
 	UP = 0b00,
-	DOWN = 0b10
+	DOWN = 0b10,
+	NONE = 255
 };
 
 inline std::pair<int64_t, int64_t> mkedge(int64_t a, int64_t b){
@@ -559,6 +560,8 @@ codepoints_to_symbols(
 
 	uint64_t node_i = 0;
 
+	uint8_t last_move = DirectionCode::NONE;
+
 	for (uint64_t i = 0; i < codepoints.size(); i++) {
 		if (branches_taken == 0) {
 			if (node_i >= sorted_nodes.size()) {
@@ -571,29 +574,27 @@ codepoints_to_symbols(
 			continue;
 		}
 
-		auto move = codepoints[i];
-
-		if (symbols.size()) {			
-			if (
-				(move == DirectionCode::UP && symbols.back() == 'd')
-				|| (move == DirectionCode::LEFT && symbols.back() == 'r')
-			) {
-				symbols.back() = 't';
-				branches_taken--;
-			}
-			else if (
-				(move == DirectionCode::DOWN && symbols.back() == 'u')
-				|| (move == DirectionCode::RIGHT && symbols.back() == 'l')
-			) {
-				symbols.back() = 'b';
-				branches_taken++;
-			}
-			else {
-				symbols.push_back(remap[move]);
-			}
-		}
-		else {
+		uint8_t move = codepoints[i];
+	
+		// by chance, up^down and left^right 
+		// both evaluate to 0b10
+		if ((move ^ last_move) != 0b10) {
 			symbols.push_back(remap[move]);
+			last_move = move;
+			continue;
+		}
+		else if (
+			(move == DirectionCode::UP && last_move == DirectionCode::DOWN)
+			|| (move == DirectionCode::LEFT && last_move == DirectionCode::RIGHT)
+		) {
+			symbols.back() = 't';
+			branches_taken--;
+			last_move = DirectionCode::NONE;
+		}
+		else { // the code here is DOWN+UP or RIGHT+LEFT
+			symbols.back() = 'b';
+			branches_taken++;
+			last_move = DirectionCode::NONE;
 		}
 
 		if (branches_taken == 0) {
