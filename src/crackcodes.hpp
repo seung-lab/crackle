@@ -492,19 +492,13 @@ std::vector<unsigned char> pack_codepoints(
 	std::vector<unsigned char> binary = write_boc_index(nodes, sx, sy);
 
 	std::vector<uint8_t> codepoints;
+	uint8_t last = 0;
 	for (uint64_t node : nodes) {
 		auto chain = chains[node];
 		for (uint8_t codepoint : chain) {
-			codepoints.push_back(codepoint);
-		}
-	}
-
-	if (codepoints.size() > 0) {
-		for (uint64_t i = codepoints.size() - 1; i >= 1; i--) {
-			codepoints[i] -= codepoints[i-1];
-			if (codepoints[i] > 3) {
-				codepoints[i] += 4;
-			}
+			uint8_t diffcoded = (codepoint - last) & 0b11;
+			last = codepoint;
+			codepoints.push_back(diffcoded);
 		}
 	}
 
