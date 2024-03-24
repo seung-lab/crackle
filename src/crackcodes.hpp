@@ -547,13 +547,13 @@ encode_boundaries(
 	return binary_components;
 }
 
-robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> 
+std::vector<std::pair<uint64_t, std::vector<unsigned char>> >
 codepoints_to_symbols(
 	const std::vector<uint64_t>& sorted_nodes,
 	const std::vector<uint8_t>& codepoints
 ) {
 
-	robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> chains;
+	std::vector<std::pair<uint64_t, std::vector<unsigned char>> > chains;
 
 	std::vector<unsigned char> symbols;
 	symbols.reserve(codepoints.size() * 4 * 2);
@@ -603,8 +603,7 @@ codepoints_to_symbols(
 		}
 
 		if (branches_taken == 0) {
-			auto& vec = chains[node];
-			vec.insert(vec.end(), symbols.begin(), symbols.end());
+			chains.push_back(std::make_pair(node, symbols));
 			symbols.clear();
 		}
 	}
@@ -642,7 +641,7 @@ std::vector<uint8_t> unpack_codepoints(
 }
 
 void decode_permissible_crack_code(
-	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
+	const std::vector<std::pair<uint64_t, std::vector<unsigned char>> > &chains,
 	const int64_t sx, const int64_t sy,
 	uint8_t* edges
 ) {
@@ -722,7 +721,7 @@ void decode_permissible_crack_code(
 }
 
 void decode_impermissible_crack_code(
-	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
+	const std::vector<std::pair<uint64_t, std::vector<unsigned char>> > &chains,
 	const int64_t sx, const int64_t sy,
 	uint8_t* edges
 ) {
@@ -800,7 +799,7 @@ void decode_impermissible_crack_code(
 }
 
 void decode_crack_code(
-	const robin_hood::unordered_node_map<uint64_t, std::vector<unsigned char>> &chains,
+	const std::vector<std::pair<uint64_t, std::vector<unsigned char>> > &chains,
 	const uint64_t sx, const uint64_t sy,
 	const bool permissible, 
 	uint8_t* slice_edges
