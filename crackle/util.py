@@ -1,3 +1,5 @@
+from typing import Optional
+
 import io
 import os
 import gzip
@@ -33,9 +35,9 @@ def aload(filelike) -> CrackleArray:
   """Load a CrackleArray from a file."""
   return CrackleArray(_load(filelike))
 
-def load(filelike) -> np.ndarray:
+def load(filelike, label:Optional[int] = None) -> np.ndarray:
   """Load an image from a file-like object or file path."""
-  return decompress(_load(filelike))
+  return decompress(_load(filelike), label=label)
 
 def load_numpy(filelike):
   f = io.BytesIO(_load(filelike))
