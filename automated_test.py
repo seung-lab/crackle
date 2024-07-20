@@ -298,6 +298,18 @@ def test_zstack_ones():
   binary2 = crackle.compress(np.ones([512,512,sz], dtype=np.uint32))
   assert binary == binary2
 
+  sz = 10
+
+  image = np.random.randint(0,255, size=(64, 64, sz), dtype=np.uint8)
+  binary = crackle.zstack([
+    image[:,:,2*z:2*z+2]
+    for z in range(sz // 2)
+  ])
+
+  recovered = crackle.decompress(binary)
+  assert np.all(image == recovered)
+  
+
 
 
 
