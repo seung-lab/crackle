@@ -5,7 +5,8 @@ from .codec import (
   compress, decompress, decompress_range, 
   remap, labels, nbytes, contains, 
   header, crack_codes, refit, 
-  renumber, num_labels
+  renumber, num_labels, 
+  zstack, zsplit,
 )
 from . import codec
 import numpy as np
@@ -95,6 +96,41 @@ class CrackleArray:
       cutout = cutout[..., np.newaxis]
 
     return cutout
+
+  def __setitem__(self, slcs, data):
+    if slcs == (Ellipsis, np.newaxis):
+      self.shape = self.shape + (1,)
+      return self
+
+    slices = reify_slices(slcs, *self.shape[:3])
+
+    if isinstance(slcs, (slice, int)):
+      slcs = (slcs,)
+
+    slice_all = slice(None, None, None)
+
+    while len(slcs) < 3:
+       slcs += (slice_all,)
+
+    if slices[0] != slice(0, self.shape[0], 1) or slices[1] != slice(0, self.shape[1], 1):
+      raise ValueError("Currently, we only support writing entire z slices.")
+
+    head = self.header()
+    data_binary = compress(data.astype(head.dtype, copy=False))
+
+    if slices[2] == slice(0, self.shape[2], 1):
+      self.binary = data_binary
+      return
+
+    (before_0, mid_0, after_0) = zsplit(self.binary, slcs[2].start)
+    (before_1, mid_1, after_1) = zsplit(self.binary, slcs[2].stop)
+    
+    self.binary = zstack([
+      before_0,
+      data_binary,
+      mid_1,
+      after_1,
+    ])
 
 class CrackleRemoteArray(CrackleArray):
   """EXPERIMENTAL DO NOT RELY ON THIS INTERFACE."""

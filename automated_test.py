@@ -325,6 +325,27 @@ def test_zsplit():
   assert np.all(after == labels[:,:,4:])
 
 
+def test_edit_array():
+  labels = np.ones([256,256,10], dtype=np.uint32)
+  binary = crackle.compress(labels)
+  arr = crackle.CrackleArray(binary)
 
+  res = np.full(labels.shape, 2, dtype=np.uint32)
+  arr[:,:,:] = res
+  assert np.all(arr[:] == res)
 
+  labels = np.ones([256,256,10], dtype=np.uint32)
+  binary = crackle.compress(labels)
+  arr = crackle.CrackleArray(binary)
+
+  res = np.full([256, 256, 5], 2, dtype=np.uint32)
+  arr[:,:,3:8] = res
+
+  ans = np.ones(labels.shape, dtype=np.uint32)
+  ans[:,:,3:8] = 2
+
+  import microviewer
+  microviewer.view(arr[:], seg=True)
+
+  assert np.all(arr[:] == ans)
 
