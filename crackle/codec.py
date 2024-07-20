@@ -699,8 +699,6 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
       raise ValueError("All binaries must be in either Fortran or C order.")
     if head.data_width != first_head.data_width:
       raise ValueError("All binaries must be the same data width.")
-    if head.stored_data_width != first_head.stored_data_width:
-      raise ValueError("All binaries must be the same stored data width.")
     if head.signed != first_head.signed:
       raise ValueError("All binaries must have the same sign.")
 
