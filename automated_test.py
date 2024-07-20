@@ -263,7 +263,7 @@ def test_remap_sorted():
   for label in new_labels:
     assert crackle.contains(binary, label)
 
-def test_zstack():
+def test_zstack_ones():
 
   sz = 100
 
@@ -288,3 +288,17 @@ def test_zstack():
 
   arr = crackle.decompress(binary)
   assert np.all(arr == 1)
+
+  sz = 100
+
+  binary = crackle.zstack([
+    np.ones([512,512,2], dtype=np.uint32)
+    for z in range(sz // 2)
+  ])
+  binary2 = crackle.compress(np.ones([512,512,sz], dtype=np.uint32))
+  assert binary == binary2
+
+
+
+
+
