@@ -841,3 +841,33 @@ def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
   after = synth(head,  all_zindex[z+1:], label_idx[z+1:], after_keys, cracks[z+1:])
 
   return (before, middle, after)
+
+def asfortranarray(binary:bytes) -> bytes:
+  """Convert a crackle binary to Fortran (column-major) order."""
+  head = header(binary)
+  if head.fortran_order:
+    return binary
+
+  head.fortran_order = True
+
+  return b''.join([
+    head.tobytes(),
+    binary[HEADER_BYTES:],
+  ])
+
+def ascontiguousarray(binary:bytes) -> bytes:
+  """Convert a crackle binary to C (row-major) order."""
+  head = header(binary)
+  if not head.fortran_order:
+    return binary
+
+  head.fortran_order = False
+
+  return b''.join([
+    head.tobytes(),
+    binary[HEADER_BYTES:],
+  ])
+
+
+
+
