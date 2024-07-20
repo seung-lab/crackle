@@ -707,6 +707,9 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     sz += head.sz
     binaries.append(binary)
 
+  if len(binaries) == 1:
+    return binaries[0]
+
   first_head.sz = sz
 
   uniq = []
