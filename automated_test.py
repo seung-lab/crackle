@@ -310,6 +310,20 @@ def test_zstack_ones():
   assert np.all(image == recovered)
   
 
+def test_zsplit():
+  labels = np.ones([256,256,7], dtype=np.uint32)
+  binary = crackle.compress(labels)
+  (before, middle, after) = crackle.zsplit(binary, 3)
+
+  before = crackle.decompress(before)
+  assert np.all(before == labels[:,:,:3])
+
+  middle = crackle.decompress(middle)
+  assert np.all(middle == labels[:,:,3:4])
+
+  after = crackle.decompress(after)
+  assert np.all(after == labels[:,:,4:])
+
 
 
 

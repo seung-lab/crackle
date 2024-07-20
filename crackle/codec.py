@@ -771,3 +771,75 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     labels_binary,
     crack_binary
   ])
+
+def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
+  """
+  Given a crackle binary, split that binary at a given z
+  into before, middle, and after binaries.
+  
+  Combined with zstack, this gives you a way to start editing
+  binaries without full decompression.
+  """
+  head = header(binary)
+  if z < 0 or z >= head.sz:
+    raise ValueError(f"{z} is outside the range 0 to {head.sz}.")
+
+  if head.label_format != LabelFormat.FLAT:
+    raise ValueError("Label format not currently supported.")
+
+  if head.sz == 1 and z == 0:
+    return (b'', binary, b'')
+
+  uniq = labels(binary)
+  raw = raw_labels(binary)
+  ccs = crack_codes(binary)
+
+  N = num_labels(binary)
+  idx_bytes = head.component_width() * head.sz
+  offset = 8 + N * head.stored_data_width
+  label_idx = np.frombuffer(raw[offset:offset + idx_bytes], dtype=f"u{head.component_width()}")
+  offset += idx_bytes
+  key_width = compute_byte_width(N)
+  keys = np.frombuffer(raw[offset:], dtype=f'u{key_width}')
+  
+  label_idx_offsets = np.concatenate([ [0], label_idx ])
+  label_idx_offsets = np.cumsum(label_idx_offsets)
+
+  before_keys = keys[:label_idx_offsets[z]]
+  middle_keys = keys[label_idx_offsets[z]:label_idx_offsets[z] + label_idx[z]]
+  after_keys = keys[label_idx_offsets[z] + label_idx[z]:]
+
+  all_zindex = np.frombuffer(components(binary)["z_index"], dtype=np.uint32)
+
+  uniq_map = { u: i for i, u in enumerate(uniq) }
+
+  def synth(head, zindex, local_label_idx, keys, cracks):
+    local_uniq = fastremap.unique(uniq[keys])
+    local_uniq_map = { uniq_map[u]: i for i, u in enumerate(local_uniq) }
+    keys = [ local_uniq_map[key] for key in keys ]
+    key_width = compute_byte_width(len(local_uniq))
+    head.stored_data_width = compute_byte_width(local_uniq.max())
+
+    labels_binary = b''.join([
+      len(local_uniq).to_bytes(8, 'little'),
+      uniq.astype(head.stored_dtype).tobytes(),
+      local_label_idx.tobytes(),
+      np.array(keys, dtype=f'u{key_width}').tobytes(),
+    ])
+
+    head.sz = len(cracks)
+    head.num_label_bytes = len(labels_binary)
+
+    return b''.join([
+      head.tobytes(),
+      zindex.tobytes(),
+      labels_binary,
+      *cracks
+    ])
+
+  cracks = crack_codes(binary)
+  before = synth(head, all_zindex[:z], label_idx[:z], before_keys, cracks[:z])
+  middle = synth(head, all_zindex[z:z+1], label_idx[z:z+1], middle_keys, cracks[z:z+1])
+  after = synth(head,  all_zindex[z+1:], label_idx[z+1:], after_keys, cracks[z+1:])
+
+  return (before, middle, after)
