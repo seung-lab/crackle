@@ -246,7 +246,7 @@ def crack_codes(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   comps = components(binary)
   z_index = np.frombuffer(comps["z_index"], dtype=np.uint32)
-  z_index = np.cumsum(z_index)
+  z_index = np.cumsum(z_index) - z_index[0]
   z_index += (
     len(header.tobytes()) 
     + header.num_label_bytes 
