@@ -119,14 +119,28 @@ class CrackleArray:
       raise ValueError("Currently, we only support writing entire z slices.")
 
     head = self.header()
-    data_binary = compress(data.astype(head.dtype, copy=False))
 
+    sz = slices[2].stop - slices[2].start
+
+    if isinstance(data, (int, float)):
+      data = np.full(
+        [ self.shape[0], self.shape[1], sz ],
+        data,
+        dtype=head.dtype,
+        order=('F' if head.fortran_order else 'C'),
+      )
+
+    if data.shape[2] != sz:
+      raise ValueError(f"{data.shape[2]} did not match slice dimensions.")
+
+    data_binary = compress(data.astype(head.dtype, copy=False))
+    
     if slices[2] == slice(0, self.shape[2], 1):
       self.binary = data_binary
       return
 
-    (before_0, mid_0, after_0) = zsplit(self.binary, slcs[2].start)
-    (before_1, mid_1, after_1) = zsplit(self.binary, slcs[2].stop)
+    (before_0, mid_0, after_0) = zsplit(self.binary, slices[2].start)
+    (before_1, mid_1, after_1) = zsplit(self.binary, slices[2].stop)
     
     del mid_0
     del after_0
