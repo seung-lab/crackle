@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import io
 import os
@@ -43,9 +43,17 @@ def load_numpy(filelike):
   f = io.BytesIO(_load(filelike))
   return np.load(f)
 
-def save(labels:np.ndarray, filelike, **kwargs):
+def save(
+  labels:Union[np.ndarray, CrackleArray], 
+  filelike, 
+  **kwargs
+):
   """Save labels into the file-like object or file path."""
-  binary = compress(labels, **kwargs)
+  if isinstance(labels, CrackleArray):
+    binary = labels.binary
+  else:
+    binary = compress(labels, **kwargs)
+
   if hasattr(filelike, 'write'):
     filelike.write(binary)
   elif (
