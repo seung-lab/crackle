@@ -344,8 +344,5 @@ def test_edit_array():
   ans = np.ones(labels.shape, dtype=np.uint32)
   ans[:,:,3:8] = 2
 
-  import microviewer
-  microviewer.view(arr[:], seg=True)
-
   assert np.all(arr[:] == ans)
 

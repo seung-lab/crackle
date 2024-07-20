@@ -41,6 +41,9 @@ class CrackleArray:
   def nbytes(self):
     return nbytes(self.binary)
 
+  def copy(self):
+    return CrackleArray(self.binary)
+
   @property
   def dtype(self):
     return header(self.binary).dtype
@@ -125,6 +128,10 @@ class CrackleArray:
     (before_0, mid_0, after_0) = zsplit(self.binary, slcs[2].start)
     (before_1, mid_1, after_1) = zsplit(self.binary, slcs[2].stop)
     
+    del mid_0
+    del after_0
+    del before_1
+
     self.binary = zstack([
       before_0,
       data_binary,
