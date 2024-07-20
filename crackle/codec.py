@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Sequence, Union
 from collections import namedtuple
 
 import numpy as np
@@ -653,3 +653,118 @@ def compress(
   labels = np.asfortranarray(labels)
   return fastcrackle.compress(labels, allow_pins, f_order, markov_model_order)
 
+def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
+  """
+  Given a set of arrays or crackle compressed binaries that
+  represent images of equal height and width and compatible 
+  dtype, create a new crackle binary that represents a single 
+  image with the input images or binaries stacked in the z-dimension.
+
+  For example, if the input images are z-depth 3, 1, 5, 3,
+  produce a new image binary that has z-size 12.
+
+  This currently only works for flat label formats 
+  and markov order 0.
+
+  Why use this? You can iteratively build a huge array within
+  limited ram.
+  """
+  binaries = []
+
+  first_head = None
+  sz = 0
+
+  for binary in images:
+    if isinstance(binary, np.ndarray):
+      binary = compress(binary)
+
+    head = header(binary)
+    if first_head is None:
+      first_head = head 
+
+    if first_head.sx != head.sx or first_head.sy != head.sy:
+      raise ValueError(
+        f"All images must have the same width and height. "
+        f"Expected sx={first_head.sx} sy={first_head.sy} ; Got: sx={head.sx} sy={head.sy}"
+      )
+    if head.label_format != LabelFormat.FLAT:
+      raise ValueError("Only the FLAT label format is compatible (for now).")
+    if head.markov_model_order != 0:
+      raise ValueError("Markov chain encoding not currently supported.")
+    if head.grid_size != first_head.grid_size:
+      raise ValueError("Grid sizes must match.")
+    if head.crack_format != first_head.crack_format:
+      raise ValueError("All crack formats must match.")
+    if head.fortran_order != first_head.fortran_order:
+      raise ValueError("All binaries must be in either Fortran or C order.")
+    if head.data_width != first_head.data_width:
+      raise ValueError("All binaries must be the same data width.")
+    if head.stored_data_width != first_head.stored_data_width:
+      raise ValueError("All binaries must be the same stored data width.")
+    if head.signed != first_head.signed:
+      raise ValueError("All binaries must have the same sign.")
+
+    sz += head.sz
+    binaries.append(binary)
+
+  first_head.sz = sz
+
+  uniq = []
+  for binary in binaries:
+    uniq.extend(labels(binary))
+  uniq = fastremap.unique(uniq)
+
+  uniq_map = {
+    u: i
+    for i, u in enumerate(uniq)
+  }
+
+  component_index = []
+  all_keys = []
+  for binary in binaries:
+    head = CrackleHeader.frombytes(binary)
+    N = num_labels(binary)
+    raw = raw_labels(binary)
+    idx_bytes = head.component_width() * head.sz
+    offset = 8 + N * head.stored_data_width
+    component_index.append(
+      np.frombuffer(raw[offset:offset + idx_bytes], dtype=f"u{head.component_width()}")
+    )
+    offset += idx_bytes
+    key_width = compute_byte_width(N)
+    keys = np.frombuffer(raw[offset:], dtype=f'u{key_width}')
+    local_uniq = labels(binary)
+    all_keys += [ uniq_map[key] for key in local_uniq[keys] ]
+
+  first_head.stored_data_width = compute_byte_width(uniq.max())
+  key_width = compute_byte_width(len(uniq))
+
+  labels_binary = b''.join([
+    len(uniq).to_bytes(8, 'little'),
+    uniq.astype(first_head.stored_dtype).tobytes(),
+    np.concatenate(component_index).tobytes(),
+    np.array(all_keys, dtype=f'u{key_width}').tobytes(),
+  ])
+
+  crack_codes_lst = []
+  zindex = np.zeros((first_head.sz,), dtype=np.uint32)
+  z = 0
+  for binary in binaries:
+    for cc in crack_codes(binary):
+      zindex[z] = len(cc)
+      crack_codes_lst.append(cc)
+      z += 1
+
+  del binaries
+
+  crack_binary = b''.join(crack_codes_lst)
+  del crack_codes_lst
+
+  first_head.num_label_bytes = len(labels_binary)
+
+  return b''.join([ 
+    first_head.tobytes(),
+    zindex.tobytes(),
+    labels_binary,
+    crack_binary
+  ])

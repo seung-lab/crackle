@@ -262,3 +262,29 @@ def test_remap_sorted():
 
   for label in new_labels:
     assert crackle.contains(binary, label)
+
+def test_zstack():
+
+  sz = 100
+
+  binary = crackle.zstack([
+    np.ones([512,512], dtype=np.uint32)
+    for z in range(sz)
+  ])
+
+  head = crackle.header(binary)
+  assert head.sx == 512
+  assert head.sy == 512
+  assert head.sz == sz
+
+  assert head.data_width == 4
+  assert head.stored_data_width == 1
+
+  assert crackle.labels(binary) == [1]
+
+  binary2 = crackle.compress(np.ones([512,512,sz], dtype=np.uint32))
+
+  assert binary == binary2
+
+  arr = crackle.decompress(binary)
+  assert np.all(arr == 1)
