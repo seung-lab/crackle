@@ -813,7 +813,7 @@ def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
     local_uniq = fastremap.unique(uniq[keys])
     local_uniq_map = { u: i for i, u in enumerate(local_uniq) }
     remapped_keys = [ local_uniq_map[k] for k in uniq[keys] ]
-    
+
     key_width = compute_byte_width(len(local_uniq))
     head.stored_data_width = compute_byte_width(local_uniq.max())
 
@@ -840,6 +840,72 @@ def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
   after = synth(head,  all_zindex[z+1:], label_idx[z+1:], after_keys, cracks[z+1:])
 
   return (before, middle, after)
+
+def extract_keys(binary:bytes) -> np.ndarray:
+  head = header(binary)
+  if head.label_format != LabelFormat.FLAT:
+    raise FormatError("Can't use this function except with FLAT labels.")
+
+  N = num_labels(binary)
+  raw = raw_labels(binary)
+  idx_bytes = head.component_width() * head.sz
+  offset = 8 + N * head.stored_data_width + idx_bytes
+  key_width = compute_byte_width(N)
+  return np.frombuffer(raw[offset:], dtype=f'u{key_width}')
+
+def condense_unique(binary:bytes) -> bytes:
+  """
+  A remapped crackle array may have
+  elements in its unique array that are
+  duplicated or not sorted. This will
+  condense the information in the array
+  and set the "is_sorted" flat to True.
+
+  Note that fully decompressing and recompressing
+  may still yield benefits as the crack code
+  will not be adjusted. If two adjacent 
+  connected components were mapped to the
+  same label, the crack code will remain 
+  oversegmented.
+  """
+  head = header(binary)
+  uniq = labels(binary)
+
+  reduced_uniq = fastremap.unique(uniq)
+
+  if np.all(uniq == reduced_uniq):
+    return binary
+
+  mapping = { u: i for i, u in enumerate(reduced_uniq) }
+
+  N = num_labels(binary)
+  key_width = compute_byte_width(N)
+
+  keys = extract_keys(binary)
+  keys = np.array([ mapping[u] for u in uniq[keys] ], dtype=f'u{key_width}')
+
+  raw = raw_labels(binary)
+  idx_bytes = head.component_width() * head.sz
+  offset = 8 + N * head.stored_data_width + idx_bytes
+  labels_idx = raw[offset:offset + idx_bytes]
+
+  labels_binary = b''.join([
+    len(reduced_uniq).to_bytes(8, 'little'),
+    reduced_uniq.astype(head.stored_dtype).tobytes(),
+    labels_idx,
+    keys.tobytes(),
+  ])
+
+  comps = components(binary)
+  head.num_label_bytes = len(labels_binary)
+  head.is_sorted = True
+
+  return b''.join([
+    head.tobytes(),
+    comps["z_index"],
+    labels_binary,
+    comps["crack_codes"],
+  ])
 
 def asfortranarray(binary:bytes) -> bytes:
   """Convert a crackle binary to Fortran (column-major) order."""
