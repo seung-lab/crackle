@@ -804,25 +804,24 @@ def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
   label_idx_offsets = np.cumsum(label_idx_offsets)
 
   before_keys = keys[:label_idx_offsets[z]]
-  middle_keys = keys[label_idx_offsets[z]:label_idx_offsets[z] + label_idx[z]]
-  after_keys = keys[label_idx_offsets[z] + label_idx[z]:]
+  middle_keys = keys[label_idx_offsets[z]:label_idx_offsets[z+1]]
+  after_keys = keys[label_idx_offsets[z+1]:]
 
   all_zindex = np.frombuffer(components(binary)["z_index"], dtype=np.uint32)
 
-  uniq_map = { u: i for i, u in enumerate(uniq) }
-
   def synth(head, zindex, local_label_idx, keys, cracks):
     local_uniq = fastremap.unique(uniq[keys])
-    local_uniq_map = { uniq_map[u]: i for i, u in enumerate(local_uniq) }
-    keys = [ local_uniq_map[key] for key in keys ]
+    local_uniq_map = { u: i for i, u in enumerate(local_uniq) }
+    remapped_keys = [ local_uniq_map[k] for k in uniq[keys] ]
+    
     key_width = compute_byte_width(len(local_uniq))
     head.stored_data_width = compute_byte_width(local_uniq.max())
 
     labels_binary = b''.join([
       len(local_uniq).to_bytes(8, 'little'),
-      uniq.astype(head.stored_dtype).tobytes(),
+      local_uniq.astype(head.stored_dtype).tobytes(),
       local_label_idx.tobytes(),
-      np.array(keys, dtype=f'u{key_width}').tobytes(),
+      np.array(remapped_keys, dtype=f'u{key_width}').tobytes(),
     ])
 
     head.sz = len(cracks)
