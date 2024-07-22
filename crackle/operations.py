@@ -445,4 +445,3 @@ def floordiv_scalar(binary:bytes, scalar:int) -> bytes:
 
 def truediv_scalar(binary:bytes, scalar:int) -> bytes:
   return operator(binary, lambda uniq: uniq / scalar)
-components
