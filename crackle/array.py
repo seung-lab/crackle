@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Any
 
 from .headers import CrackleHeader
 from .codec import (
@@ -79,8 +79,13 @@ class CrackleArray:
   def decompress(self, label:Optional[int] = None) -> bytes:
     return decompress(self.binary, label)
 
-  def __eq__(self, other:int) -> bool:
-    return self.min() == other and self.max() == other
+  def __eq__(self, other:Union[int, Any]) -> bool:
+    if isinstance(other, int):
+      return self.min() == other and self.max() == other
+    elif isinstance(other, CrackleArray):
+      return self.binary == other.binary
+    else:
+      raise TypeError(f"Type {type(other)} is not supported.")
 
   def __add__(self, other:int) -> bytes:
     return CrackleArray(add_scalar(self.binary, other))
