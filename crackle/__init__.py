@@ -47,7 +47,7 @@ from .codec import (
 	nbytes, components, component_lengths,
 	header, contains, crack_codes, refit,
 	renumber, num_labels, min, max, 
-	zstack, zsplit, full
+	zstack, zsplit, full, zeros, ones,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload
