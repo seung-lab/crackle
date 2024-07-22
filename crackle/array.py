@@ -70,31 +70,43 @@ class CrackleArray:
   def remap(self, buf, mapping, preserve_missing_labels=False):
     return CrackleArray(remap(buf, mapping, preserve_missing_labels))
 
-  def refit(self, start:int = 0):
+  def refit(self, start:int = 0) -> bytes:
     return CrackleArray(refit(self.binary))
 
-  def renumber(self, start:int = 0):
+  def renumber(self, start:int = 0) -> bytes:
     return CrackleArray(renumber(self.binary, start))
 
-  def decompress(self, label:Optional[int] = None):
+  def decompress(self, label:Optional[int] = None) -> bytes:
     return decompress(self.binary, label)
 
-  def __add__(self, other):
+  def __add__(self, other:int) -> bytes:
     return CrackleArray(add_scalar(self.binary, other))
 
-  def __sub__(self, other):
+  def __radd__(self, other:int) -> bytes:
+    return self.__add__(other)
+
+  def __sub__(self, other:int) -> bytes:
     return CrackleArray(subtract_scalar(self.binary, other))
 
-  def __mul__(self, other):
+  def __rsub__(self, other:int) -> bytes:
+    return self.__sub__(other)
+
+  def __mul__(self, other:int) -> bytes:
     return CrackleArray(multiply_scalar(self.binary, other))
 
-  def __floordiv__(self, other):
+  def __rmul__(self, other:int) -> bytes:
+    return self.__mul__(other)
+
+  def __floordiv__(self, other:int) -> bytes:
     return CrackleArray(floordiv_scalar(self.binary, other))
 
-  def __contains__(self, elem):
+  def __rfloordiv__(self, other:int) -> bytes:
+    return self.__floordiv__(other)
+
+  def __contains__(self, elem:int) -> bool:
     return contains(self.binary, elem)
 
-  def __getitem__(self, slcs):
+  def __getitem__(self, slcs) -> np.ndarray:
     if slcs == (Ellipsis, np.newaxis):
       self.shape = self.shape + (1,)
       return self
