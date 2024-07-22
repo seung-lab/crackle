@@ -933,6 +933,64 @@ def ascontiguousarray(binary:bytes) -> bytes:
     binary[HEADER_BYTES:],
   ])
 
+def full(shape, fill_value, dtype=None, order='C') -> bytes:
+  """
+  Create a crackle binary that represents an array
+  filled with a single value. Arguments are identical
+  to np.full.
+  """
+  if dtype is None:
+    dtype = np.array(fill_value).dtype
+
+  head = CrackleHeader(
+    label_format=LabelFormat.FLAT,
+    crack_format=CrackFormat.IMPERMISSIBLE,
+    data_width=np.dtype(dtype).itemsize, 
+    stored_data_width=compute_byte_width(fill_value),
+    sx=shape[0], 
+    sy=shape[1], 
+    sz=shape[2],
+    num_label_bytes=0,
+    fortran_order=(order == 'F'),
+    grid_size=int(2 ** 31),
+    signed=(fill_value < 0),
+    markov_model_order=0,
+    is_sorted=True,
+  )
+
+  labels_binary = b''.join([
+    int(1).to_bytes(8, 'little'),
+    np.array([ fill_value ], dtype=head.stored_dtype).tobytes(),
+    np.ones([ head.sz ], dtype=f'u{head.component_width()}'),
+    np.zeros([ head.sz ], dtype=np.uint8),
+  ])
+
+  head.num_label_bytes = len(labels_binary)
+  head.is_sorted = True
+
+  empty_slice_crack_code = b'\x01\x00\x00\x00\x00'
+
+  return b''.join([
+    head.tobytes(),
+    np.full([head.sz], len(empty_slice_crack_code), dtype=np.uint32),
+    labels_binary,
+    empty_slice_crack_code * head.sz,
+  ])
+
+def zeros(shape, dtype=None, order="C"):
+  return full(shape, 0, dtype, order)
+
+def ones(shape, dtype=None, order="C"):
+  return full(shape, 1, dtype, order)
+
+
+
+
+
+
+
+
+
 
 
 

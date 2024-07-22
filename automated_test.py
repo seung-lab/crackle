@@ -346,3 +346,20 @@ def test_edit_array():
 
   assert np.all(arr[:] == ans)
 
+def test_full():
+  shape = [100,200,50]
+  binary = crackle.full(shape, 0, dtype=np.uint16, order="F")
+  ans = np.full(shape, 0, dtype=np.uint16, order="F")
+
+  binary2 = crackle.compress(ans)
+  
+  assert binary == binary2
+
+  arr = crackle.decompress(binary)
+
+  assert np.all(arr == ans)
+
+
+
+
+
