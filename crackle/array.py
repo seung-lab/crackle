@@ -79,6 +79,9 @@ class CrackleArray:
   def decompress(self, label:Optional[int] = None) -> bytes:
     return decompress(self.binary, label)
 
+  def __eq__(self, other:int) -> bool:
+    return self.min() == other and self.max() == other
+
   def __add__(self, other:int) -> bytes:
     return CrackleArray(add_scalar(self.binary, other))
 
