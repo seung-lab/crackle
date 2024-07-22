@@ -115,13 +115,11 @@ class CrackleArray:
     while len(slcs) < 3:
        slcs += (slice_all,)
 
-    if slices[0] != slice(0, self.shape[0], 1) or slices[1] != slice(0, self.shape[1], 1):
-      raise ValueError("Currently, we only support writing entire z slices.")
 
     head = self.header()
-
     sz = slices[2].stop - slices[2].start
 
+    # This could be alternatively written as a remap operation
     if isinstance(data, (int, float)):
       data = np.full(
         [ self.shape[0], self.shape[1], sz ],
@@ -129,6 +127,11 @@ class CrackleArray:
         dtype=head.dtype,
         order=('F' if head.fortran_order else 'C'),
       )
+
+    if slices[0] != slice(0, self.shape[0], 1) or slices[1] != slice(0, self.shape[1], 1):
+      tmp_data = self[:,:,slices[2].start:slices[2].stop]
+      tmp_data[(slices[0], slices[1])] = data
+      data = tmp_data
 
     if data.shape[2] != sz:
       raise ValueError(f"{data.shape[2]} did not match slice dimensions.")
