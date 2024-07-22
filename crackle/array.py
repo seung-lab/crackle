@@ -3,10 +3,17 @@ from typing import Optional
 from .headers import CrackleHeader
 from .codec import (
   compress, decompress, decompress_range, 
-  remap, labels, nbytes, contains, 
-  header, crack_codes, refit, 
-  renumber, num_labels, 
+  labels, nbytes, contains, 
+  header, crack_codes, num_labels,
+  components,
+)
+from .operations import (
+  refit, 
+  renumber,
   zstack, zsplit,
+  remap,
+  add_scalar, subtract_scalar,
+  multiply_scalar, floordiv_scalar,
 )
 from . import codec
 import numpy as np
@@ -71,6 +78,18 @@ class CrackleArray:
 
   def decompress(self, label:Optional[int] = None):
     return decompress(self.binary, label)
+
+  def __add__(self, other):
+    return CrackleArray(add_scalar(self.binary, other))
+
+  def __sub__(self, other):
+    return CrackleArray(subtract_scalar(self.binary, other))
+
+  def __mul__(self, other):
+    return CrackleArray(multiply_scalar(self.binary, other))
+
+  def __floordiv__(self, other):
+    return CrackleArray(floordiv_scalar(self.binary, other))
 
   def __contains__(self, elem):
     return contains(self.binary, elem)

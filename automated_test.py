@@ -352,13 +352,36 @@ def test_full():
   ans = np.full(shape, 0, dtype=np.uint16, order="F")
 
   binary2 = crackle.compress(ans)
-  
+
   assert binary == binary2
 
   arr = crackle.decompress(binary)
 
   assert np.all(arr == ans)
 
+def test_zeros():
+  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
+  arr = crackle.decompress(binary)
+  ans = np.zeros([10,10,10], dtype=np.uint64, order="F")
+  assert crackle.labels(binary) == [ 0 ]
+  assert np.all(arr == ans)
+
+@pytest.mark.parametrize("scalar", [0, 1, 5, 255, 70000])
+def test_add(scalar):
+  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
+  print(crackle.components(binary))
+
+  arr = crackle.CrackleArray(binary)
+  assert arr.labels() == [ 0 ]
+  arr = arr + scalar
+  assert arr.labels() == [ scalar ]
+
+  assert np.all(
+    arr.decompress() == np.full([10,10,10], scalar, dtype=np.uint64, order="F")
+  )
+
+
+  
 
 
 

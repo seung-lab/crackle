@@ -43,11 +43,17 @@ Date: December 2022 - March 2023
 """
 from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
-	compress, decompress, labels, remap, 
+	compress, decompress, labels,
 	nbytes, components, component_lengths,
-	header, contains, crack_codes, refit,
-	renumber, num_labels, min, max, 
-	zstack, zsplit, full, zeros, ones,
+	header, contains, crack_codes, num_labels,
+)
+from .operations import (
+	remap, refit, renumber,
+	min, max, 
+	zstack, zsplit, 
+	full, zeros, ones,
+	add_scalar, subtract_scalar,
+	multiply_scalar, floordiv_scalar,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload
