@@ -137,7 +137,10 @@ def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
 
   if not head.is_sorted:
     head.is_sorted = True
-    binary[:CrackleHeader.HEADER_BYTES] = head.tobytes()
+    binary = b''.join([
+      head.tobytes(),
+      binary[CrackleHeader.HEADER_BYTES:]
+    ])
 
   return (binary, mapping)
 

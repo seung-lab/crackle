@@ -154,7 +154,6 @@ class CrackleArray:
     while len(slcs) < 3:
        slcs += (slice_all,)
 
-
     head = self.header()
     sz = slices[2].stop - slices[2].start
 
