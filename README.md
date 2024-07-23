@@ -51,7 +51,27 @@ labels = crackle.load("example.ckl.gz")
 
 arr = crackle.CrackleArray(binary)
 res = arr[:10,:10,:10] # array slicing (efficient z ranges)
+arr[:,:,30] = 20 # write to a crackle array (whole z slices write faster)
 20 in arr # log(N) check
+arr = arr.numpy() # convert to a numpy array
+
+# building big arrays with low memory
+binary = crackle.zeros([5000,5000,5000], dtype=np.uint64, order='F')
+
+part1 = np.zeros([1000, 1000, 1000], dtype=np.uint32)
+part2 = crackle.ones([1000, 1000, 1000], dtype=np.uint32)
+
+binary = crackle.asfortranarray(binary)
+binary = crackle.ascontiguousarray(binary)
+
+# creates a crackle binary with part1 stacked atop part2
+# in the z dimension. x and y dimensions must match
+# without needing to decompress anything.
+binary = crackle.zstack([ part1, part2 ])
+
+# splits a crackle binary into before, middle (single slice),
+# and after sections without decompressing.
+before, middle, after = crackle.zsplit(binary, z=742)
 ```
 
 *This repository is currently Beta. It works and the format is reasonably fixed. There may be some improvements down the line (such as 3d compression of crack codes), but they will be a new format version number.*

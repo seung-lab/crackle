@@ -175,6 +175,9 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
   sz = 0
 
   for binary in images:
+    if binary is None:
+      continue
+
     if isinstance(binary, np.ndarray):
       binary = compress(binary)
 
@@ -223,6 +226,9 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
   component_index = []
   all_keys = []
   for binary in binaries:
+    if binary is None:
+      continue
+
     head = CrackleHeader.frombytes(binary)
     N = num_labels(binary)
     raw = raw_labels(binary)
