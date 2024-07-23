@@ -110,6 +110,19 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   binary[offset:offset+uniq_bytes] = list(all_labels.view(np.uint8))
   return bytes(binary)
 
+def astype(binary:bytes, dtype) -> bytes:
+  """
+  Change the rendered dtype to the smallest
+  dtype needed to render the image without
+  loss of precision.
+  """
+  head = header(binary)
+  head.data_width = np.dtype(dtype).itemsize
+  return b''.join([ 
+    head.tobytes(), 
+    binary[CrackleHeader.HEADER_BYTES:] 
+  ])
+
 def refit(binary:bytes) -> bytes:
   """
   Change the rendered dtype to the smallest
@@ -118,11 +131,7 @@ def refit(binary:bytes) -> bytes:
   """
   head = header(binary)
   dtype = fastremap.fit_dtype(head.dtype, max(binary))
-  head.data_width = np.dtype(dtype).itemsize
-  return b''.join([ 
-    head.tobytes(), 
-    binary[CrackleHeader.HEADER_BYTES:] 
-  ])
+  return astype(binary, dtype)
 
 def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
   """

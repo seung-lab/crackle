@@ -8,6 +8,7 @@ from .codec import (
   components,
 )
 from .operations import (
+  astype,
   refit, 
   renumber,
   zstack, zsplit,
@@ -70,8 +71,11 @@ class CrackleArray:
   def remap(self, buf, mapping, preserve_missing_labels=False):
     return CrackleArray(remap(buf, mapping, preserve_missing_labels))
 
-  def refit(self) -> bytes:
+  def refit(self):
     return CrackleArray(refit(self.binary))
+
+  def astype(self, dtype):
+    return CrackleArray(astype(self.binary, dtype))
 
   def renumber(self, start:int = 0) -> bytes:
     return CrackleArray(renumber(self.binary, start))

@@ -48,6 +48,7 @@ from .codec import (
 	header, contains, crack_codes, num_labels,
 )
 from .operations import (
+	astype,
 	remap, refit, renumber,
 	min, max, 
 	zstack, zsplit, 
