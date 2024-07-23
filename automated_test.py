@@ -381,7 +381,12 @@ def test_add(scalar):
   )
 
 
-  
+def test_refit():
+  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
+  arr = crackle.CrackleArray(binary)
+  arr = arr.refit()
+  assert arr.dtype == np.uint8
+
 
 
 
