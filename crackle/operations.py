@@ -117,7 +117,7 @@ def refit(binary:bytes) -> bytes:
   loss of precision.
   """
   head = header(binary)
-  dtype = fastremap.fit_dtype(head.dtype, num_labels(binary))
+  dtype = fastremap.fit_dtype(head.dtype, max(binary))
   head.data_width = np.dtype(dtype).itemsize
   return b''.join([ 
     head.tobytes(), 
