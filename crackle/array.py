@@ -70,7 +70,7 @@ class CrackleArray:
   def remap(self, buf, mapping, preserve_missing_labels=False):
     return CrackleArray(remap(buf, mapping, preserve_missing_labels))
 
-  def refit(self, start:int = 0) -> bytes:
+  def refit(self) -> bytes:
     return CrackleArray(refit(self.binary))
 
   def renumber(self, start:int = 0) -> bytes:
