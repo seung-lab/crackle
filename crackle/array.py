@@ -80,6 +80,9 @@ class CrackleArray:
   def renumber(self, start:int = 0) -> bytes:
     return CrackleArray(renumber(self.binary, start))
 
+  def numpy(self):
+    return self.decompress()
+
   def decompress(self, label:Optional[int] = None) -> bytes:
     return decompress(self.binary, label)
 
