@@ -15,40 +15,40 @@ from .lib import width2dtype, compute_byte_width, compute_dtype
 
 def min(binary:bytes) -> int:
   """Returns the minimum label of the crackle binary."""
-  header = CrackleHeader.frombytes(binary)
+  head = CrackleHeader.frombytes(binary)
 
   if not head.is_sorted:
     return int(np.min(labels(binary)))
 
-  off = header.HEADER_BYTES + header.sz * 4
+  off = head.HEADER_BYTES + head.sz * 4
 
-  if header.label_format == LabelFormat.FLAT:
-    return int.from_bytes(binary[off+8:off+8+header.stored_data_width], byteorder='little')
+  if head.label_format == LabelFormat.FLAT:
+    return int.from_bytes(binary[off+8:off+8+head.stored_data_width], byteorder='little')
   else:
     bgcolor = background_color(binary)
-    sdw = header.stored_data_width
+    sdw = head.stored_data_width
     off += sdw+8
-    arrmin = int.from_bytes(binary[off:off+header.stored_data_width], byteorder='little')
+    arrmin = int.from_bytes(binary[off:off+head.stored_data_width], byteorder='little')
     if bgcolor < arrmin:
       return bgcolor
     return arrmin
 
 def max(binary:bytes) -> int:
   """Returns the maximum label of the crackle binary."""
-  header = CrackleHeader.frombytes(binary)
+  head = CrackleHeader.frombytes(binary)
 
   if not head.is_sorted:
     return int(np.max(labels(binary)))
 
-  loff = header.HEADER_BYTES + header.sz * 4
+  loff = head.HEADER_BYTES + head.sz * 4
 
-  if header.label_format == LabelFormat.FLAT:
+  if head.label_format == LabelFormat.FLAT:
     N = num_labels(binary)
-    offset = loff + 8 + (N-1) * header.stored_data_width
-    return int.from_bytes(binary[offset:offset+header.stored_data_width], byteorder='little')
+    offset = loff + 8 + (N-1) * head.stored_data_width
+    return int.from_bytes(binary[offset:offset+head.stored_data_width], byteorder='little')
   else:
     bgcolor = background_color(binary)
-    sdw = header.stored_data_width
+    sdw = head.stored_data_width
     N = num_labels(binary) - 1
     offset = loff + sdw + 8 + (N-1) * sdw
     arrmin = int.from_bytes(binary[offset:offset+sdw], byteorder='little')
