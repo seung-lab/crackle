@@ -49,6 +49,10 @@ remapped = crackle.renumber(binary, start=0)
 crackle.save(labels, "example.ckl.gz")
 labels = crackle.load("example.ckl.gz")
 
+# Save a crackle array as a numpy array
+# in a memory efficient manner.
+crackle.save_numpy(binary, "example.npy")
+
 arr = crackle.CrackleArray(binary)
 res = arr[:10,:10,:10] # array slicing (efficient z ranges)
 arr[:,:,30] = 20 # write to a crackle array (whole z slices write faster)
