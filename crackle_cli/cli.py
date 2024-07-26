@@ -75,7 +75,7 @@ def print_header(src):
 
 def decompress_file(src):
 	try:
-		data = crackle.util.load(src)
+		arr = crackle.util.aload(src)
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
@@ -89,7 +89,7 @@ def decompress_file(src):
 	if ext != ".npy":
 		dest += ".npy"
 
-	np.save(dest, data)
+	crackle.save_numpy(arr, dest)
 
 	try:
 		stat = os.stat(dest)
