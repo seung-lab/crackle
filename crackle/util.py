@@ -43,8 +43,11 @@ def load_numpy(filelike):
   f = io.BytesIO(_load(filelike))
   return np.load(f)
 
-def save_numpy(arr:CrackleArray, filelike, block_size=int(200e6)):
-
+def save_numpy(
+  arr:Union[CrackleArray, bytes], 
+  filelike, 
+  block_size=int(200e6),
+):
   if isinstance(filelike, str):
     f = open(filelike, "wb")
 
@@ -65,9 +68,9 @@ def save_numpy(arr:CrackleArray, filelike, block_size=int(200e6)):
   order = "F" if head.fortran_order else "C"
 
   for z in range(blocks):
-    start = z*sz_blocks
-    end = min((z+1)*sz_blocks, arr.shape[2])
-
+    start = z * sz_blocks
+    end = min((z+1) * sz_blocks, arr.shape[2])
+    
     subarr = arr[:,:,start:end]
     f.write(subarr.tobytes(order))
 
