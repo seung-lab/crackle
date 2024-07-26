@@ -57,5 +57,5 @@ from .operations import (
 	multiply_scalar, floordiv_scalar,
 )
 from .headers import FormatError, CrackleHeader
-from .util import save, load, aload
+from .util import save, load, aload, save_numpy
 
