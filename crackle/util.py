@@ -48,6 +48,9 @@ def save_numpy(
   filelike, 
   block_size=int(200e6),
 ):
+  if isinstance(arr, bytes):
+    arr = CrackleArray(arr)
+
   if isinstance(filelike, str):
     f = open(filelike, "wb")
 
@@ -70,7 +73,7 @@ def save_numpy(
   for z in range(blocks):
     start = z * sz_blocks
     end = min((z+1) * sz_blocks, arr.shape[2])
-    
+
     subarr = arr[:,:,start:end]
     f.write(subarr.tobytes(order))
 
