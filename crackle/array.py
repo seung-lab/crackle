@@ -17,6 +17,7 @@ from .operations import (
   multiply_scalar, floordiv_scalar,
 )
 from . import codec
+
 import numpy as np
 
 class CrackleArray:
@@ -85,6 +86,10 @@ class CrackleArray:
 
   def decompress(self, label:Optional[int] = None) -> bytes:
     return decompress(self.binary, label)
+
+  def save(self, filelike):
+    import crackle.util
+    return crackle.util.save(self, filelike)
 
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):
