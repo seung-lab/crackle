@@ -44,15 +44,29 @@ def load_numpy(filelike):
   return np.load(f)
 
 def save_numpy(
-  arr:Union[CrackleArray, bytes], 
+  arr:Union[np.ndarray, CrackleArray, bytes], 
   filelike, 
   block_size=int(200e6),
 ):
+  if isinstance(arr, np.ndarray):
+    np.save(filelike, arr)
+    return
+
   if isinstance(arr, bytes):
     arr = CrackleArray(arr)
 
-  if isinstance(filelike, str):
-    f = open(filelike, "wb")
+  if (
+    isinstance(filelike, str) 
+    and os.path.splitext(filelike)[1] == '.gz'
+  ):
+    f = gzip.open(filelike, 'wb')
+  elif (
+    isinstance(filelike, str) 
+    and os.path.splitext(filelike)[1] in ('.lzma', '.xz')
+  ):
+    f = lzma.open(filelike, 'wb')
+  elif isinstance(filelike, str):
+    f = open(filelike, 'wb')
 
   head = arr.header()
   data_width = head.data_width
@@ -88,6 +102,18 @@ def save(
   """Save labels into the file-like object or file path."""
   if isinstance(labels, CrackleArray):
     binary = labels.binary
+  
+  if (
+    isinstance(filelike, str)
+    and (
+      filelike.endswith(".npy")
+      or filelike.endswith(".npy.gz")
+      or filelike.endswith(".npy.xz")
+      or filelike.endswith(".npy.lzma")
+    )
+  ):
+    return save_numpy(binary, filelike)
+
   else:
     binary = compress(labels, **kwargs)
 
