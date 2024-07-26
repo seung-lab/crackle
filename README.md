@@ -51,7 +51,7 @@ labels = crackle.load("example.ckl.gz")
 
 # Save a crackle array as a numpy array
 # in a memory efficient manner.
-crackle.save_numpy(binary, "example.npy")
+crackle.save(binary, "example.npy.gz")
 
 arr = crackle.CrackleArray(binary)
 res = arr[:10,:10,:10] # array slicing (efficient z ranges)
