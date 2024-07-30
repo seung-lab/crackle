@@ -53,12 +53,14 @@ struct CandidatePin {
 	uint32_t z_s;
 	uint32_t z_e;
 	robin_hood::unordered_flat_set<uint32_t> ccids;
+	int valid_ccids;
 
 	CandidatePin() {
 		x = 0;
 		y = 0;
 		z_s = 0;
 		z_e = 0;
+		valid_ccids = 0;
 	}
 
 	CandidatePin(
@@ -72,7 +74,7 @@ struct CandidatePin {
 	{
 		ccids.reserve(_ccids.size());
 		ccids.insert(_ccids.begin(), _ccids.end());
-
+		valid_ccids = ccids.size();
 	}
 
 	uint64_t start_idx(uint64_t sx, uint64_t sy) const {
@@ -227,7 +229,8 @@ std::vector<CandidatePin> find_optimal_pins(
 	std::vector<CandidatePin> &pinsets,
 	robin_hood::unordered_flat_set<uint32_t> &universe,
 	const std::unique_ptr<uint32_t[]> &cc_labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const uint64_t max_cc_label
 ) {	
 	std::vector<CandidatePin> final_pins;
 	final_pins.reserve(final_pins.size() / 10);
@@ -241,18 +244,28 @@ std::vector<CandidatePin> find_optimal_pins(
 	std::vector<crackle::pairing_heap::PHNode<int64_t, int64_t>*> 
 		heap_ptrs(pinsets.size());
 
-	robin_hood::unordered_flat_set<int64_t> isets;
-	isets.reserve(pinsets.size());
+	robin_hood::unordered_flat_map<CandidatePin*, int64_t> iheap_ptrs;
+	iheap_ptrs.reserve(pinsets.size());
 
 	for (int64_t i = 0; i < static_cast<int64_t>(pinsets.size()); i++) {
 		heap_ptrs[i] = heap.emplace(-1 * pinsets[i].ccids.size(), i);
-		isets.emplace(i);
+		iheap_ptrs[reinterpret_cast<CandidatePin*>(&pinsets[i])] = i;
 	}
+
+	std::vector<bool> valid_ccid(max_cc_label + 1, true);
+
+	std::unordered_map<uint32_t, std::vector<CandidatePin*>> pins_by_ccid;
+	for (CandidatePin &pin : pinsets) {
+		for (auto ccid : pin.ccids) {
+			pins_by_ccid[ccid].push_back(&pin);
+		}
+	}
+
+	printf("pinset size: %d\n", pinsets.size());
 
 	while (universe.size()) {
 		int64_t idx = heap.min_value();
 		heap.pop();
-		isets.erase(idx);
 
 		CandidatePin& cur = pinsets[idx];
 		for (uint32_t ccid : cur.ccids) {
@@ -266,27 +279,26 @@ std::vector<CandidatePin> find_optimal_pins(
 			break;
 		}
 
-		std::vector<uint64_t> to_erase;
-		for (auto i : isets) {
-			if (pinsets[i].z_s > cur.z_e || pinsets[i].z_e < cur.z_s) {
+		for (uint32_t ccid : cur.ccids) {
+			if (!valid_ccid[ccid]) {
 				continue;
 			}
+			valid_ccid[ccid] = false;
 
-			auto& tmp = pinsets[i].ccids;
-			for (uint32_t ccid : cur.ccids) {
-				tmp.erase(ccid);
+			auto& cc_pins = pins_by_ccid[ccid];
+			for (CandidatePin* pinptr : cc_pins) {
+				pinptr->valid_ccids--;
+				int64_t i = iheap_ptrs[pinptr];
+				printf("%d %d\n", i, pinptr->valid_ccids);
+				if (pinptr->valid_ccids == 0) {
+					heap.erase(heap_ptrs[i]);
+				}
+				else {
+					printf("Here %llu\n", heap_ptrs[i]);
+					heap.update_key(heap_ptrs[i], -1 * pinptr->valid_ccids);
+					printf("tHere\n");
+				}
 			}
-
-			if (tmp.size() == 0) {
-				to_erase.push_back(i);
-				heap.erase(heap_ptrs[i]);
-			}
-			else {
-				heap.update_key(heap_ptrs[i], -1 * tmp.size());
-			}
-		}
-		for (uint64_t i : to_erase) {
-			isets.erase(i);
 		}
 
 		final_pins.emplace_back(cur);
@@ -327,7 +339,7 @@ compute(
 	for (auto [label, pins] : pinsets) {
 		all_pins[label] = find_optimal_pins(
 			pins, multiverse[label], cc_labels, 
-			sx, sy, sz
+			sx, sy, sz, N_total
 		);
 	}
 
