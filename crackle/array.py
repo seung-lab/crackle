@@ -1,4 +1,4 @@
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Dict
 
 from .headers import CrackleHeader
 from .codec import (
@@ -38,16 +38,16 @@ class CrackleArray:
     return True
 
   @property
-  def size(self):
+  def size(self) -> int:
     shape = self.shape
     return shape[0] * shape[1] * shape[2]
 
   @property
-  def ndim(self):
+  def ndim(self) -> int:
     return sum([ dim >= 0 for dim in self.shape ])
 
   @property
-  def nbytes(self):
+  def nbytes(self) -> int:
     return nbytes(self.binary)
 
   def copy(self):
@@ -60,16 +60,16 @@ class CrackleArray:
   def labels(self):
     return labels(self.binary)
 
-  def num_labels(self):
+  def num_labels(self) -> int:
     return num_labels(self.binary)
 
-  def min(self):
+  def min(self) -> int:
     return codec.min(self.binary)
 
-  def max(self):
+  def max(self) -> int:
     return codec.max(self.binary)
 
-  def remap(self, mapping, preserve_missing_labels=False):
+  def remap(self, mapping:Dict[int,int], preserve_missing_labels:bool = False):
     return CrackleArray(remap(self.binary, mapping, preserve_missing_labels))
 
   def refit(self):
@@ -81,7 +81,7 @@ class CrackleArray:
   def renumber(self, start:int = 0) -> bytes:
     return CrackleArray(renumber(self.binary, start))
 
-  def numpy(self):
+  def numpy(self) -> np.ndarray:
     return self.decompress()
 
   def decompress(self, label:Optional[int] = None) -> bytes:
