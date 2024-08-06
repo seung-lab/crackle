@@ -69,8 +69,8 @@ class CrackleArray:
   def max(self):
     return codec.max(self.binary)
 
-  def remap(self, buf, mapping, preserve_missing_labels=False):
-    return CrackleArray(remap(buf, mapping, preserve_missing_labels))
+  def remap(self, mapping, preserve_missing_labels=False):
+    return CrackleArray(remap(self.binary, mapping, preserve_missing_labels))
 
   def refit(self):
     return CrackleArray(refit(self.binary))
