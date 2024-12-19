@@ -19,6 +19,7 @@
 #include "labels.hpp"
 #include "pins.hpp"
 #include "markov.hpp"
+#include "dual_graph.hpp"
 
 namespace crackle {
 
@@ -276,13 +277,10 @@ std::vector<std::vector<uint8_t>> decode_markov_model(
 	return crackle::markov::from_stored_model(stored_model, header.markov_model_order);
 }
 
-// vcg: voxel connectivity graph
-void crack_code_to_vcg(
+auto crack_code_to_symbol_stream(
   const std::vector<unsigned char>& code,
   const uint64_t sx, const uint64_t sy,
-  const bool permissible, 
-  const std::vector<std::vector<uint8_t>>& markov_model,
-  uint8_t* slice_edges
+  const std::vector<std::vector<uint8_t>>& markov_model
 ) {
 	std::vector<uint64_t> nodes = crackle::crackcodes::read_boc_index(code, sx, sy);
 
@@ -296,7 +294,18 @@ void crack_code_to_vcg(
 		codepoints = crackle::markov::decode_codepoints(markov_stream, markov_model);
 	}
 
-	auto symbol_stream = crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
+	return crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
+}
+
+// vcg: voxel connectivity graph
+void crack_code_to_vcg(
+  const std::vector<unsigned char>& code,
+  const uint64_t sx, const uint64_t sy,
+  const bool permissible, 
+  const std::vector<std::vector<uint8_t>>& markov_model,
+  uint8_t* slice_edges
+) {
+	auto symbol_stream = crack_code_to_symbol_stream(code, sx, sy, markov_model);
 	crackle::crackcodes::decode_crack_code(
 		symbol_stream, sx, sy, permissible, slice_edges
 	);
@@ -552,6 +561,86 @@ void decompress(
 		);
 	}
 }
+
+std::vector<std::vector<uint32_t>> point_cloud(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1
+) {
+
+	if (num_bytes < CrackleHeader::header_size) {
+		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
+		err += std::to_string(num_bytes);
+		throw std::runtime_error(err);
+	}
+
+	const CrackleHeader header(buffer);
+
+	if (header.format_version > 0) {
+		std::string err = "crackle: Invalid format version.";
+		err += std::to_string(header.format_version);
+		throw std::runtime_error(err);
+	}
+
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(header.sz - 1)), static_cast<int64_t>(0));
+	z_end = z_end < 0 ? static_cast<int64_t>(header.sz) : z_end;
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(header.sz)), static_cast<int64_t>(0));
+
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
+	}
+
+	const int64_t szr = z_end - z_start;
+
+	const uint64_t voxels = (
+		static_cast<uint64_t>(header.sx) 
+		* static_cast<uint64_t>(header.sy) 
+		* static_cast<uint64_t>(szr)
+	);
+
+	if (voxels == 0) {
+		return std::vector<std::vector<uint32_t>>();
+	}
+
+	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
+
+	std::vector<std::vector<uint32_t>> all_ccls;
+
+	for (auto crack_code : crack_codes) {
+		auto chains = crack_code_to_symbol_stream(
+			/*code=*/crack_code,
+			/*sx=*/header.sx, /*sy=*/header.sy,
+			/*markov_model=*/markov_model
+		);
+
+		auto ccls = crackle::dual_graph::crack_codes_to_dual_graph(chains, header.sx, header.sy);
+		all_ccls.insert(all_ccls.end(), ccls.begin(), ccls.end());
+	}
+
+	return all_ccls;
+}
+
+auto point_cloud(
+	const std::string &buffer,
+	const int64_t z_start = -1, const int64_t z_end = -1
+) {
+	return point_cloud(
+		reinterpret_cast<const unsigned char*>(buffer.c_str()),
+		buffer.size(),
+		z_start, z_end
+	);
+}
+
 
 };
 
