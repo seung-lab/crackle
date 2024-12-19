@@ -174,7 +174,8 @@ symbols_to_codepoints(
 	const uint64_t TERM[2] = { DirectionCode::DOWN, DirectionCode::UP };
 	const uint64_t TERM2[2] = { DirectionCode::RIGHT, DirectionCode::LEFT };
 
-	uint8_t lookup[256];
+	constexpr uint8_t lookup_size = static_cast<uint8_t>('u') + 1;
+	uint8_t lookup[lookup_size];
 	lookup[static_cast<uint8_t>('u')] = DirectionCode::UP;
 	lookup[static_cast<uint8_t>('d')] = DirectionCode::DOWN;
 	lookup[static_cast<uint8_t>('l')] = DirectionCode::LEFT;
