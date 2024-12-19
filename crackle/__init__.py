@@ -46,6 +46,7 @@ from .codec import (
 	compress, decompress, labels,
 	nbytes, components, component_lengths,
 	header, contains, crack_codes, num_labels,
+	point_cloud,
 )
 from .operations import (
 	astype,

@@ -595,3 +595,10 @@ def condense_unique(binary:bytes) -> bytes:
     labels_binary,
     comps["crack_codes"],
   ])
+
+def point_cloud(binary:bytes) -> np.ndarray:
+  ptc = fastcrackle.point_cloud(binary, -1, -1)
+  return ptc.reshape([ ptc.size // 3, 3 ], order="C")
+
+
+
