@@ -598,6 +598,8 @@ def condense_unique(binary:bytes) -> bytes:
 
 def point_cloud(binary:bytes) -> np.ndarray:
   ptc = fastcrackle.point_cloud(binary, -1, -1)
+  if len(ptc) == 0:
+    return np.zeros([0,0], dtype=np.uint16, order="C")
   return ptc.reshape([ ptc.size // 3, 3 ], order="C")
 
 def reencode(binary:bytes, markov_model_order:int):
