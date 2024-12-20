@@ -661,11 +661,21 @@ std::vector<LABEL> decode_label_map(
 		return decode_flat<LABEL, STORED_LABEL>(header, binary, z_start, z_end);
 	}
 	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
+		if (cc_labels == NULL) {
+			std::string err = "crackle: cc_labels must not be null.";
+			throw std::runtime_error(err);
+		}
+
 		label_map = decode_fixed_width_pins<LABEL, STORED_LABEL>(
 			header, binary, cc_labels, N, z_start, z_end
 		);
 	}
 	else if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
+		if (cc_labels == NULL) {
+			std::string err = "crackle: cc_labels must not be null.";
+			throw std::runtime_error(err);
+		}
+		
 		label_map = decode_condensed_pins<LABEL, STORED_LABEL>(
 			header, binary, cc_labels, N, z_start, z_end
 		);
