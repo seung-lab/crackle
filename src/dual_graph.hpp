@@ -157,14 +157,23 @@ extract_contours(
 		connected_components.push_back(std::move(connected_component));
 	}
 
-	// This can obviously be optimized so that the min is only computed
-	// once per a vector.
-    std::sort(connected_components.begin(), connected_components.end(), 
-    	[](const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
-	        uint32_t minA = *std::min_element(a.begin(), a.end());
-	        uint32_t minB = *std::min_element(b.begin(), b.end());
-	        return minA < minB;
-	    });
+	std::vector<std::pair<uint32_t, const std::vector<uint32_t>*>> min_with_vectors;
+	for (const auto& vec : connected_components) {
+	    if (!vec.empty()) {
+	        min_with_vectors.emplace_back(*std::min_element(vec.begin(), vec.end()), &vec);
+	    }
+	}
+
+	std::sort(min_with_vectors.begin(), min_with_vectors.end(),
+	          [](const auto& a, const auto& b) {
+	              return a.first < b.first;
+	          });
+
+	std::vector<std::vector<uint32_t>> sorted_components;
+	for (const auto& pair : min_with_vectors) {
+	    sorted_components.push_back(*pair.second);
+	}
+	connected_components = std::move(sorted_components);
 
 	return connected_components;
 }

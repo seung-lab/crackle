@@ -659,8 +659,8 @@ point_cloud(
 			std::vector<uint16_t>& label_points = ptc[current_label];
 
 			for (uint32_t loc : ccl) {
-				uint64_t y = loc / header.sx;
-				uint64_t x = loc - (header.sx * y);
+				uint16_t y = loc / header.sx;
+				uint16_t x = loc - (header.sx * y);
 
 				label_points.push_back(x);
 				label_points.push_back(y);

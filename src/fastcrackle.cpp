@@ -232,7 +232,7 @@ auto compute_pins(const py::array &labels) {
 		return crackle::pins::compute<uint64_t>(
 			reinterpret_cast<uint64_t*>(const_cast<void*>(labels.data())),
 			sx, sy, sz
-		);		
+		);
 	}
 }
 
