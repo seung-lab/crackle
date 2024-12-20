@@ -55,7 +55,7 @@ const uint8_t contour_lookup[16] = {
 	0b1100, // 0b1100
 	0b1100, // 0b1101
 	0b1100, // 0b1110
-	0b0001  // 0b1111
+	0b1111  // 0b1111
 };
 
 enum VCGDirectionCode {
@@ -115,7 +115,7 @@ extract_contours(
 	std::vector<std::vector<uint32_t>> connected_components;
 
 	const uint8_t visited_bit = 0b10000;
-	char last_move = 'x';
+	char last_move = 'x'; // a character not in the alphabet we're using
 
 	while ((start_node = G.next_contour(start_node)) != -1) {
 
@@ -125,7 +125,7 @@ extract_contours(
 		while ((vcg[node] & visited_bit) == 0) {
 			// int y = node / sx;
 			// int x = node - sx * y;
-			// printf("x %d y %d ", x, y);
+			// printf("x %d y %d last: %c ", x, y, last_move);
 			// print_bits(vcg[node]);
 			// printf("\n");
 
@@ -134,6 +134,31 @@ extract_contours(
 			vcg[node] = allowed_dirs | visited_bit;
 			// print_bits(vcg[node]);
 			// printf("\n");
+
+			if (allowed_dirs == VCGDirectionCode::ANY) {
+				if (last_move == 'l' || last_move == 'r') {
+					if (vcg[node-sx] != VCGDirectionCode::ANY) {
+						node -= sx;
+						last_move = 'u';
+					}
+					else {
+						node += sx;
+						last_move = 'd';
+					}
+				}
+				else {
+					if (vcg[node+1] != VCGDirectionCode::ANY) {
+						node += 1;
+						last_move = 'r';
+					}
+					else {
+						node -= 1;
+						last_move = 'l';
+					}
+				}
+
+				continue;
+			}
 
 			// circulate clockwise
 			if (allowed_dirs & VCGDirectionCode::RIGHT && last_move != 'l') {
