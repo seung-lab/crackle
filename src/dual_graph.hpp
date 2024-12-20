@@ -33,6 +33,11 @@ struct VCGGraph {
 
 };
 
+// this array specifies the allowed
+// directions when you hit a wall.
+// ->| means you can go up or down
+// to follow the wall contour
+
 // -y +y -x +x
 const uint8_t contour_lookup[16] = {
 	0b0000, // 0b0000
