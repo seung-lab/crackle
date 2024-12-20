@@ -634,6 +634,9 @@ point_cloud(
 
 	uint64_t label_i = 0;
 
+	// printf("label map size: %d\n", label_map.size());
+	// printf("crack codes size: %d\n", crack_codes.size());
+
 	uint16_t z = z_start;
 	for (auto crack_code : crack_codes) {
 		crack_code_to_vcg(
@@ -647,6 +650,7 @@ point_cloud(
 		auto ccls = crackle::dual_graph::extract_contours(vcg, header.sx, header.sy);
 		for (auto ccl : ccls) {
 			uint64_t current_label = label_map[label_i];
+			// printf("cur: %d %d\n", label_i, current_label);
 			if (label > 0 && current_label != static_cast<uint64_t>(label)) {
 				label_i++;
 				continue;
