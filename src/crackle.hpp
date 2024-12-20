@@ -571,6 +571,7 @@ point_cloud(
 	const size_t num_bytes,
 	int64_t z_start = -1,
 	int64_t z_end = -1,
+	const int64_t label = -1
 ) {
 
 	if (num_bytes < CrackleHeader::header_size) {
@@ -645,8 +646,12 @@ point_cloud(
 
 		auto ccls = crackle::dual_graph::extract_contours(vcg, header.sx, header.sy);
 		for (auto ccl : ccls) {
-			uint64_t label = label_map[label_i];
-			std::vector<uint16_t>& label_points = ptc[label];
+			uint64_t current_label = label_map[label_i];
+			if (label > 0 && current_label != static_cast<uint64_t>(label)) {
+				continue;
+			}
+
+			std::vector<uint16_t>& label_points = ptc[current_label];
 
 			for (uint32_t loc : ccl) {
 				uint64_t y = loc / header.sx;
@@ -670,44 +675,47 @@ auto point_cloud(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
 	int64_t z_start = -1,
-	int64_t z_end = -1
+	int64_t z_end = -1,
+	const int64_t label = -1
 ) {
 	CrackleHeader header(buffer);
 
 	if (header.data_width == 1) {
 		return point_cloud<uint8_t>(
 			buffer, num_bytes,
-			z_start, z_end
+			z_start, z_end, label
 		);
 	}
 	else if (header.data_width == 2) {
 		return point_cloud<uint16_t>(
 			buffer, num_bytes,
-			z_start, z_end
+			z_start, z_end, label
 		);
 	}
 	else if (header.data_width == 4) {
 		return point_cloud<uint32_t>(
 			buffer, num_bytes,
-			z_start, z_end
+			z_start, z_end, label
 		);
 	}
 	else {
 		return point_cloud<uint64_t>(
 			buffer, num_bytes,
-			z_start, z_end
+			z_start, z_end, label
 		);
 	}
 }
 
 auto point_cloud(
 	const std::string &buffer,
-	const int64_t z_start = -1, const int64_t z_end = -1
+	const int64_t z_start = -1, 
+	const int64_t z_end = -1,
+	const int64_t label = -1
 ) {
 	return point_cloud(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size(),
-		z_start, z_end
+		z_start, z_end, label
 	);
 }
 

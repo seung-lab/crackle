@@ -239,9 +239,10 @@ auto compute_pins(const py::array &labels) {
 auto point_cloud(	
 	const py::bytes &buffer, 
 	const int64_t z_start = 0, 
-	const int64_t z_end = -1
+	const int64_t z_end = -1,
+	const int64_t label = -1
 ) {
-	return crackle::point_cloud(buffer, z_start, z_end);
+	return crackle::point_cloud(buffer, z_start, z_end, label);
 }
 
 
@@ -256,7 +257,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 		"Perform 4-connected components in layers on a 3D array."
 	);
 	m.def("compute_pins", &compute_pins, "Compute a pinset.");
-	m.def("point_cloud", &point_cloud, "Extract a point cloud without decompressing.");
+	m.def("point_cloud", &point_cloud, "Extract one or more point clouds without decompressing.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 	    .def(py::init<>())

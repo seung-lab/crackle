@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Sequence, Union
+from typing import List, Optional, Tuple, Sequence, Union, Dict
 from collections import namedtuple
 
 import numpy as np
@@ -596,15 +596,42 @@ def condense_unique(binary:bytes) -> bytes:
     comps["crack_codes"],
   ])
 
-def point_cloud(binary:bytes) -> np.ndarray:
-  ptc = fastcrackle.point_cloud(binary, -1, -1)
+def point_cloud(
+  binary:bytes, label:Optional[int] = None
+) -> Union[np.ndarray, Dict[int,np.ndarray]]:
+  """
+  Extract surface point clouds from the image without fully
+  decompressing.
+
+  If label is not provided, decode all surfaces and return as
+  a dict of numpy arrays with the labels as the key.
+
+  If label is provided, return the surface point cloud as
+  a numpy array.
+  """
+  if label is None:
+    label = -1
+    z_start = -1
+    z_end = -1
+  elif not contains(binary, label):
+      raise ValueError(f"Label {label} not contained in image.")
+  else:
+    z_start, z_end = z_range_for_label(binary, label)
+
+  ptc = fastcrackle.point_cloud(binary, z_start, z_end, label)
   
   if len(ptc) == 0:
-    return {}
+    if label:
+      return np.zeros([0,3], dtype=np.uint16, order="C")
+    else:
+      return {}
 
-  for label, pts in ptc.items():
+  for lbl, pts in ptc.items():
     arr = np.asarray(pts, dtype=np.uint16, order="C")
-    ptc[label] = arr.reshape([ len(pts) // 3, 3 ], order="C")
+    ptc[lbl] = arr.reshape([ len(pts) // 3, 3 ], order="C")
+
+  if label > -1:
+    return ptc[label]
 
   return ptc
 
