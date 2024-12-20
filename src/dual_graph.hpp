@@ -115,6 +115,7 @@ extract_contours(
 	std::vector<std::vector<uint32_t>> connected_components;
 
 	const uint8_t visited_bit = 0b10000;
+	char last_move = 'x';
 
 	while ((start_node = G.next_contour(start_node)) != -1) {
 
@@ -135,25 +136,25 @@ extract_contours(
 			// printf("\n");
 
 			// circulate clockwise
-			if (allowed_dirs & VCGDirectionCode::RIGHT) {
+			if (allowed_dirs & VCGDirectionCode::RIGHT && last_move != 'l') {
 				node += 1;
-				// printf("r\n");
+				last_move = 'r';
 			}
-			else if (allowed_dirs & VCGDirectionCode::DOWN) {
+			else if (allowed_dirs & VCGDirectionCode::DOWN && last_move != 'u') {
 				node += sx;
-				// printf("d\n");
+				last_move = 'd';
 			}
-			else if (allowed_dirs & VCGDirectionCode::LEFT) {
+			else if (allowed_dirs & VCGDirectionCode::LEFT && last_move != 'r') {
 				node -= 1;
-				// printf("l\n");
+				last_move = 'l';
 			}
-			else if (allowed_dirs & VCGDirectionCode::UP) {
+			else if (allowed_dirs & VCGDirectionCode::UP && last_move != 'd') {
 				node -= sx;
-				// printf("u\n");
+				last_move = 'u';
 			}
 		}
 
-		connected_components.push_back(connected_component);
+		connected_components.push_back(std::move(connected_component));
 	}
 
 	// This can obviously be optimized so that the min is only computed
