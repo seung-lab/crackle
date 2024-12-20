@@ -156,6 +156,8 @@ extract_contours(
 		connected_components.push_back(connected_component);
 	}
 
+	// This can obviously be optimized so that the min is only computed
+	// once per a vector.
     std::sort(connected_components.begin(), connected_components.end(), 
     	[](const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
 	        uint32_t minA = *std::min_element(a.begin(), a.end());
