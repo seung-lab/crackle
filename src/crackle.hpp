@@ -648,6 +648,7 @@ point_cloud(
 		for (auto ccl : ccls) {
 			uint64_t current_label = label_map[label_i];
 			if (label > 0 && current_label != static_cast<uint64_t>(label)) {
+				label_i++;
 				continue;
 			}
 
