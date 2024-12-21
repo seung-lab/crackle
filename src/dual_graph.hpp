@@ -12,27 +12,6 @@
 namespace crackle {
 namespace dual_graph {
 
-struct VCGGraph {
-	std::vector<uint8_t>& vcg;
-	
-	int64_t sx;
-	int64_t sy;
-
-	VCGGraph(std::vector<uint8_t>& _vcg, int64_t _sx, int64_t _sy) 
-		: vcg(_vcg), sx(_sx), sy(_sy) {}
-
-	int64_t next_contour(int64_t idx) {
-		for (int64_t i = idx; i < sx * sy; i++) {
-			if (vcg[i] != 0b1111 && (vcg[i] & 0b10000) == 0) {
-				return i;
-			}
-		}
-
-		return -1;
-	}
-
-};
-
 // this array specifies the allowed
 // directions when you hit a wall.
 // ->| means you can go up or down
@@ -58,13 +37,14 @@ const uint8_t contour_lookup[16] = {
 	0b1111  // 0b1111
 };
 
+const uint8_t VISITED_BIT = 0b10000;
+
 enum VCGDirectionCode {
 	LEFT = 0b0010,
 	RIGHT = 0b0001,
 	UP = 0b1000,
 	DOWN = 0b0100,
-	ANY = 0b1111,
-	VISITED = 0b10000
+	ANY = 0b1111
 };
 
 void print_bits(uint8_t val) {
@@ -73,6 +53,40 @@ void print_bits(uint8_t val) {
 		printf("%d", (val >> i) & 0b1);
 	}
 }
+
+
+struct VCGGraph {
+	std::vector<uint8_t>& vcg;
+	
+	int64_t sx;
+	int64_t sy;
+
+	VCGGraph(std::vector<uint8_t>& _vcg, int64_t _sx, int64_t _sy) 
+		: vcg(_vcg), sx(_sx), sy(_sy) {}
+
+	// returns clockwise and next id
+	bool next_contour(bool& clockwise, int64_t& idx) {
+		int64_t y = idx / sx;
+		int64_t x = idx - sx * y;
+		// printf("<%d %d %d %d>\n", x, y, sx, sy);
+		for (; y < sy; y++) {
+			int barriers = 0;
+			for (; x < sx; x++, idx++) {
+				barriers += static_cast<int>((vcg[idx] & 0b11) < 0b11);
+				if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISITED_BIT) == 0) {
+					// odd clockwise, even counterclockwise
+					// this is bc the outer border has a barrier already at 0
+					clockwise = true;//(barriers & 0b1) == 1; 
+					// printf("barriers: %d\n", barriers);
+					return true;
+				}
+			}
+			x = 0;
+		}
+
+		return false;
+	}
+};
 
 std::vector<std::vector<uint32_t>> 
 extract_contours(
@@ -110,26 +124,24 @@ extract_contours(
 	// 	printf("\n");
 	// }
 
-	int64_t start_node = 0;
-
 	std::vector<std::vector<uint32_t>> connected_components;
-
-	const uint8_t visited_bit = 0b10000;
 
 	// clockwise for outer boundaries
 	// counterclockwise for inner boundaries
 	bool clockwise = true; 
+	int64_t start_node = 0;
 
 	// Moore Neighbor Tracing variation
 
-	while ((start_node = G.next_contour(start_node)) != -1) {
+	while (G.next_contour(clockwise, start_node)) {
 
+		// printf("clockwise %d start_node %d\n", clockwise, start_node);
 		std::vector<uint32_t> connected_component;
 		uint32_t node = start_node;
 	
 		char last_move = 'r'; 
 
-		while ((vcg[node] & visited_bit) == 0) {
+		while ((vcg[node] & VISITED_BIT) == 0) {
 			// int y = node / sx;
 			// int x = node - sx * y;
 			// printf("x %d y %d last: %c ", x, y, last_move);
@@ -138,9 +150,7 @@ extract_contours(
 
 			connected_component.push_back(node);
 			uint8_t allowed_dirs = contour_lookup[vcg[node]];
-			vcg[node] = allowed_dirs | visited_bit;
-			// print_bits(vcg[node]);
-			// printf(" last move: %c\n", last_move);
+			vcg[node] = allowed_dirs | VISITED_BIT;
 
 			if (clockwise) {
 				if (last_move == 'r') {
@@ -266,6 +276,8 @@ extract_contours(
 		// printf("NEW COMPONENT\n");
 		connected_components.push_back(std::move(connected_component));
 	}
+
+	// printf("final clockwise %d start_node %d\n", clockwise, start_node);
 
 	std::vector<std::pair<uint32_t, const std::vector<uint32_t>*>> min_with_vectors;
 	for (const auto& vec : connected_components) {
