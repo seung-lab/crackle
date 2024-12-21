@@ -236,13 +236,26 @@ auto compute_pins(const py::array &labels) {
 	}
 }
 
-auto point_cloud(	
+py::dict point_cloud(	
 	const py::bytes &buffer, 
 	const int64_t z_start = 0, 
 	const int64_t z_end = -1,
 	const int64_t label = -1
 ) {
-	return crackle::point_cloud(buffer, z_start, z_end, label);
+	auto ptc = crackle::point_cloud(buffer, z_start, z_end, label);
+
+	py::dict py_ptc;
+ 	for (const auto& [key, vec] : ptc) {
+        py::array array = py::array_t<uint16_t>(
+            vec.size(),
+            vec.data(),
+            py::capsule(vec.data(), [](void*) {})
+        );
+
+        py_ptc[py::int_(key)] = array;
+    }
+
+    return py_ptc;
 }
 
 
