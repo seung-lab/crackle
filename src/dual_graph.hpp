@@ -269,8 +269,6 @@ extract_contours(
 					}
 				}
 			}
-
-			clockwise = false;	
 		}
 
 		// printf("NEW COMPONENT\n");
