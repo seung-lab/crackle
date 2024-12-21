@@ -115,13 +115,20 @@ extract_contours(
 	std::vector<std::vector<uint32_t>> connected_components;
 
 	const uint8_t visited_bit = 0b10000;
-	char last_move = 'x'; // a character not in the alphabet we're using
+
+	// clockwise for outer boundaries
+	// counterclockwise for inner boundaries
+	bool clockwise = true; 
+
+	// Moore Neighbor Tracing variation
 
 	while ((start_node = G.next_contour(start_node)) != -1) {
 
 		std::vector<uint32_t> connected_component;
 		uint32_t node = start_node;
-		
+	
+		char last_move = 'r'; 
+
 		while ((vcg[node] & visited_bit) == 0) {
 			// int y = node / sx;
 			// int x = node - sx * y;
@@ -133,52 +140,130 @@ extract_contours(
 			uint8_t allowed_dirs = contour_lookup[vcg[node]];
 			vcg[node] = allowed_dirs | visited_bit;
 			// print_bits(vcg[node]);
-			// printf("\n");
+			// printf(" last move: %c\n", last_move);
 
-			if (allowed_dirs == VCGDirectionCode::ANY) {
-				if (last_move == 'l' || last_move == 'r') {
-					if (vcg[node-sx] != VCGDirectionCode::ANY) {
+			if (clockwise) {
+				if (last_move == 'r') {
+					if (allowed_dirs & VCGDirectionCode::UP) {
 						node -= sx;
 						last_move = 'u';
 					}
-					else {
+					else if (allowed_dirs & VCGDirectionCode::RIGHT) {
+						node += 1;
+						last_move = 'r';
+					}
+					else if (allowed_dirs & VCGDirectionCode::DOWN) {
 						node += sx;
 						last_move = 'd';
 					}
 				}
-				else {
-					if (vcg[node+1] != VCGDirectionCode::ANY) {
+				else if (last_move == 'l') {
+					if (allowed_dirs & VCGDirectionCode::DOWN) {
+						node += sx;
+						last_move = 'd';
+					}
+					else if (allowed_dirs & VCGDirectionCode::LEFT) {
+						node -= 1;
+						last_move = 'l';
+					}
+					else if (allowed_dirs & VCGDirectionCode::UP) {
+						node -= sx;
+						last_move = 'u';
+					}
+				}
+				else if (last_move == 'u') {
+					if (allowed_dirs & VCGDirectionCode::LEFT) {
+						node -= 1;
+						last_move = 'l';
+					}
+					else if (allowed_dirs & VCGDirectionCode::UP) {
+						node -= sx;
+						last_move = 'u';
+					}
+					else if (allowed_dirs & VCGDirectionCode::RIGHT) {
 						node += 1;
 						last_move = 'r';
 					}
-					else {
+				}
+				else { // last_move == 'd'
+					if (allowed_dirs & VCGDirectionCode::RIGHT) {
+						node += 1;
+						last_move = 'r';
+					}
+					else if (allowed_dirs & VCGDirectionCode::DOWN) {
+						node += sx;
+						last_move = 'd';
+					}
+					else if (allowed_dirs & VCGDirectionCode::LEFT) {
 						node -= 1;
 						last_move = 'l';
 					}
 				}
-
-				continue;
+			}
+			else {
+				if (last_move == 'r') {
+					if (allowed_dirs & VCGDirectionCode::DOWN) {
+						node += sx;
+						last_move = 'd';
+					}
+					else if (allowed_dirs & VCGDirectionCode::RIGHT) {
+						node += 1;
+						last_move = 'r';
+					}
+					else if (allowed_dirs & VCGDirectionCode::UP) {
+						node -= sx;
+						last_move = 'u';
+					}
+				}
+				else if (last_move == 'l') {
+					if (allowed_dirs & VCGDirectionCode::UP) {
+						node -= sx;
+						last_move = 'u';
+					}
+					else if (allowed_dirs & VCGDirectionCode::LEFT) {
+						node -= 1;
+						last_move = 'l';
+					}
+					else if (allowed_dirs & VCGDirectionCode::DOWN) {
+						node += sx;
+						last_move = 'd';
+					}
+				}
+				else if (last_move == 'u') {
+					if (allowed_dirs & VCGDirectionCode::RIGHT) {
+						node += 1;
+						last_move = 'r';
+					}
+					
+					else if (allowed_dirs & VCGDirectionCode::UP) {
+						node -= sx;
+						last_move = 'u';
+					}
+					else if (allowed_dirs & VCGDirectionCode::LEFT) {
+						node -= 1;
+						last_move = 'l';
+					}
+				}
+				else { // last_move == 'd'
+					if (allowed_dirs & VCGDirectionCode::LEFT) {
+						node -= 1;
+						last_move = 'l';
+					}
+					else if (allowed_dirs & VCGDirectionCode::DOWN) {
+						node += sx;
+						last_move = 'd';
+					}
+					else if (allowed_dirs & VCGDirectionCode::RIGHT) {
+						node += 1;
+						last_move = 'r';
+					}
+				}
 			}
 
-			// circulate clockwise
-			if (allowed_dirs & VCGDirectionCode::RIGHT && last_move != 'l') {
-				node += 1;
-				last_move = 'r';
-			}
-			else if (allowed_dirs & VCGDirectionCode::DOWN && last_move != 'u') {
-				node += sx;
-				last_move = 'd';
-			}
-			else if (allowed_dirs & VCGDirectionCode::LEFT && last_move != 'r') {
-				node -= 1;
-				last_move = 'l';
-			}
-			else if (allowed_dirs & VCGDirectionCode::UP && last_move != 'd') {
-				node -= sx;
-				last_move = 'u';
-			}
+			clockwise = false;	
 		}
 
+		// printf("NEW COMPONENT\n");
 		connected_components.push_back(std::move(connected_component));
 	}
 
