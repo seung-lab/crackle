@@ -65,23 +65,22 @@ struct VCGGraph {
 		: vcg(_vcg), sx(_sx), sy(_sy) {}
 
 	// returns clockwise and next id
-	bool next_contour(bool& clockwise, int64_t& idx) {
+	bool next_contour(bool& is_internal, int64_t& idx) {
 		int64_t y = idx / sx;
-		int64_t x = idx - sx * y;
-		// printf("<%d %d %d %d>\n", x, y, sx, sy);
+	
+		idx = sx * y;
+
 		for (; y < sy; y++) {
 			int barriers = 0;
-			for (; x < sx; x++, idx++) {
+			for (int64_t x = 0; x < sx; x++, idx++) {
 				barriers += static_cast<int>((vcg[idx] & 0b11) < 0b11);
 				if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISITED_BIT) == 0) {
 					// odd clockwise, even counterclockwise
 					// this is bc the outer border has a barrier already at 0
-					clockwise = true;//(barriers & 0b1) == 1; 
-					// printf("barriers: %d\n", barriers);
+					is_internal = (barriers & 0b1) == 0; 
 					return true;
 				}
 			}
-			x = 0;
 		}
 
 		return false;
@@ -128,12 +127,15 @@ extract_contours(
 
 	// clockwise for outer boundaries
 	// counterclockwise for inner boundaries
-	bool clockwise = true; 
+	bool is_internal = false; 
+	bool clockwise = true;
 	int64_t start_node = 0;
 
 	// Moore Neighbor Tracing variation
 
-	while (G.next_contour(clockwise, start_node)) {
+	while (G.next_contour(is_internal, start_node)) {
+
+		clockwise = true;
 
 		// printf("clockwise %d start_node %d\n", clockwise, start_node);
 		std::vector<uint32_t> connected_component;
@@ -146,7 +148,7 @@ extract_contours(
 			// int x = node - sx * y;
 			// printf("x %d y %d last: %c ", x, y, last_move);
 			// print_bits(vcg[node]);
-			// printf("\n");
+			// printf(" node %d \n", node);
 
 			connected_component.push_back(node);
 			uint8_t allowed_dirs = contour_lookup[vcg[node]];
@@ -273,7 +275,7 @@ extract_contours(
 			clockwise = false;	
 		}
 
-		if (connected_component.size() == 0) {
+		if (connected_component.size() == 0 || is_internal) {
 			continue;
 		}
 
