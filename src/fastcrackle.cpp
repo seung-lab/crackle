@@ -246,12 +246,8 @@ py::dict point_cloud(
 
 	py::dict py_ptc;
  	for (const auto& [key, vec] : ptc) {
-        py::array array = py::array_t<uint16_t>(
-            vec.size(),
-            vec.data(),
-            py::capsule(vec.data(), [](void*) {})
-        );
-
+    	py::array array = py::array_t<uint16_t>(vec.size());
+   		std::memcpy(array.mutable_data(), vec.data(), vec.size() * sizeof(uint16_t));
         py_ptc[py::int_(key)] = array;
     }
 
