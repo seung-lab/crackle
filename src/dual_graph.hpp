@@ -269,31 +269,30 @@ extract_contours(
 					}
 				}
 			}
+
+			clockwise = false;	
 		}
 
-		// printf("NEW COMPONENT\n");
-		connected_components.push_back(std::move(connected_component));
+		if (connected_component.size() == 0) {
+			continue;
+		}
+
+		// Rotate the contour so that the characteristic min element
+		// is at the front.
+		std::vector<uint32_t>::iterator it = std::min_element(connected_component.begin(), connected_component.end());
+		std::vector<uint32_t> rotated;
+		rotated.reserve(connected_component.size());
+
+		rotated.insert(rotated.end(), it, connected_component.end());
+		rotated.insert(rotated.end(), connected_component.begin(), it);
+
+		connected_components.push_back(std::move(rotated));
 	}
 
-	// printf("final clockwise %d start_node %d\n", clockwise, start_node);
-
-	std::vector<std::pair<uint32_t, const std::vector<uint32_t>*>> min_with_vectors;
-	for (const auto& vec : connected_components) {
-	    if (!vec.empty()) {
-	        min_with_vectors.emplace_back(*std::min_element(vec.begin(), vec.end()), &vec);
-	    }
-	}
-
-	std::sort(min_with_vectors.begin(), min_with_vectors.end(),
-	          [](const auto& a, const auto& b) {
-	              return a.first < b.first;
-	          });
-
-	std::vector<std::vector<uint32_t>> sorted_components;
-	for (const auto& pair : min_with_vectors) {
-	    sorted_components.push_back(*pair.second);
-	}
-	connected_components = std::move(sorted_components);
+	std::sort(connected_components.begin(), connected_components.end(),
+		[](const auto& a, const auto& b) {
+			return a[0] < b[0];
+		});
 
 	return connected_components;
 }
