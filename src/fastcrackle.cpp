@@ -245,13 +245,13 @@ py::dict point_cloud(
 	auto ptc = crackle::point_cloud(buffer, z_start, z_end, label);
 
 	py::dict py_ptc;
- 	for (const auto& [key, vec] : ptc) {
-    	py::array array = py::array_t<uint16_t>(vec.size());
-   		std::memcpy(array.mutable_data(), vec.data(), vec.size() * sizeof(uint16_t));
-        py_ptc[py::int_(key)] = array;
-    }
+	for (const auto& [key, vec] : ptc) {
+		py::array array = py::array_t<uint16_t>(vec.size());
+		std::memcpy(array.mutable_data(), vec.data(), vec.size() * sizeof(uint16_t));
+		py_ptc[py::int_(key)] = array;
+	}
 
-    return py_ptc;
+	return py_ptc;
 }
 
 
@@ -269,8 +269,8 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("point_cloud", &point_cloud, "Extract one or more point clouds without decompressing.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
-	    .def(py::init<>())
-	    .def_readwrite("index", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::index)
-	    .def_readwrite("depth", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::depth)
-	    .def_readwrite("label", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::label);
+		.def(py::init<>())
+		.def_readwrite("index", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::index)
+		.def_readwrite("depth", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::depth)
+		.def_readwrite("label", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::label);
 }
