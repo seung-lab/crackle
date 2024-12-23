@@ -184,7 +184,8 @@ void extract_contours_helper(
 	while (G.next_contour(barriers, start_node, y)) {
 
 		is_hole = (barriers & 0b1) == 1;
-		clockwise = is_hole;
+		// go counterclockwise for |x  vs clockwise for x|
+		clockwise = (vcg[start_node] & 0b1) == 0;
 
 		std::vector<uint32_t> connected_component;
 
