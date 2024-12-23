@@ -12,34 +12,10 @@
 namespace crackle {
 namespace dual_graph {
 
-// this array specifies the allowed
-// directions when you hit a wall.
-// ->| means you can go up or down
-// to follow the wall contour
-
-// -y +y -x +x
-const uint8_t contour_lookup[16] = {
-	0b0000, // 0b0000
-	0b0001, // 0b0001
-	0b0010, // 0b0010
-	0b0011, // 0b0011
-	0b0100, // 0b0100
-	0b0101, // 0b0101
-	0b0110, // 0b0110
-	0b0011, // 0b0111
-	0b1000, // 0b1000
-	0b1001, // 0b1001
-	0b1010, // 0b1010
-	0b0011, // 0b1011
-	0b1100, // 0b1100
-	0b1100, // 0b1101
-	0b1100, // 0b1110
-	0b1111  // 0b1111
-};
-
 const uint8_t VISITED_BIT = 0b10000;
 
 enum VCGDirectionCode {
+	NONE = 0b0000,
 	LEFT = 0b0010,
 	RIGHT = 0b0001,
 	UP = 0b1000,
@@ -84,6 +60,79 @@ struct VCGGraph {
 	}
 };
 
+#define TRY_LEFT if (allowed_dirs & VCGDirectionCode::LEFT) {return VCGDirectionCode::LEFT;}
+#define TRY_RIGHT if (allowed_dirs & VCGDirectionCode::RIGHT) {return VCGDirectionCode::RIGHT;}
+#define TRY_UP if (allowed_dirs & VCGDirectionCode::UP) {return VCGDirectionCode::UP;}
+#define TRY_DOWN if (allowed_dirs & VCGDirectionCode::DOWN) {return VCGDirectionCode::DOWN;}
+
+
+uint8_t compute_next_move(
+	const bool clockwise,
+	const uint8_t last_move,
+	const uint8_t allowed_dirs
+) {
+	if (clockwise) {
+		if (last_move == VCGDirectionCode::RIGHT) {
+			TRY_DOWN
+			else TRY_RIGHT
+			else TRY_UP
+			else TRY_LEFT
+		}
+		else if (last_move == VCGDirectionCode::LEFT) {
+			TRY_UP
+			else TRY_LEFT
+			else TRY_DOWN
+			else TRY_RIGHT
+		}
+		else if (last_move == VCGDirectionCode::UP) {
+			TRY_RIGHT
+			else TRY_UP
+			else TRY_LEFT
+			else TRY_DOWN
+		}
+		else { // last_move == 'd'
+			TRY_LEFT
+			else TRY_DOWN
+			else TRY_RIGHT
+			else TRY_UP
+		}
+	}
+	else {
+		if (last_move == VCGDirectionCode::RIGHT) {
+			TRY_UP
+			else TRY_RIGHT
+			else TRY_DOWN
+			else TRY_LEFT
+		}
+		if (last_move == VCGDirectionCode::LEFT) {
+			TRY_DOWN
+			else TRY_LEFT
+			else TRY_UP
+			else TRY_RIGHT
+		}
+		if (last_move == VCGDirectionCode::UP) {
+			TRY_LEFT
+			else TRY_UP
+			else TRY_RIGHT
+			else TRY_DOWN
+		}
+		else { // last_move == 'd'
+			TRY_RIGHT
+			else TRY_DOWN
+			else TRY_LEFT
+			else TRY_UP
+		}
+	}
+
+	return VCGDirectionCode::NONE;
+}
+
+
+#undef TRY_UP
+#undef TRY_DOWN
+#undef TRY_LEFT
+#undef TRY_RIGHT
+
 std::vector<std::vector<uint32_t>> 
 extract_contours(
 	std::vector<uint8_t>& vcg,
@@ -112,13 +161,13 @@ extract_contours(
 		vcg[idx] = vcg[idx] & ~VCGDirectionCode::RIGHT;
 	}
 
-	for (int y = 0; y < sy; y++) {
-		for (int x = 0; x < sx; x++) {
-			print_bits(vcg[x + sx * y]);
-			printf(" ");
-		}
-		printf("\n");
-	}
+	// for (int y = 0; y < sy; y++) {
+	// 	for (int x = 0; x < sx; x++) {
+	// 		print_bits(vcg[x + sx * y]);
+	// 		printf(" ");
+	// 	}
+	// 	printf("\n");
+	// }
 
 	std::vector<std::vector<uint32_t>> contours;
 	std::vector<std::vector<uint32_t>> hole_contours;
@@ -130,6 +179,25 @@ extract_contours(
 	int64_t start_node = 0;
 	uint32_t barriers = 0;
 
+	// corresponds to VCGDirectionCodes
+	int64_t move_amt[9] = { 
+		0, // none
+		1, // right
+		-1, // left
+		0, // n/a
+		static_cast<int64_t>(sx), // down
+		0, // n/a 
+		0, // n/a
+		0, // n/a 
+		-static_cast<int64_t>(sx) // up
+	};
+
+	char translate[9];
+	translate[VCGDirectionCode::NONE] = 'x';
+	translate[VCGDirectionCode::LEFT] = 'l';
+	translate[VCGDirectionCode::RIGHT] = 'r';
+	translate[VCGDirectionCode::UP] = 'u';
+	translate[VCGDirectionCode::DOWN] = 'd';
 
 	// Moore Neighbor Tracing variation
 	while (G.next_contour(barriers, start_node)) {
@@ -139,98 +207,43 @@ extract_contours(
 
 		// printf("clockwise %d start_node %d\n", clockwise, start_node);
 		std::vector<uint32_t> connected_component;
-		uint32_t node = start_node;
+		int64_t node = start_node;
+		uint8_t allowed_dirs = vcg[node] & 0b1111;
+		uint8_t next_move, ending_orientation;
 
-		char last_move = (clockwise ? 'u' : 'd'); 
+		// int y = node / sx;
+		// int x = node - sx * y;
 
-		// printf("barriers: %d\n", barriers);
-
-
-#define TRY_LEFT if (allowed_dirs & VCGDirectionCode::LEFT) {\
-						node -= 1;\
-						last_move = 'l';\
-					}
-
-#define TRY_RIGHT if (allowed_dirs & VCGDirectionCode::RIGHT) {\
-						node += 1;\
-						last_move = 'r';\
-					}
-
-#define TRY_UP if (allowed_dirs & VCGDirectionCode::UP) {\
-						node -= sx;\
-						last_move = 'u';\
-					}
-
-# define TRY_DOWN if (allowed_dirs & VCGDirectionCode::DOWN) {\
-						node += sx;\
-						last_move = 'd';\
-					}
-
-		do {
-			// int y = node / sx;
-			// int x = node - sx * y;
-			// printf("x %d y %d last: %c ", x, y, last_move);
-			// print_bits(vcg[node]);
-			// printf(" node %d hole %d clockwise %d \n", node, is_hole, clockwise);
-
+		if (allowed_dirs == VCGDirectionCode::NONE) {
+			vcg[node] |= VISITED_BIT;
 			connected_component.push_back(node);
-			uint8_t allowed_dirs = contour_lookup[vcg[node]];
-			vcg[node] = allowed_dirs | VISITED_BIT;
+		}
+		else {
+			next_move = (clockwise ? VCGDirectionCode::UP : VCGDirectionCode::DOWN); 
+			ending_orientation = compute_next_move(clockwise, next_move, allowed_dirs);
+			next_move = ending_orientation;
 
-			if (clockwise) {
-				if (last_move == 'r') {
-					TRY_DOWN
-					else TRY_RIGHT
-					else TRY_UP
-					else TRY_LEFT
-				}
-				else if (last_move == 'l') {
-					TRY_UP
-					else TRY_LEFT
-					else TRY_DOWN
-					else TRY_RIGHT
-				}
-				else if (last_move == 'u') {
-					TRY_RIGHT
-					else TRY_UP
-					else TRY_LEFT
-					else TRY_DOWN
-				}
-				else { // last_move == 'd'
-					TRY_LEFT
-					else TRY_DOWN
-					else TRY_RIGHT
-					else TRY_UP
-				}
-			}
-			else {
-				if (last_move == 'r') {
-					TRY_UP
-					else TRY_RIGHT
-					else TRY_DOWN
-					else TRY_LEFT
-				}
-				else if (last_move == 'l') {
-					TRY_DOWN
-					else TRY_LEFT
-					else TRY_UP
-					else TRY_RIGHT
-				}
-				else if (last_move == 'u') {
-					TRY_LEFT
-					else TRY_UP
-					else TRY_RIGHT
-					else TRY_DOWN
-				}
-				else { // last_move == 'd'
-					TRY_RIGHT
-					else TRY_DOWN
-					else TRY_LEFT
-					else TRY_UP
-				}
-			}
-		} while (node != start_node); // defective version of moore algorithm
+			// printf("x %d y %d next: %c ", x, y, translate[next_move]);
+			// print_bits(vcg[node]);
+			// printf(" node %d hole %d clockwise %d start %d\n", node, is_hole, clockwise, start_node);
 
+
+			// printf("barriers: %d\n", barriers);
+
+			do {
+				node += move_amt[next_move];
+				// y = node / sx;
+				// x = node - sx * y;
+
+				connected_component.push_back(node);
+				vcg[node] |= VISITED_BIT;
+				next_move = compute_next_move(clockwise, next_move, (vcg[node] & 0b1111));
+
+				// printf("x %d y %d next: %c ", x, y, translate[next_move]);
+				// print_bits(vcg[node]);
+				// printf(" node %d hole %d clockwise %d start %d\n", node, is_hole, clockwise, start_node);
+			} while (!(node == start_node && (vcg[node] & VISITED_BIT) && next_move == ending_orientation));
+		}
 		// printf("NEW COMPONENT\n");
 
 		if (connected_component.size() == 0) {
@@ -293,10 +306,5 @@ extract_contours(
 
 };
 };
-
-#undef TRY_UP
-#undef TRY_DOWN
-#undef TRY_LEFT
-#undef TRY_RIGHT
 
 #endif
