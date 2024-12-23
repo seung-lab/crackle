@@ -30,7 +30,6 @@ void print_bits(uint8_t val) {
 	}
 }
 
-
 struct VCGGraph {
 	std::vector<uint8_t>& vcg;
 	
@@ -133,20 +132,12 @@ uint8_t compute_next_move(
 #undef TRY_LEFT
 #undef TRY_RIGHT
 
-std::vector<std::vector<uint32_t>> 
-extract_contours(
+void extract_contours_helper(
 	std::vector<uint8_t>& vcg,
-	const uint64_t sx, const uint64_t sy 
+	const uint64_t sx, const uint64_t sy,
+	std::vector<std::vector<uint32_t>>& contours,
+	std::vector<std::vector<uint32_t>>& hole_contours
 ) {
-
-	// for (int y = 0; y < sy; y++) {
-	// 	for (int x = 0; x < sx; x++) {
-	// 		print_bits(vcg[x + sx * y]);
-	// 		printf(" ");
-	// 	}
-	// 	printf("\n");
-	// }
-	// printf("\n");
 
 	VCGGraph G(vcg, sx, sy);
 	for (uint64_t i = 0; i < sx; i++) {
@@ -160,17 +151,6 @@ extract_contours(
 		idx = (sx-1) + sx * i;
 		vcg[idx] = vcg[idx] & ~VCGDirectionCode::RIGHT;
 	}
-
-	// for (int y = 0; y < sy; y++) {
-	// 	for (int x = 0; x < sx; x++) {
-	// 		print_bits(vcg[x + sx * y]);
-	// 		printf(" ");
-	// 	}
-	// 	printf("\n");
-	// }
-
-	std::vector<std::vector<uint32_t>> contours;
-	std::vector<std::vector<uint32_t>> hole_contours;
 
 	// clockwise for outer boundaries
 	// counterclockwise for inner boundaries
@@ -192,27 +172,16 @@ extract_contours(
 		-static_cast<int64_t>(sx) // up
 	};
 
-	char translate[9];
-	translate[VCGDirectionCode::NONE] = 'x';
-	translate[VCGDirectionCode::LEFT] = 'l';
-	translate[VCGDirectionCode::RIGHT] = 'r';
-	translate[VCGDirectionCode::UP] = 'u';
-	translate[VCGDirectionCode::DOWN] = 'd';
-
 	// Moore Neighbor Tracing variation
 	while (G.next_contour(barriers, start_node)) {
 
 		is_hole = (barriers & 0b1) == 0;
 		clockwise = is_hole;
 
-		// printf("clockwise %d start_node %d\n", clockwise, start_node);
 		std::vector<uint32_t> connected_component;
 		int64_t node = start_node;
 		uint8_t allowed_dirs = vcg[node] & 0b1111;
 		uint8_t next_move, ending_orientation;
-
-		// int y = node / sx;
-		// int x = node - sx * y;
 
 		if (allowed_dirs == VCGDirectionCode::NONE) {
 			vcg[node] |= VISITED_BIT;
@@ -223,28 +192,13 @@ extract_contours(
 			ending_orientation = compute_next_move(clockwise, next_move, allowed_dirs);
 			next_move = ending_orientation;
 
-			// printf("x %d y %d next: %c ", x, y, translate[next_move]);
-			// print_bits(vcg[node]);
-			// printf(" node %d hole %d clockwise %d start %d\n", node, is_hole, clockwise, start_node);
-
-
-			// printf("barriers: %d\n", barriers);
-
 			do {
 				node += move_amt[next_move];
-				// y = node / sx;
-				// x = node - sx * y;
-
 				connected_component.push_back(node);
 				vcg[node] |= VISITED_BIT;
 				next_move = compute_next_move(clockwise, next_move, (vcg[node] & 0b1111));
-
-				// printf("x %d y %d next: %c ", x, y, translate[next_move]);
-				// print_bits(vcg[node]);
-				// printf(" node %d hole %d clockwise %d start %d\n", node, is_hole, clockwise, start_node);
 			} while (!(node == start_node && (vcg[node] & VISITED_BIT) && next_move == ending_orientation));
 		}
-		// printf("NEW COMPONENT\n");
 
 		if (connected_component.size() == 0) {
 			continue;
@@ -270,6 +224,18 @@ extract_contours(
 			contours.push_back(std::move(rotated));
 		}
 	}
+}
+
+std::vector<std::vector<uint32_t>> 
+extract_contours(
+	std::vector<uint8_t>& vcg,
+	const uint64_t sx, const uint64_t sy 
+) {
+
+	std::vector<std::vector<uint32_t>> contours;
+	std::vector<std::vector<uint32_t>> hole_contours;
+
+	extract_contours_helper(vcg, sx, sy, contours, hole_contours);
 
 	std::sort(contours.begin(), contours.end(),
 		[](const auto& a, const auto& b) {
@@ -280,8 +246,6 @@ extract_contours(
 		[](const auto& a, const auto& b) {
 			return a[0] < b[0];
 		});
-
-	// printf("MERGING\n");
 
 	// merge holes with parent contours
 	for (uint64_t j = 0; j < hole_contours.size(); j++) {
@@ -295,7 +259,7 @@ extract_contours(
 			if (min_element_ct > min_element_hole) {
 				break;
 			}
-			// printf("Merged c%d hc%d %d %d\n", i, j, min_element_ct, min_element_hole);
+			
 			contour.insert(contour.end(), hc.begin(), hc.end());
 			break;
 		}
