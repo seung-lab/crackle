@@ -192,7 +192,9 @@ void extract_contours_helper(
 				connected_component.push_back(node);
 				vcg[node] |= VISITED_BIT;
 				next_move = compute_next_move(clockwise, next_move, (vcg[node] & 0b1111));
-			} while (!(node == start_node && (vcg[node] & VISITED_BIT) && next_move == ending_orientation));
+			} while (
+				!(node == start_node && next_move == ending_orientation)
+			);
 		}
 
 		if (connected_component.size() == 0) {
