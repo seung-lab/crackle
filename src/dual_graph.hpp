@@ -184,14 +184,19 @@ void extract_contours_helper(
 		}
 		else {
 			next_move = (clockwise ? VCGDirectionCode::UP : VCGDirectionCode::DOWN); 
-			ending_orientation = compute_next_move(clockwise, next_move, allowed_dirs);
+			ending_orientation = compute_next_move(
+				clockwise, next_move, allowed_dirs
+			);
 			next_move = ending_orientation;
 
 			do {
 				node += move_amt[next_move];
 				connected_component.push_back(node);
 				vcg[node] |= VISITED_BIT;
-				next_move = compute_next_move(clockwise, next_move, (vcg[node] & 0b1111));
+				allowed_dirs = vcg[node] & 0b1111;
+				next_move = compute_next_move(
+					clockwise, next_move, allowed_dirs
+				);
 			} while (
 				!(node == start_node && next_move == ending_orientation)
 			);
