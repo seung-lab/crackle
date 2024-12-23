@@ -160,17 +160,12 @@ void extract_contours_helper(
 	uint32_t barriers = 0;
 
 	// corresponds to VCGDirectionCodes
-	int64_t move_amt[9] = { 
-		0, // none
-		1, // right
-		-1, // left
-		0, // n/a
-		static_cast<int64_t>(sx), // down
-		0, // n/a 
-		0, // n/a
-		0, // n/a 
-		-static_cast<int64_t>(sx) // up
-	};
+	int64_t move_amt[9];
+	move_amt[VCGDirectionCode::NONE] = 0;
+	move_amt[VCGDirectionCode::RIGHT] = 1;
+	move_amt[VCGDirectionCode::LEFT] = -1;
+	move_amt[VCGDirectionCode::DOWN] = static_cast<int64_t>(sx);
+	move_amt[VCGDirectionCode::UP] = -static_cast<int64_t>(sx);
 
 	// Moore Neighbor Tracing variation
 	while (G.next_contour(barriers, start_node)) {
