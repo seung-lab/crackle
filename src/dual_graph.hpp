@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <algorithm>
 
-#include "robin_hood.hpp"
 #include "crackcodes.hpp"
 #include "builtins.hpp"
 
@@ -186,7 +185,6 @@ void extract_contours_helper(
 		clockwise = is_hole;
 
 		std::vector<uint32_t> connected_component;
-		connected_component.reserve(100);
 
 		int64_t node = start_node;
 		uint8_t allowed_dirs = vcg[node] & 0b1111;
@@ -197,6 +195,7 @@ void extract_contours_helper(
 			connected_component.push_back(node);
 		}
 		else {
+			connected_component.reserve(100);
 			next_move = (clockwise ? VCGDirectionCode::UP : VCGDirectionCode::DOWN); 
 			ending_orientation = compute_next_move(
 				clockwise, next_move, allowed_dirs
