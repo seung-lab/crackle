@@ -61,7 +61,7 @@ struct VCGGraph {
 				if ((vcg[idx] & 0b10011) < 0b11) {
 					return true;
 				}
-				barriers += static_cast<uint32_t>(popcount(vcg[idx] & 0b11));
+				barriers += static_cast<uint32_t>(popcount((~vcg[idx]) & 0b11));
 			}
 			barriers = 0;
 			x = 0;
