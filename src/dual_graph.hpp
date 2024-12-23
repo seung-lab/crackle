@@ -42,17 +42,17 @@ struct VCGGraph {
 	// returns clockwise and next id
 	bool next_contour(uint32_t& barriers, int64_t& idx) {
 		int64_t y = idx / sx;
-	
-		idx = sx * y;
+		int64_t x = idx - sx * y;
 
 		for (; y < sy; y++) {
-			barriers = 0;
-			for (int64_t x = 0; x < sx; x++, idx++) {
+			for (; x < sx; x++, idx++) {
 				barriers += static_cast<uint32_t>((vcg[idx] & 0b11) < 0b11);
 				if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISITED_BIT) == 0) {
 					return true;
 				}
 			}
+			barriers = 0;
+			x = 0;
 		}
 
 		return false;
