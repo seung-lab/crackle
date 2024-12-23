@@ -186,6 +186,8 @@ void extract_contours_helper(
 		clockwise = is_hole;
 
 		std::vector<uint32_t> connected_component;
+		connected_component.reserve(100);
+
 		int64_t node = start_node;
 		uint8_t allowed_dirs = vcg[node] & 0b1111;
 		uint8_t next_move, ending_orientation;
