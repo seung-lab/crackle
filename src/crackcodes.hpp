@@ -630,8 +630,8 @@ void decode_permissible_crack_code(
 	const int64_t sx, const int64_t sy,
 	uint8_t* edges
 ) {
-	// voxel connectivity
-	// four bits: -y-x+y+x true is passable
+	// voxel connectivity matches cc3d_graphs.hpp 4 connected
+	// four bits: -y+y-x+x true is passable
 	std::fill(edges, edges + sx * sy, 0);
 
 	int64_t sxe = sx + 1;
@@ -710,8 +710,8 @@ void decode_impermissible_crack_code(
 	const int64_t sx, const int64_t sy,
 	uint8_t* edges
 ) {
-	// voxel connectivity
-	// four bits: -y-x+y+x true is passable
+	// voxel connectivity matches cc3d_graphs.hpp 4 connected
+	// four bits: -y+y-x+x true is passable
 	std::fill(edges, edges + sx * sy, 0b1111);
 
 	int64_t sxe = sx + 1;
