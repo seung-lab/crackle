@@ -39,15 +39,16 @@ struct VCGGraph {
 	VCGGraph(std::vector<uint8_t>& _vcg, int64_t _sx, int64_t _sy) 
 		: vcg(_vcg), sx(_sx), sy(_sy) {}
 
-	// returns clockwise and next id
-	bool next_contour(uint32_t& barriers, int64_t& idx) {
-		int64_t y = idx / sx;
+	bool next_contour(uint32_t& barriers, int64_t& idx, int64_t& y) {
 		int64_t x = idx - sx * y;
 
 		for (; y < sy; y++) {
 			for (; x < sx; x++, idx++) {
 				barriers += static_cast<uint32_t>((vcg[idx] & 0b11) < 0b11);
-				if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISITED_BIT) == 0) {
+				
+				// condensing this conditional seems to save 5% in one speed test
+				// if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISITED_BIT) == 0) {
+				if ((vcg[idx] & 0b10011) < 0b11) {
 					return true;
 				}
 			}
@@ -168,7 +169,8 @@ void extract_contours_helper(
 	move_amt[VCGDirectionCode::UP] = -static_cast<int64_t>(sx);
 
 	// Moore Neighbor Tracing variation
-	while (G.next_contour(barriers, start_node)) {
+	int64_t y = 0; // breaking abstraction to save a frequent division
+	while (G.next_contour(barriers, start_node, y)) {
 
 		is_hole = (barriers & 0b1) == 0;
 		clockwise = is_hole;
