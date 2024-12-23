@@ -13,6 +13,8 @@ namespace dual_graph {
 
 const uint8_t VISITED_BIT = 0b10000;
 
+// voxel connectivity matches cc3d_graphs.hpp 4 connected
+// four bits: -y+y-x+x true is passable
 enum VCGDirectionCode {
 	NONE = 0b0000,
 	LEFT = 0b0010,
