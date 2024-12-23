@@ -42,15 +42,25 @@ struct VCGGraph {
 	bool next_contour(uint32_t& barriers, int64_t& idx, int64_t& y) {
 		int64_t x = idx - sx * y;
 
+		// important for barrier to be after
+		// if even numbers of barriers are contours and odd numbers
+		// are holes, assume the first contour starting at 0,0 is not
+		// a hole. If two contours are separated by more than one space,
+		// there will be a contour and a hole and then a contour. If
+		// they are separated by only one space, there will be no hole
+		// contour (because the contour and hole are the same).
+		// So add the sum of the left and right barriers, but after
+		// b/c otherwise the first contour will frequently be considered
+		// a hole and that throws everything off.
+
 		for (; y < sy; y++) {
 			for (; x < sx; x++, idx++) {
-				barriers += static_cast<uint32_t>((vcg[idx] & 0b11) < 0b11);
-				
 				// condensing this conditional seems to save 5% in one speed test
 				// if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISITED_BIT) == 0) {
 				if ((vcg[idx] & 0b10011) < 0b11) {
 					return true;
 				}
+				barriers += static_cast<uint32_t>(popcount(vcg[idx] & 0b11));
 			}
 			barriers = 0;
 			x = 0;
@@ -172,7 +182,7 @@ void extract_contours_helper(
 	int64_t y = 0; // breaking abstraction to save a frequent division
 	while (G.next_contour(barriers, start_node, y)) {
 
-		is_hole = (barriers & 0b1) == 0;
+		is_hole = (barriers & 0b1) == 1;
 		clockwise = is_hole;
 
 		std::vector<uint32_t> connected_component;
