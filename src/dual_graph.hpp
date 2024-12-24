@@ -280,13 +280,15 @@ merge_holes(
 		equivalences.add(i+1); // +1 bc 0 is "null" in DisjointSet
 	}
 
+	// printf("3\n");
+
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		for (uint64_t j = i + 1; j < candidate_contours.size(); j++) {
 			auto& bbx1 = bboxes[i];
 			auto& bbx2 = bboxes[j];
 
 			// non-intersecting bounding boxes
-			if (bbx2.second > bbx1.first || bbx2.first > bbx1.second) {
+			if (bbx2.second < bbx1.first || bbx2.first > bbx1.second) {
 				continue;
 			}
 
