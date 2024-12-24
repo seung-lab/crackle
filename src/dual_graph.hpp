@@ -309,7 +309,7 @@ merge_holes(
 	std::vector<std::vector<uint32_t>> merged_contours(candidate_contours.size());
 
 	for (uint64_t i = 0; i < merged_contours.size(); i++) {
-		uint32_t idx = equivalences.root(i) - 1;
+		uint32_t idx = equivalences.root(i + 1) - 1;
 
 		merged_contours[idx].insert(
 			merged_contours[idx].end(), 
