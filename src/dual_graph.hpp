@@ -58,7 +58,7 @@ struct VCGGraph {
 			for (; x < sx; x++, idx++) {
 				// condensing this conditional seems to save 5% in one speed test
 				// if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISITED_BIT) == 0) {
-				if ((vcg[idx] & 0b10011) < 0b11) {
+				if ((vcg[idx] & 0b110011) < 0b11 || vcg[idx] == 0b11100) {
 					return true;
 				}
 				barriers += static_cast<uint32_t>(popcount((~vcg[idx]) & 0b11));
@@ -166,7 +166,7 @@ void extract_contours_helper(
 
 	// clockwise for outer boundaries
 	// counterclockwise for inner boundaries
-	bool is_hole = false; 
+	// bool is_hole = false; 
 	bool clockwise = true;
 	int64_t start_node = 0;
 	uint32_t barriers = 0;
@@ -183,10 +183,7 @@ void extract_contours_helper(
 	int64_t y = 0; // breaking abstraction to save a frequent division
 	while (G.next_contour(barriers, start_node, y)) {
 
-		is_hole = (barriers & 0b1) == 1;
-		// go counterclockwise for |x  vs clockwise for x|
-		clockwise = (vcg[start_node] & 0b1) == 0;
-
+		// is_hole = (barriers & 0b1) == 1;
 		std::vector<uint32_t> connected_component;
 
 		int64_t node = start_node;
@@ -199,7 +196,12 @@ void extract_contours_helper(
 		}
 		else {
 			connected_component.reserve(100);
-			next_move = (clockwise ? VCGDirectionCode::UP : VCGDirectionCode::DOWN); 
+			connected_component.push_back(start_node);
+
+			// go counterclockwise for |x  vs clockwise for x|
+			next_move = VCGDirectionCode::UP;
+			clockwise = (vcg[start_node] & 0b1) == 0;
+
 			ending_orientation = compute_next_move(
 				clockwise, next_move, allowed_dirs
 			);
@@ -208,7 +210,8 @@ void extract_contours_helper(
 			do {
 				node += move_amt[next_move];
 				connected_component.push_back(node);
-				vcg[node] |= VISITED_BIT;
+				uint8_t visit_count = vcg[node] >> 4;
+				vcg[node] = ((visit_count + 1) << 4) | (vcg[node] & 0b1111);
 				allowed_dirs = vcg[node] & 0b1111;
 				next_move = compute_next_move(
 					clockwise, next_move, allowed_dirs
@@ -222,25 +225,21 @@ void extract_contours_helper(
 			continue;
 		}
 
-		// make it slightly easier to parse contours after merging
-		// as each contour starts and ends with the same node
-		connected_component.push_back(start_node); 
+		// // Rotate the contour so that the characteristic min element
+		// // is at the front.
+		// std::vector<uint32_t>::iterator it = std::min_element(connected_component.begin(), connected_component.end());
+		// std::vector<uint32_t> rotated;
+		// rotated.reserve(connected_component.size());
 
-		// Rotate the contour so that the characteristic min element
-		// is at the front.
-		std::vector<uint32_t>::iterator it = std::min_element(connected_component.begin(), connected_component.end());
-		std::vector<uint32_t> rotated;
-		rotated.reserve(connected_component.size());
+		// rotated.insert(rotated.end(), it, connected_component.end());
+		// rotated.insert(rotated.end(), connected_component.begin(), it);
 
-		rotated.insert(rotated.end(), it, connected_component.end());
-		rotated.insert(rotated.end(), connected_component.begin(), it);
-
-		if (is_hole) {
-			hole_contours.push_back(std::move(rotated));
-		}
-		else {
-			contours.push_back(std::move(rotated));
-		}
+		// if (is_hole) {
+		// 	hole_contours.push_back(std::move(rotated));
+		// }
+		// else {
+		contours.push_back(std::move(connected_component));
+		// }
 	}
 }
 
@@ -255,33 +254,33 @@ extract_contours(
 
 	extract_contours_helper(vcg, sx, sy, contours, hole_contours);
 
-	std::sort(contours.begin(), contours.end(),
-		[](const auto& a, const auto& b) {
-			return a[0] < b[0];
-		});
+	// std::sort(contours.begin(), contours.end(),
+	// 	[](const auto& a, const auto& b) {
+	// 		return a[0] < b[0];
+	// 	});
 
-	std::sort(hole_contours.begin(), hole_contours.end(),
-		[](const auto& a, const auto& b) {
-			return a[0] < b[0];
-		});
+	// std::sort(hole_contours.begin(), hole_contours.end(),
+	// 	[](const auto& a, const auto& b) {
+	// 		return a[0] < b[0];
+	// 	});
 
-	// merge holes with parent contours
-	for (uint64_t j = 0; j < hole_contours.size(); j++) {
-		auto& hc = hole_contours[j];
-		auto min_element_hole = hc[0];
+	// // merge holes with parent contours
+	// for (uint64_t j = 0; j < hole_contours.size(); j++) {
+	// 	auto& hc = hole_contours[j];
+	// 	auto min_element_hole = hc[0];
 
-		for (uint64_t i = 0; i < contours.size(); i++) {
-			auto& contour = contours[i];
-			auto min_element_ct = contour[0];
+	// 	for (uint64_t i = 0; i < contours.size(); i++) {
+	// 		auto& contour = contours[i];
+	// 		auto min_element_ct = contour[0];
 			
-			if (min_element_ct > min_element_hole) {
-				break;
-			}
+	// 		if (min_element_ct > min_element_hole) {
+	// 			break;
+	// 		}
 			
-			contour.insert(contour.end(), hc.begin(), hc.end());
-			break;
-		}
-	}
+	// 		contour.insert(contour.end(), hc.begin(), hc.end());
+	// 		break;
+	// 	}
+	// }
 
 	return contours;
 }
