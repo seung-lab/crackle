@@ -7,6 +7,7 @@
 
 #include "crackcodes.hpp"
 #include "builtins.hpp"
+#include "cc3d.hpp"
 
 namespace crackle {
 namespace dual_graph {
@@ -225,23 +226,110 @@ void extract_contours_helper(
 			continue;
 		}
 
-		// // Rotate the contour so that the characteristic min element
-		// // is at the front.
-		// std::vector<uint32_t>::iterator it = std::min_element(connected_component.begin(), connected_component.end());
-		// std::vector<uint32_t> rotated;
-		// rotated.reserve(connected_component.size());
+		// Rotate the contour so that the characteristic min element
+		// is at the front.
+		std::vector<uint32_t>::iterator it = std::min_element(connected_component.begin(), connected_component.end());
+		std::vector<uint32_t> rotated;
+		rotated.reserve(connected_component.size());
 
-		// rotated.insert(rotated.end(), it, connected_component.end());
-		// rotated.insert(rotated.end(), connected_component.begin(), it);
+		rotated.insert(rotated.end(), it, connected_component.end());
+		rotated.insert(rotated.end(), connected_component.begin(), it);
 
 		// if (is_hole) {
 		// 	hole_contours.push_back(std::move(rotated));
 		// }
 		// else {
-		contours.push_back(std::move(connected_component));
+		contours.push_back(std::move(rotated));
 		// }
 	}
 }
+
+bool polygonContainsPoint(
+	const std::vector<uint32_t>& poly, 
+	const uint32_t idx, 
+	const uint64_t sx
+) {
+
+	uint32_t pt_y = idx / sx;
+	uint32_t contacts = 0;
+
+	for (uint64_t i = 0; i < poly.size(); i++) {
+		uint32_t elem_y = poly[i] / sx;
+		contacts += (elem_y > pt_y);	
+	}
+
+	return contacts & 0b1;
+}
+
+
+std::vector<std::vector<uint32_t>>
+merge_holes(
+	std::vector<std::vector<uint32_t>>& candidate_contours,
+	const uint64_t sx
+) {
+
+	std::vector<std::pair<uint32_t, uint32_t>> bboxes(candidate_contours.size());
+	std::vector<uint16_t> merge_ct(candidate_contours.size());
+	crackle::cc3d::DisjointSet<uint32_t> equivalences(candidate_contours.size() + 1);
+
+	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
+		auto& vec = candidate_contours[i];
+		std::vector<uint32_t>::iterator it = std::max_element(vec.begin(), vec.end());
+		bboxes[i].first = vec[0];
+		bboxes[i].second = *it;
+		equivalences.add(i+1); // +1 bc 0 is "null" in DisjointSet
+	}
+
+	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
+		for (uint64_t j = i + 1; j < candidate_contours.size(); j++) {
+			auto& bbx1 = bboxes[i];
+			auto& bbx2 = bboxes[j];
+
+			// non-intersecting bounding boxes
+			if (bbx2.second > bbx1.first || bbx2.first > bbx1.second) {
+				continue;
+			}
+
+			if (polygonContainsPoint(candidate_contours[i], candidate_contours[j][0], sx)) {
+				merge_ct[j]++;
+				// if an odd number of merges, then it's a "hole"
+				// otherwise it's its own connected component.
+				if ((merge_ct[j] & 0b1) == 0) {
+					equivalences.ids[j] = j+1;
+				}
+				else {
+					equivalences.unify(i+1, j+1); // +1 bc 0 is null in DisjointSet
+				}
+			}
+		}
+	}
+
+	std::vector<std::vector<uint32_t>> merged_contours(candidate_contours.size());
+
+	for (uint64_t i = 0; i < merged_contours.size(); i++) {
+		uint32_t idx = equivalences.root(i) - 1;
+
+		merged_contours[idx].insert(
+			merged_contours[idx].end(), 
+			candidate_contours[i].begin(), 
+			candidate_contours[i].end()
+		);
+	}
+
+  	merged_contours.erase(
+        std::remove_if(merged_contours.begin(), merged_contours.end(), [](const std::vector<uint32_t>& item) { return item.empty(); }),
+        merged_contours.end()
+    );
+
+
+	std::sort(merged_contours.begin(), merged_contours.end(),
+		[](const auto& a, const auto& b) {
+			return a[0] < b[0];
+		});
+
+	return merged_contours;
+}
+
 
 std::vector<std::vector<uint32_t>> 
 extract_contours(
@@ -253,6 +341,10 @@ extract_contours(
 	std::vector<std::vector<uint32_t>> hole_contours;
 
 	extract_contours_helper(vcg, sx, sy, contours, hole_contours);
+
+	// return merge_holes(contours, sx);
+
+
 
 	// std::sort(contours.begin(), contours.end(),
 	// 	[](const auto& a, const auto& b) {
