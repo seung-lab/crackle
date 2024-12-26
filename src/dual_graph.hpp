@@ -288,7 +288,12 @@ merge_holes(
 			auto& bbx2 = bboxes[j];
 
 			// non-intersecting bounding boxes
-			if (bbx2.second < bbx1.first || bbx2.first > bbx1.second) {
+			// Without parsing these into x,y coords first
+			// this test mainly resticts the y axis, so performance can be
+			// improved a lot.
+			if (
+				!(bbx2.first >= bbx1.first && bbx2.second <= bbx1.second)
+			) {
 				continue;
 			}
 
