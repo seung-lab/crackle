@@ -372,8 +372,20 @@ merge_holes(
 	roots.reserve(candidate_contours.size() / 10);
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
-		uint32_t root = links[i].root()->value;
-		roots.emplace(root);
+		uint32_t depth =links[i].depth();
+		if (depth <= 1) {
+			uint32_t root = links[i].root()->value;
+			roots.emplace(root);
+		}
+		else if ((depth & 0b1) == 0) {
+			links[i].setParent(NULL);
+			roots.emplace(i);
+		}
+		else {
+			links[i].parent->setParent(NULL);
+			uint32_t root = links[i].root()->value;
+			roots.emplace(root);
+		}
 	}
 
 	std::vector<std::vector<uint32_t>> merged_contours(roots.size());
