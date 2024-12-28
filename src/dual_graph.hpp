@@ -246,8 +246,9 @@ void extract_contours_helper(
 }
 
 bool polygonContainsPoint(
-	const std::vector<uint32_t>& poly, 
-	const uint32_t idx, 
+	const std::vector<uint32_t>& poly,
+	const std::vector<uint8_t>& vcg,
+	const uint32_t pt,
 	const uint64_t sx
 ) {
 
@@ -258,7 +259,9 @@ bool polygonContainsPoint(
 
 	for (uint64_t i = 0; i < poly.size(); i++) {
 		uint32_t elem_y = poly[i] / fast_sx;
-		contacts += (elem_y > pt_y);
+		// need to check that a vertical chain actually touches
+		// a vertical boundary in the vcg
+		contacts += (elem_y > pt_y) && (vcg[poly[i]] & 0b1100);
 	}
 
 	return contacts & 0b1;
@@ -268,6 +271,7 @@ bool polygonContainsPoint(
 std::vector<std::vector<uint32_t>>
 merge_holes(
 	std::vector<std::vector<uint32_t>>& candidate_contours,
+	const std::vector<uint8_t>& vcg,
 	const uint64_t sx
 ) {
 
@@ -300,8 +304,8 @@ merge_holes(
 				continue;
 			}
 
-			if (polygonContainsPoint(candidate_contours[i], candidate_contours[j][0], sx)) {
-				merge_ct[j]++;
+			if (polygonContainsPoint(candidate_contours[i], vcg, candidate_contours[j][0], sx)) {
+				
 				// if an odd number of merges, then it's a "hole"
 				// otherwise it's its own connected component.
 				if ((merge_ct[j] & 0b1) == 0) {
@@ -352,14 +356,13 @@ extract_contours(
 
 	extract_contours_helper(vcg, sx, sy, contours, hole_contours);
 
-	// return merge_holes(contours, sx);
+	std::sort(contours.begin(), contours.end(),
+		[](const auto& a, const auto& b) {
+			return a[0] < b[0];
+		});
 
-
-
-	// std::sort(contours.begin(), contours.end(),
-	// 	[](const auto& a, const auto& b) {
-	// 		return a[0] < b[0];
-	// 	});
+	return merge_holes(contours, vcg, sx);
+	// return contours;
 
 	// std::sort(hole_contours.begin(), hole_contours.end(),
 	// 	[](const auto& a, const auto& b) {
@@ -384,7 +387,7 @@ extract_contours(
 	// 	}
 	// }
 
-	return contours;
+	// return contours;
 }
 
 };
