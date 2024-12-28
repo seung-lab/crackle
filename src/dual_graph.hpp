@@ -333,18 +333,30 @@ merge_holes(
 	const std::vector<uint8_t>& vcg,
 	const uint64_t sx
 ) {
-	std::vector<std::pair<uint32_t, uint32_t>> bboxes(candidate_contours.size());
+
+	const libdivide::divider<uint32_t> fast_sx(sx);
+	
+	std::vector<
+		std::pair<std::pair<uint32_t, uint32_t>, std::pair<uint32_t, uint32_t>>
+	> bboxes(candidate_contours.size());
 	std::vector<TreeNode> links(candidate_contours.size());
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		auto& vec = candidate_contours[i];
 		std::vector<uint32_t>::iterator it = std::max_element(vec.begin(), vec.end());
-		bboxes[i].first = vec[0];
-		bboxes[i].second = *it;
+
+		uint32_t miny = vec[0] / fast_sx;
+		uint32_t minx = vec[0] - miny * sx;
+
+		uint32_t maxy = (*it) / fast_sx;
+		uint32_t maxx = (*it) - maxy * sx;
+
+		bboxes[i].first = std::make_pair(minx, miny);
+		bboxes[i].second = std::make_pair(maxx, maxy);
 		links[i].value = i;
 	}
 
-	const libdivide::divider<uint32_t> fast_sx(sx);
+	// printf("sz: %d\n", candidate_contours.size());
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		for (uint64_t j = i + 1; j < candidate_contours.size(); j++) {
@@ -352,11 +364,9 @@ merge_holes(
 			auto& bbx2 = bboxes[j];
 
 			// non-intersecting bounding boxes
-			// Without parsing these into x,y coords first
-			// this test mainly resticts the y axis, so performance can be
-			// improved a lot.
 			if (
-				!(bbx2.first >= bbx1.first && bbx2.second <= bbx1.second)
+				!(bbx2.first.first >= bbx1.first.first && bbx2.second.first <= bbx1.second.first)
+				|| !(bbx2.first.second >= bbx1.first.second && bbx2.second.second <= bbx1.second.second)
 			) {
 				continue;
 			}
