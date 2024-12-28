@@ -9,6 +9,7 @@
 #include "builtins.hpp"
 #include "cc3d.hpp"
 #include "libdivide.hpp"
+#include "robin_hood.hpp"
 
 namespace crackle {
 namespace dual_graph {
@@ -72,6 +73,56 @@ struct VCGGraph {
 		return false;
 	}
 };
+
+struct TreeNode {
+public:
+	TreeNode* parent;
+	uint32_t value;
+	std::vector<TreeNode*> children;
+
+	TreeNode() : parent(NULL), value(0) {}
+
+	void setParent(TreeNode* parent_) {
+		if (parent_ != NULL) {
+			parent_->children.push_back(this);
+		}
+		this->parent = parent_;
+	}
+
+	bool isRoot() const {
+		return parent == NULL;
+	}
+
+	const TreeNode* root() const {
+		const TreeNode* cur = this;
+		while (cur->parent != NULL) {
+			cur = cur->parent;
+		}
+	}
+
+	int depth() const {
+		int depth = 0;
+		const TreeNode* cur = this;
+		while (cur->parent != NULL) {
+			cur = cur->parent;
+			depth++;
+		}
+		return depth;
+	}
+
+	std::vector<uint32_t> allValues () const {
+		std::vector<uint32_t> all_vals;
+		all_vals.push_back(value);
+
+		for (TreeNode* node : children) {
+			auto node_vals = node->allValues();
+			all_vals.insert(all_vals.end(), node_vals.begin(), node_vals.end());
+		}
+
+		return all_vals;
+	}
+};
+
 
 #define TRY_LEFT if (allowed_dirs & VCGDirectionCode::LEFT) {return VCGDirectionCode::LEFT;}
 #define TRY_RIGHT if (allowed_dirs & VCGDirectionCode::RIGHT) {return VCGDirectionCode::RIGHT;}
@@ -274,20 +325,16 @@ merge_holes(
 	const std::vector<uint8_t>& vcg,
 	const uint64_t sx
 ) {
-
 	std::vector<std::pair<uint32_t, uint32_t>> bboxes(candidate_contours.size());
-	std::vector<uint16_t> merge_ct(candidate_contours.size());
-	crackle::cc3d::DisjointSet<uint32_t> equivalences(candidate_contours.size() + 1);
+	std::vector<TreeNode> links(candidate_contours.size());
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		auto& vec = candidate_contours[i];
 		std::vector<uint32_t>::iterator it = std::max_element(vec.begin(), vec.end());
 		bboxes[i].first = vec[0];
 		bboxes[i].second = *it;
-		equivalences.add(i+1); // +1 bc 0 is "null" in DisjointSet
+		links[i].value = i;
 	}
-
-	// printf("3\n");
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		for (uint64_t j = i + 1; j < candidate_contours.size(); j++) {
@@ -305,41 +352,33 @@ merge_holes(
 			}
 
 			if (polygonContainsPoint(candidate_contours[i], vcg, candidate_contours[j][0], sx)) {
-				
-				// if an odd number of merges, then it's a "hole"
-				// otherwise it's its own connected component.
-				if ((merge_ct[j] & 0b1) == 0) {
-					equivalences.ids[j] = j+1;
-				}
-				else {
-					equivalences.unify(i+1, j+1); // +1 bc 0 is null in DisjointSet
-				}
+				links[j].setParent(&links[i]);
 			}
 		}
 	}
 
-	std::vector<std::vector<uint32_t>> merged_contours(candidate_contours.size());
+	robin_hood::unordered_set<uint32_t> roots;
+	roots.reserve(candidate_contours.size() / 10);
 
-	for (uint64_t i = 0; i < merged_contours.size(); i++) {
-		uint32_t idx = equivalences.root(i + 1) - 1;
-
-		merged_contours[idx].insert(
-			merged_contours[idx].end(), 
-			candidate_contours[i].begin(), 
-			candidate_contours[i].end()
-		);
+	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
+		roots.emplace(links[i].root()->value);
 	}
 
-  	merged_contours.erase(
-        std::remove_if(merged_contours.begin(), merged_contours.end(), [](const std::vector<uint32_t>& item) { return item.empty(); }),
-        merged_contours.end()
-    );
+	std::vector<std::vector<uint32_t>> merged_contours;
+	merged_contours.reserve(roots.size());
 
-
-	std::sort(merged_contours.begin(), merged_contours.end(),
-		[](const auto& a, const auto& b) {
-			return a[0] < b[0];
-		});
+	int i = 0;
+	for (auto root : roots) {
+		auto vals = links[root].allValues();
+		for (uint32_t val : vals) {
+			merged_contours[i].insert(
+				merged_contours[i].end(), 
+				candidate_contours[val].begin(), 
+				candidate_contours[val].end()
+			);
+		}
+		i++;
+	}
 
 	return merged_contours;
 }
@@ -362,32 +401,6 @@ extract_contours(
 		});
 
 	return merge_holes(contours, vcg, sx);
-	// return contours;
-
-	// std::sort(hole_contours.begin(), hole_contours.end(),
-	// 	[](const auto& a, const auto& b) {
-	// 		return a[0] < b[0];
-	// 	});
-
-	// // merge holes with parent contours
-	// for (uint64_t j = 0; j < hole_contours.size(); j++) {
-	// 	auto& hc = hole_contours[j];
-	// 	auto min_element_hole = hc[0];
-
-	// 	for (uint64_t i = 0; i < contours.size(); i++) {
-	// 		auto& contour = contours[i];
-	// 		auto min_element_ct = contour[0];
-			
-	// 		if (min_element_ct > min_element_hole) {
-	// 			break;
-	// 		}
-			
-	// 		contour.insert(contour.end(), hc.begin(), hc.end());
-	// 		break;
-	// 	}
-	// }
-
-	// return contours;
 }
 
 };
