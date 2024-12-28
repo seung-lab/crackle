@@ -211,8 +211,7 @@ uint8_t compute_next_move(
 void extract_contours_helper(
 	std::vector<uint8_t>& vcg,
 	const uint64_t sx, const uint64_t sy,
-	std::vector<std::vector<uint32_t>>& contours,
-	std::vector<std::vector<uint32_t>>& hole_contours
+	std::vector<std::vector<uint32_t>>& contours
 ) {
 
 	VCGGraph G(vcg, sx, sy);
@@ -298,12 +297,7 @@ void extract_contours_helper(
 		rotated.insert(rotated.end(), it, connected_component.end());
 		rotated.insert(rotated.end(), connected_component.begin(), it);
 
-		// if (is_hole) {
-		// 	hole_contours.push_back(std::move(rotated));
-		// }
-		// else {
 		contours.push_back(std::move(rotated));
-		// }
 	}
 }
 
@@ -317,13 +311,16 @@ bool polygonContainsPoint(
 	const libdivide::divider<uint32_t> fast_sx(sx); 
 
 	uint32_t pt_y = pt / fast_sx;
+	uint32_t pt_x = pt - pt_y * sx;
 	uint32_t contacts = 0;
 
 	for (uint64_t i = 0; i < poly.size(); i++) {
 		uint32_t elem_y = poly[i] / fast_sx;
+		uint32_t elem_x = poly[i] - elem_y * sx;
+
 		// need to check that a vertical chain actually touches
 		// a vertical boundary in the vcg
-		contacts += (elem_y > pt_y) && (vcg[poly[i]] & 0b1100);
+		contacts += (pt_x == elem_x) && (elem_y > pt_y) && (vcg[poly[i]] & 0b1100);
 	}
 
 	return contacts & 0b1;
@@ -352,17 +349,20 @@ merge_holes(
 			auto& bbx1 = bboxes[i];
 			auto& bbx2 = bboxes[j];
 
+			// printf("i %d j %d\n", i, j);
+
 			// non-intersecting bounding boxes
 			// Without parsing these into x,y coords first
 			// this test mainly resticts the y axis, so performance can be
 			// improved a lot.
-			if (
-				!(bbx2.first >= bbx1.first && bbx2.second <= bbx1.second)
-			) {
-				continue;
-			}
+			// if (
+			// 	!(bbx2.first >= bbx1.first && bbx2.second <= bbx1.second)
+			// ) {
+			// 	continue;
+			// }
 
 			if (polygonContainsPoint(candidate_contours[i], vcg, candidate_contours[j][0], sx)) {
+				// printf("link i %d j %d (idx %d)\n", i, j, candidate_contours[j][0]);
 				links[j].setParent(&links[i]);
 			}
 		}
@@ -372,7 +372,8 @@ merge_holes(
 	roots.reserve(candidate_contours.size() / 10);
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
-		uint32_t depth =links[i].depth();
+		uint32_t depth = links[i].depth();
+		// printf("i %d depth %d root %d\n", i, depth, links[i].root()->value);
 		if (depth <= 1) {
 			uint32_t root = links[i].root()->value;
 			roots.emplace(root);
@@ -394,8 +395,17 @@ merge_holes(
 	for (auto root : roots) {
 		auto vals = links[root].allValues();
 		for (uint32_t val : vals) {
+
+			auto insertion_point_it = merged_contours[i].end();
+			if (
+				merged_contours[i].size() > 0 
+				&& merged_contours[i][0] > candidate_contours[val][0]
+			) {
+				insertion_point_it = merged_contours[i].begin();
+			}
+
 			merged_contours[i].insert(
-				merged_contours[i].end(), 
+				insertion_point_it, 
 				candidate_contours[val].begin(), 
 				candidate_contours[val].end()
 			);
@@ -414,16 +424,22 @@ extract_contours(
 ) {
 
 	std::vector<std::vector<uint32_t>> contours;
-	std::vector<std::vector<uint32_t>> hole_contours;
 
-	extract_contours_helper(vcg, sx, sy, contours, hole_contours);
+	extract_contours_helper(vcg, sx, sy, contours);
 
 	std::sort(contours.begin(), contours.end(),
 		[](const auto& a, const auto& b) {
 			return a[0] < b[0];
 		});
 
-	return merge_holes(contours, vcg, sx);
+	std::vector<std::vector<uint32_t>> merged = merge_holes(contours, vcg, sx);
+
+	std::sort(merged.begin(), merged.end(),
+		[](const auto& a, const auto& b) {
+			return a[0] < b[0];
+		});
+
+	return merged;
 }
 
 };
