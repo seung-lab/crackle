@@ -81,18 +81,20 @@ def save_numpy(
   sz = arr.shape[2]
 
   sz_blocks = max(int(np.ceil(sz / blocks)), 1)
+  num_z_blocks = max(int(np.ceil(sz / sz_blocks)), 1)
 
   order = "F" if head.fortran_order else "C"
 
-  for z in range(blocks):
-    start = z * sz_blocks
-    end = min((z+1) * sz_blocks, arr.shape[2])
+  try:
+    for z_block in range(num_z_blocks):
+      start = z_block * sz_blocks
+      end = min((z_block+1) * sz_blocks, arr.shape[2])
 
-    subarr = arr[:,:,start:end]
-    f.write(subarr.tobytes(order))
-
-  if isinstance(filelike, str):
-    f.close()
+      subarr = arr[:,:,start:end]
+      f.write(subarr.tobytes(order))
+  finally:
+    if isinstance(filelike, str):
+      f.close()
 
 def save(
   labels:Union[np.ndarray, CrackleArray], 
