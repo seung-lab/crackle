@@ -86,6 +86,12 @@ public:
 		if (parent_ != NULL) {
 			parent_->children.push_back(this);
 		}
+		if (parent != NULL && parent != parent_) {
+			parent->children.erase(
+				std::remove(parent->children.begin(), parent->children.end(), this), 
+				parent->children.end()
+			);
+		}
 		this->parent = parent_;
 	}
 
@@ -98,6 +104,7 @@ public:
 		while (cur->parent != NULL) {
 			cur = cur->parent;
 		}
+		return cur;
 	}
 
 	int depth() const {
@@ -110,15 +117,19 @@ public:
 		return depth;
 	}
 
-	std::vector<uint32_t> allValues () const {
-		std::vector<uint32_t> all_vals;
+private:
+	void _allValuesHelper (std::vector<uint32_t>& all_vals) const {
 		all_vals.push_back(value);
 
 		for (TreeNode* node : children) {
-			auto node_vals = node->allValues();
-			all_vals.insert(all_vals.end(), node_vals.begin(), node_vals.end());
+			node->_allValuesHelper(all_vals);
 		}
+	}
 
+public:
+	std::vector<uint32_t> allValues () const {
+		std::vector<uint32_t> all_vals;
+		_allValuesHelper(all_vals);
 		return all_vals;
 	}
 };
@@ -361,13 +372,13 @@ merge_holes(
 	roots.reserve(candidate_contours.size() / 10);
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
-		roots.emplace(links[i].root()->value);
+		uint32_t root = links[i].root()->value;
+		roots.emplace(root);
 	}
 
-	std::vector<std::vector<uint32_t>> merged_contours;
-	merged_contours.reserve(roots.size());
+	std::vector<std::vector<uint32_t>> merged_contours(roots.size());
 
-	int i = 0;
+	uint64_t i = 0;
 	for (auto root : roots) {
 		auto vals = links[root].allValues();
 		for (uint32_t val : vals) {
