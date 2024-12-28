@@ -8,6 +8,7 @@
 #include "crackcodes.hpp"
 #include "builtins.hpp"
 #include "cc3d.hpp"
+#include "libdivide.hpp"
 
 namespace crackle {
 namespace dual_graph {
@@ -250,12 +251,14 @@ bool polygonContainsPoint(
 	const uint64_t sx
 ) {
 
-	uint32_t pt_y = idx / sx;
+	const libdivide::divider<uint32_t> fast_sx(sx); 
+
+	uint32_t pt_y = pt / fast_sx;
 	uint32_t contacts = 0;
 
 	for (uint64_t i = 0; i < poly.size(); i++) {
-		uint32_t elem_y = poly[i] / sx;
-		contacts += (elem_y > pt_y);	
+		uint32_t elem_y = poly[i] / fast_sx;
+		contacts += (elem_y > pt_y);
 	}
 
 	return contacts & 0b1;
