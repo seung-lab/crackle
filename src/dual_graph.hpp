@@ -344,22 +344,22 @@ merge_holes(
 		links[i].value = i;
 	}
 
+	const libdivide::divider<uint32_t> fast_sx(sx);
+
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		for (uint64_t j = i + 1; j < candidate_contours.size(); j++) {
 			auto& bbx1 = bboxes[i];
 			auto& bbx2 = bboxes[j];
 
-			// printf("i %d j %d\n", i, j);
-
 			// non-intersecting bounding boxes
 			// Without parsing these into x,y coords first
 			// this test mainly resticts the y axis, so performance can be
 			// improved a lot.
-			// if (
-			// 	!(bbx2.first >= bbx1.first && bbx2.second <= bbx1.second)
-			// ) {
-			// 	continue;
-			// }
+			if (
+				!(bbx2.first >= bbx1.first && bbx2.second <= bbx1.second)
+			) {
+				continue;
+			}
 
 			if (polygonContainsPoint(candidate_contours[i], vcg, candidate_contours[j][0], sx)) {
 				// printf("link i %d j %d (idx %d)\n", i, j, candidate_contours[j][0]);
