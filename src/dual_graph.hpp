@@ -320,7 +320,7 @@ bool polygonContainsPoint(
 
 		// need to check that a vertical chain actually touches
 		// a vertical boundary in the vcg
-		contacts += (pt_x == elem_x) && (elem_y > pt_y) && (vcg[poly[i]] & 0b1100);
+		contacts += (pt_x == elem_x) && (elem_y < pt_y) && (vcg[poly[i]] & 0b1100);
 	}
 
 	return contacts & 0b1;
