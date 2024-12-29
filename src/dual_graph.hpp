@@ -407,10 +407,34 @@ merge_holes(
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		uint32_t depth = links[i].depth();
-		// printf("i %d depth %d root %d\n", i, depth, links[i].root()->value);
-		if (depth <= 1) {
+		
+		if (depth == 0) {
 			uint32_t root = links[i].root()->value;
 			roots.emplace(root);
+		}
+		else if (depth == 1) {
+			// need to detect the case where there is a
+			// thin object that is 8-connected to another object
+			// as this can cause the "hole" to disappear (because
+			// it was already traced around it).
+			// a true hole will have a start position to the left, up, 
+			// or up-left of the candidate.
+			uint32_t root = links[i].root()->value;
+			
+			uint32_t idx = candidate_contours[i][0];
+			uint32_t cur_y = idx / fast_sx;
+			uint32_t cur_x = idx - sx * cur_y;
+
+			idx = candidate_contours[root][0];
+			uint32_t root_y = idx / fast_sx;
+			uint32_t root_x = idx - sx * root_y;
+
+			if ((cur_x - root_x) > 1 || (cur_y - root_y) > 1) {
+				roots.emplace(i);
+			}
+			else {
+				roots.emplace(root);
+			}
 		}
 		else if ((depth & 0b1) == 0) {
 			links[i].setParent(NULL);
