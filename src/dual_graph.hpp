@@ -364,7 +364,10 @@ merge_holes(
 			auto& bbx2 = bboxes[j];
 
 			// non-intersecting bounding boxes
-			if (
+			if (bbx2.first.second >= bbx1.second.second) {
+				break;
+			}
+			else if (
 				!(bbx2.first.first >= bbx1.first.first && bbx2.second.first <= bbx1.second.first)
 				|| !(bbx2.first.second >= bbx1.first.second && bbx2.second.second <= bbx1.second.second)
 			) {
