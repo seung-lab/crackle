@@ -317,13 +317,23 @@ bool polygonContainsPoint(
 	uint32_t pt_x = pt - pt_y * sx;
 	uint32_t contacts = 0;
 
+	robin_hood::unordered_set<uint32_t> seen;
+	seen.reserve(poly.size());
+
 	for (uint64_t i = 0; i < poly.size(); i++) {
+		if (seen.count(poly[i])) {
+			continue;
+		}
+
 		uint32_t elem_y = poly[i] / fast_sx;
 		uint32_t elem_x = poly[i] - elem_y * sx;
 
 		// need to check that a vertical chain actually touches
 		// a vertical boundary in the vcg
-		contacts += (pt_x == elem_x) && (elem_y < pt_y) && (vcg[poly[i]] & 0b1100);
+		bool barrier = (vcg[poly[i]] & 0b1100) != 0b1100; // at least one y barrier
+		uint32_t incr = (pt_x == elem_x) && (elem_y < pt_y) && barrier;
+		contacts += incr;
+		seen.emplace(poly[i]);
 	}
 
 	return contacts & 0b1;
