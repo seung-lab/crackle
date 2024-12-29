@@ -266,7 +266,7 @@ void extract_contours_helper(
 
 			// go counterclockwise for |x  vs clockwise for x|
 			next_move = VCGDirectionCode::UP;
-			clockwise = (vcg[start_node] & 0b1) == 0;
+			clockwise = ((vcg[start_node] & 0b1) == 0) && (vcg[start_node] != 0b11100);
 
 			ending_orientation = compute_next_move(
 				clockwise, next_move, allowed_dirs
