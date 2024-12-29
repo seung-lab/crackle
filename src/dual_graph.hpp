@@ -372,7 +372,15 @@ merge_holes(
 	// printf("sz: %d\n", candidate_contours.size());
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
+		if (candidate_contours[i].size() == 1) {
+			continue;
+		}
+
 		for (uint64_t j = i + 1; j < candidate_contours.size(); j++) {
+			if (candidate_contours[j].size() == 1) {
+				continue;
+			}
+
 			auto& bbx1 = bboxes[i];
 			auto& bbx2 = bboxes[j];
 
