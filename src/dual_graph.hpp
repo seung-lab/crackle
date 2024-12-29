@@ -60,7 +60,10 @@ struct VCGGraph {
 		for (; y < sy; y++) {
 			for (; x < sx; x++, idx++) {
 				// condensing this conditional seems to save 5% in one speed test
-				// if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISITED_BIT) == 0) {
+				// if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISIT_COUNT) == 0) {
+				// -----
+				// vcg[idx] == 0b11100 means we are in a pinch that has been visited
+				// exactly once (it will need to be visited twice). 
 				if ((vcg[idx] & 0b110011) < 0b11 || vcg[idx] == 0b11100) {
 					return true;
 				}
