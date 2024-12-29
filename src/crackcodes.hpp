@@ -585,8 +585,16 @@ codepoints_to_symbols(
 			continue;
 		}
 		else if (
-			(move == DirectionCode::UP && last_move == DirectionCode::DOWN)
-			|| (move == DirectionCode::LEFT && last_move == DirectionCode::RIGHT)
+			// equivalent to:
+			// move == DirectionCode::UP || move == DirectionCode::LEFT
+			// 
+			// which is equivalent to (because we already check 
+			// against last_move in move ^ last_move = 0b10) which
+			// means last move is guaranteed to be its opposite.
+			//
+			// (move == DirectionCode::UP && last_move == DirectionCode::DOWN)
+			// || (move == DirectionCode::LEFT && last_move == DirectionCode::RIGHT)
+			popcount(move) != 1 // 00 (LEFT) or 11 (UP), 7 operations -> 2
 		) {
 			symbols.back() = 't';
 			branches_taken--;
