@@ -127,7 +127,7 @@ def compress_file(src, allow_pins, markov, gzip):
 		dest += ".gz"
 
 	if is_crackle:
-		data.binary = crackle.codec.reencode(data.binary, markov_model_order=markov)
+		data.binary = crackle.codec.reencode(data.binary, markov_model_order=int(markov))
 		data.save(dest)
 	else:
 		crackle.save(data, dest, allow_pins=allow_pins, markov_model_order=int(markov))
