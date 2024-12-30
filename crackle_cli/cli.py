@@ -71,6 +71,7 @@ def print_header(src):
 	print(f"Filename: {src}")
 	for key,val in head.__dict__.items():
 		print(f"{key}: {val}")
+	print(f"num_labels: {arr.num_labels()}")
 	print()
 
 def decompress_file(src):
