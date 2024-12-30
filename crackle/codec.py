@@ -595,3 +595,7 @@ def condense_unique(binary:bytes) -> bytes:
     labels_binary,
     comps["crack_codes"],
   ])
+
+def reencode(binary:bytes, markov_model_order:int):
+  return fastcrackle.reencode_markov(binary, markov_model_order)
+
