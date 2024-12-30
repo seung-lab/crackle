@@ -189,9 +189,9 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
       first_head = head 
 
     if first_head.fortran_order:
-      binary = crackle.asfortranarray(binary)
+      binary = asfortranarray(binary)
     else:
-      binary = crackle.ascontiguousarray(binary)
+      binary = ascontiguousarray(binary)
 
     if first_head.sx != head.sx or first_head.sy != head.sy:
       raise ValueError(
