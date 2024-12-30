@@ -133,9 +133,12 @@ def compress_file(src, allow_pins, markov, gzip):
 		crackle.save(data, dest, allow_pins=allow_pins, markov_model_order=int(markov))
 	del data
 
+	if dest == orig_src:
+		return
+		
 	try:
 		stat = os.stat(dest)
-		if stat.st_size > 0 and dest != orig_src:
+		if stat.st_size > 0:
 			os.remove(orig_src)
 		else:
 			raise ValueError("File is zero length.")
