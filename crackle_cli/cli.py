@@ -145,5 +145,5 @@ def compress_file(src, allow_pins, markov, gzip):
 
 def removesuffix(x:str, suffix:str) -> str:
   if x.endswith(suffix):
-    x = x[:-4]
+    x = x[:-len(suffix)]
   return x
