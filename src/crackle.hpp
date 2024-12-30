@@ -636,7 +636,6 @@ std::vector<unsigned char> reencode_with_markov_order(
 	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
 	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
 	if (header.markov_model_order > 0) {
-		printf("here %d %d\n", header.markov_model_order, stored_model.size());
 		final_binary.insert(final_binary.end(), stored_model.begin(), stored_model.end());
 	}
 	for (auto& code : crack_codes) {
