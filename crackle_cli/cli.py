@@ -135,7 +135,7 @@ def compress_file(src, allow_pins, markov, gzip):
 
 	try:
 		stat = os.stat(dest)
-		if stat.st_size > 0:
+		if stat.st_size > 0 and dest != orig_src:
 			os.remove(orig_src)
 		else:
 			raise ValueError("File is zero length.")
