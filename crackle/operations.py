@@ -9,6 +9,7 @@ from .codec import (
   compress, decompress, labels, 
   header, raw_labels, decode_flat_labels,
   num_labels, crack_codes, components,
+  reencode
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype
@@ -180,10 +181,17 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
 
     if isinstance(binary, np.ndarray):
       binary = compress(binary)
+    else:
+      binary = reencode(binary, markov_model_order=0)
 
     head = header(binary)
     if first_head is None:
       first_head = head 
+
+    if first_head.fortran_order:
+      binary = asfortranarray(binary)
+    else:
+      binary = ascontiguousarray(binary)
 
     if first_head.sx != head.sx or first_head.sy != head.sy:
       raise ValueError(
@@ -192,14 +200,10 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
       )
     if head.label_format != LabelFormat.FLAT:
       raise ValueError("Only the FLAT label format is compatible (for now).")
-    if head.markov_model_order != 0:
-      raise ValueError("Markov chain encoding not currently supported.")
     if head.grid_size != first_head.grid_size:
       raise ValueError("Grid sizes must match.")
     if head.crack_format != first_head.crack_format:
       raise ValueError("All crack formats must match.")
-    if head.fortran_order != first_head.fortran_order:
-      raise ValueError("All binaries must be in either Fortran or C order.")
     if head.data_width != first_head.data_width:
       raise ValueError("All binaries must be the same data width.")
     if head.signed != first_head.signed:

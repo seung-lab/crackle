@@ -143,6 +143,13 @@ py::bytes compress(
 	}
 }
 
+py::bytes reencode_markov(
+	const py::bytes &buffer, const int markov_model_order
+) {
+	auto buf = crackle::reencode_with_markov_order(buffer, markov_model_order);
+	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
+}
+
 py::tuple connected_components(const py::array &labels) {
 	int width = labels.dtype().itemsize();
 
@@ -233,6 +240,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
 	m.def("compress", &compress, "Compress a numpy array into a binary crackle file returned as bytes.");
+	m.def("reencode_markov", &reencode_markov, "Change the markov order of an existing crackle binary.");
 	m.def(
 		"connected_components", 
 		&connected_components,

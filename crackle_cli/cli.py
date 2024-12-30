@@ -102,29 +102,44 @@ def decompress_file(src):
 		sys.exit()
 
 def compress_file(src, allow_pins, markov, gzip):
+	is_crackle = False
 	try:
 		data = crackle.util.load_numpy(src)
 	except ValueError:
-		print(f"crackle: {src} is not a numpy file.")
-		return
+		try:
+			data = crackle.aload(src)
+			is_crackle = True
+		except:
+			print(f"crackle: {src} is not a numpy or crackle file.")
+			return
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
 
+	orig_src = src
 	src = removesuffix(src, ".lzma")
 	src = removesuffix(src, ".gz")
 	src = removesuffix(src, ".xz")
+	src = removesuffix(src, ".ckl")
 
 	dest = f"{src}.ckl"
 	if gzip:
 		dest += ".gz"
-	crackle.save(data, dest, allow_pins=allow_pins, markov_model_order=int(markov))
+
+	if is_crackle:
+		data.binary = crackle.codec.reencode(data.binary, markov_model_order=int(markov))
+		data.save(dest)
+	else:
+		crackle.save(data, dest, allow_pins=allow_pins, markov_model_order=int(markov))
 	del data
 
+	if dest == orig_src:
+		return
+		
 	try:
 		stat = os.stat(dest)
 		if stat.st_size > 0:
-			os.remove(src)
+			os.remove(orig_src)
 		else:
 			raise ValueError("File is zero length.")
 	except (FileNotFoundError, ValueError) as err:
@@ -133,5 +148,5 @@ def compress_file(src, allow_pins, markov, gzip):
 
 def removesuffix(x:str, suffix:str) -> str:
   if x.endswith(suffix):
-    x = x[:-4]
+    x = x[:-len(suffix)]
   return x

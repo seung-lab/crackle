@@ -276,13 +276,12 @@ std::vector<std::vector<uint8_t>> decode_markov_model(
 	return crackle::markov::from_stored_model(stored_model, header.markov_model_order);
 }
 
-// vcg: voxel connectivity graph
-void crack_code_to_vcg(
+std::vector<std::pair<uint64_t, std::vector<unsigned char>> >
+crack_code_to_symbols(
   const std::vector<unsigned char>& code,
   const uint64_t sx, const uint64_t sy,
   const bool permissible, 
-  const std::vector<std::vector<uint8_t>>& markov_model,
-  uint8_t* slice_edges
+  const std::vector<std::vector<uint8_t>>& markov_model
 ) {
 	std::vector<uint64_t> nodes = crackle::crackcodes::read_boc_index(code, sx, sy);
 
@@ -296,7 +295,18 @@ void crack_code_to_vcg(
 		codepoints = crackle::markov::decode_codepoints(markov_stream, markov_model);
 	}
 
-	auto symbol_stream = crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
+	return crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
+}
+
+// vcg: voxel connectivity graph
+void crack_code_to_vcg(
+  const std::vector<unsigned char>& code,
+  const uint64_t sx, const uint64_t sy,
+  const bool permissible, 
+  const std::vector<std::vector<uint8_t>>& markov_model,
+  uint8_t* slice_edges
+) {
+	auto symbol_stream = crack_code_to_symbols(code, sx, sy, permissible, markov_model);
 	crackle::crackcodes::decode_crack_code(
 		symbol_stream, sx, sy, permissible, slice_edges
 	);
@@ -552,6 +562,100 @@ void decompress(
 		);
 	}
 }
+
+// take an existing crackle stream and change the markov order
+// returning a reencoded copy
+std::vector<unsigned char> reencode_with_markov_order(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	const int markov_model_order
+) { 
+	if (num_bytes < CrackleHeader::header_size) {
+		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
+		err += std::to_string(num_bytes);
+		throw std::runtime_error(err);
+	}
+
+	CrackleHeader header(buffer);
+
+	if (header.format_version > 0) {
+		std::string err = "crackle: Invalid format version.";
+		err += std::to_string(header.format_version);
+		throw std::runtime_error(err);
+	}
+
+	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
+
+	if (header.markov_model_order == markov_model_order) {
+		return binary;
+	}
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto existing_crack_codes = get_crack_codes(header, binary, 0, header.sz);
+	const bool permissible = (header.crack_format == CrackFormat::PERMISSIBLE);
+
+	std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> crack_codepoints;
+	for (auto& crack_code : existing_crack_codes) {
+		auto symbol_stream = crack_code_to_symbols(crack_code, header.sx, header.sy, permissible, markov_model);
+		auto unpacked_codepoints = crackle::crackcodes::symbols_to_codepoints(symbol_stream);
+		crack_codepoints.push_back(unpacked_codepoints);
+	}
+
+	header.markov_model_order = markov_model_order;
+
+	std::vector<unsigned char> stored_model; // only needed for markov
+	std::vector<std::vector<unsigned char>> crack_codes(crack_codepoints.size());
+	if (header.markov_model_order > 0) {
+		auto stats = crackle::markov::gather_statistics(crack_codepoints, header.markov_model_order);
+		auto model = crackle::markov::stats_to_model(stats);
+		stored_model = crackle::markov::to_stored_model(model);
+
+		for (uint64_t z = 0; z < crack_codepoints.size(); z++) {
+			crack_codes[z] = crackle::markov::compress(
+				crack_codepoints[z], model, header.markov_model_order,
+				header.sx, header.sy
+			);
+		}
+	}
+	else {
+		for (uint64_t z = 0; z < crack_codepoints.size(); z++) {
+			crack_codes[z] = crackle::crackcodes::pack_codepoints(crack_codepoints[z], header.sx, header.sy);
+		}
+	}
+
+	std::vector<unsigned char> z_index_binary(sizeof(uint32_t) * header.sz);
+	for (int64_t i = 0, z = 0; z < header.sz; z++) {
+		i += crackle::lib::itoc(static_cast<uint32_t>(crack_codes[z].size()), z_index_binary, i);
+	}
+
+	std::vector<unsigned char> labels_binary = crackle::labels::raw_labels(binary);
+
+	std::vector<unsigned char> final_binary = header.tobytes();
+	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
+	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
+	if (header.markov_model_order > 0) {
+		final_binary.insert(final_binary.end(), stored_model.begin(), stored_model.end());
+	}
+	for (auto& code : crack_codes) {
+		final_binary.insert(final_binary.end(), code.begin(), code.end());
+	}
+
+	return final_binary;
+}
+
+auto reencode_with_markov_order(
+	const std::string &buffer,
+	const int markov_model_order
+) {
+	return reencode_with_markov_order(
+		reinterpret_cast<const unsigned char*>(buffer.c_str()),
+		buffer.size(),
+		markov_model_order
+	);
+}
+
 
 };
 

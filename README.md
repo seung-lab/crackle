@@ -7,6 +7,7 @@
 crackle data.npy # creates data.ckl
 crackle -m 5 data.npy # use a 5th order context model
 crackle -d data.ckl # recovers data.npy
+crackle -m 0 data.ckl # change markov model order
 ```
 
 ```python
