@@ -422,8 +422,20 @@ merge_holes(
 			// picked = root;
 		}
 		else if (depth == 1) {
-			roots.emplace(root);
-			// picked = root;
+			uint32_t minpt = candidate_contours[i][0];
+
+			// if not blocked on up and left
+			// it'll be the same connected component
+			// (a hole)
+			if (vcg[minpt] & 0b1010) {
+				roots.emplace(root);
+				// picked = root;
+			}
+			else {
+				links[i].setParent(NULL);
+				roots.emplace(i);
+				// picked = i;				
+			}
 		}
 		else {
 			auto& vec = candidate_contours[root];
