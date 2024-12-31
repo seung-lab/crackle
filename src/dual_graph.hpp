@@ -43,19 +43,8 @@ struct VCGGraph {
 	VCGGraph(std::vector<uint8_t>& _vcg, int64_t _sx, int64_t _sy) 
 		: vcg(_vcg), sx(_sx), sy(_sy) {}
 
-	bool next_contour(uint32_t& barriers, int64_t& idx, int64_t& y) {
+	bool next_contour(int64_t& idx, int64_t& y) {
 		int64_t x = idx - sx * y;
-
-		// important for barrier to be after
-		// if even numbers of barriers are contours and odd numbers
-		// are holes, assume the first contour starting at 0,0 is not
-		// a hole. If two contours are separated by more than one space,
-		// there will be a contour and a hole and then a contour. If
-		// they are separated by only one space, there will be no hole
-		// contour (because the contour and hole are the same).
-		// So add the sum of the left and right barriers, but after
-		// b/c otherwise the first contour will frequently be considered
-		// a hole and that throws everything off.
 
 		for (; y < sy; y++) {
 			for (; x < sx; x++, idx++) {
@@ -64,12 +53,14 @@ struct VCGGraph {
 				// -----
 				// vcg[idx] == 0b11100 means we are in a pinch that has been visited
 				// exactly once (it will need to be visited twice). 
-				if ((vcg[idx] & 0b110011) < 0b11 || vcg[idx] == 0b11100) {
+
+				// check that the next voxel isn't visited and is a barrier
+
+				if ((vcg[idx] & 0b110011) < 0b11 
+					|| (x < sx - 1 && (vcg[idx+1] & 0b11110010) == 0b0)) {
 					return true;
 				}
-				barriers += static_cast<uint32_t>(popcount((~vcg[idx]) & 0b11));
 			}
-			barriers = 0;
 			x = 0;
 		}
 
@@ -235,7 +226,6 @@ void extract_contours_helper(
 	// bool is_hole = false; 
 	bool clockwise = true;
 	int64_t start_node = 0;
-	uint32_t barriers = 0;
 
 	// corresponds to VCGDirectionCodes
 	int64_t move_amt[9];
@@ -247,14 +237,15 @@ void extract_contours_helper(
 
 	// Moore Neighbor Tracing variation
 	int64_t y = 0; // breaking abstraction to save a frequent division
-	while (G.next_contour(barriers, start_node, y)) {
+	while (G.next_contour(start_node, y)) {
 
-		// is_hole = (barriers & 0b1) == 1;
 		std::vector<uint32_t> connected_component;
 
 		int64_t node = start_node;
 		uint8_t allowed_dirs = vcg[node] & 0b1111;
 		uint8_t next_move, ending_orientation;
+
+		uint64_t nodes_already_visited = (vcg[node] >> 4) > 0;
 
 		if (allowed_dirs == VCGDirectionCode::NONE) {
 			vcg[node] |= VISITED_BIT;
@@ -266,7 +257,7 @@ void extract_contours_helper(
 
 			// go counterclockwise for |x  vs clockwise for x|
 			next_move = VCGDirectionCode::UP;
-			clockwise = ((vcg[start_node] & 0b1) == 0) && (vcg[start_node] != 0b11100);
+			clockwise = ((vcg[start_node] & 0b1) == 0) || (vcg[start_node] == 0b11100);
 
 			ending_orientation = compute_next_move(
 				clockwise, next_move, allowed_dirs
@@ -277,17 +268,21 @@ void extract_contours_helper(
 				node += move_amt[next_move];
 				connected_component.push_back(node);
 				uint8_t visit_count = vcg[node] >> 4;
+				nodes_already_visited += (visit_count > 0);
 				vcg[node] = ((visit_count + 1) << 4) | (vcg[node] & 0b1111);
 				allowed_dirs = vcg[node] & 0b1111;
+
 				next_move = compute_next_move(
 					clockwise, next_move, allowed_dirs
 				);
 			} while (
 				!(node == start_node && next_move == ending_orientation)
 			);
+
+			start_node++;
 		}
 
-		if (connected_component.size() == 0) {
+		if (connected_component.size() == 0 || connected_component.size() == nodes_already_visited) {
 			continue;
 		}
 
