@@ -278,9 +278,9 @@ void extract_contours_helper(
 			} while (
 				!(node == start_node && next_move == ending_orientation)
 			);
-
-			start_node++;
 		}
+
+		start_node++;
 
 		if (connected_component.size() == 0 || connected_component.size() == nodes_already_visited) {
 			continue;
