@@ -310,7 +310,8 @@ bool polygonContainsPoint(
 
 	uint32_t pt_y = pt / fast_sx;
 	uint32_t pt_x = pt - pt_y * sx;
-	uint32_t contacts = 0;
+	uint32_t contacts_y = 0;
+	uint32_t contacts_x = 0;
 
 	robin_hood::unordered_set<uint32_t> seen;
 	seen.reserve(poly.size());
@@ -326,12 +327,19 @@ bool polygonContainsPoint(
 		// need to check that a vertical chain actually touches
 		// a vertical boundary in the vcg
 		bool barrier = (vcg[poly[i]] & 0b1100) != 0b1100; // at least one y barrier
-		uint32_t incr = (pt_x == elem_x) && (elem_y < pt_y) && barrier;
-		contacts += incr;
+		uint32_t incr = (pt_x == elem_x) && (elem_y <= pt_y) && barrier;
+		contacts_y += incr;
+
+		barrier = (vcg[poly[i]] & 0b11) != 0b11; // at least one x barrier
+		incr = (pt_y == elem_y) && (elem_x <= pt_x) && barrier;
+		contacts_x += incr;
+
 		seen.emplace(poly[i]);
 	}
 
-	return contacts & 0b1;
+	// printf("poly %d pt %d contacts x%d y%d\n", poly[0], pt, contacts_x, contacts_y);
+
+	return (contacts_y & 0b1) && (contacts_x & 0b1);
 }
 
 
@@ -372,26 +380,22 @@ merge_holes(
 		}
 
 		for (uint64_t j = i + 1; j < candidate_contours.size(); j++) {
-			if (candidate_contours[j].size() == 1) {
-				continue;
-			}
-
 			auto& bbx1 = bboxes[i];
 			auto& bbx2 = bboxes[j];
 
 			// non-intersecting bounding boxes
-			if (bbx2.first.second >= bbx1.second.second) {
+			if (bbx2.first.second > bbx1.second.second) {
 				break;
 			}
-			else if (
-				!(bbx2.first.first >= bbx1.first.first && bbx2.second.first <= bbx1.second.first)
-				|| !(bbx2.first.second >= bbx1.first.second && bbx2.second.second <= bbx1.second.second)
-			) {
+			else if (!(
+				(bbx2.first.first >= bbx1.first.first && bbx2.first.second >= bbx1.first.second)
+			 && (bbx2.second.first <= bbx1.second.first && bbx2.second.second <= bbx1.second.second)
+			)) {
 				continue;
 			}
 
 			if (polygonContainsPoint(candidate_contours[i], vcg, candidate_contours[j][0], sx)) {
-				// printf("link i %d j %d (idx %d)\n", i, j, candidate_contours[j][0]);
+				// printf("link i %d j %d (idx %d %d)\n", i, j, candidate_contours[i][0], candidate_contours[j][0]);
 				links[j].setParent(&links[i]);
 			}
 		}
@@ -402,44 +406,47 @@ merge_holes(
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		uint32_t depth = links[i].depth();
+		uint32_t root = links[i].root()->value;
+
+		// printf("i=%d depth=%d, root=%d, nchild=%d\n", 
+		// 	i, depth, links[i].root()->value, links[i].children.size());
+		// uint64_t picked = 666;
 		
-		if (depth == 0) {
-			uint32_t root = links[i].root()->value;
-			roots.emplace(root);
-		}
-		else if (depth == 1) {
-			// need to detect the case where there is a
-			// thin object that is 8-connected to another object
-			// as this can cause the "hole" to disappear (because
-			// it was already traced around it).
-			// a true hole will have a start position to the left, up, 
-			// or up-left of the candidate.
-			uint32_t root = links[i].root()->value;
-			
-			uint32_t idx = candidate_contours[i][0];
-			uint32_t cur_y = idx / fast_sx;
-			uint32_t cur_x = idx - sx * cur_y;
-
-			idx = candidate_contours[root][0];
-			uint32_t root_y = idx / fast_sx;
-			uint32_t root_x = idx - sx * root_y;
-
-			if ((cur_x - root_x) > 1 || (cur_y - root_y) > 1) {
-				roots.emplace(i);
-			}
-			else {
-				roots.emplace(root);
-			}
-		}
-		else if ((depth & 0b1) == 0) {
+		if (links[i].children.size() == 0) {
 			links[i].setParent(NULL);
 			roots.emplace(i);
+			// picked = i;
+		}
+		else if (depth == 0) {
+			roots.emplace(root);
+			// picked = root;
+		}
+		else if (depth == 1) {
+			roots.emplace(root);
+			// picked = root;
 		}
 		else {
-			links[i].parent->setParent(NULL);
-			uint32_t root = links[i].root()->value;
-			roots.emplace(root);
+			auto& vec = candidate_contours[root];
+			auto it = std::find(vec.begin(), vec.end(), candidate_contours[i][0]);
+			if (it != vec.end()) {
+				links[i].setParent(&links[root]);
+				roots.emplace(root);
+				// picked = root;
+			}
+			else if ((depth & 0b0) == 0) {
+				links[i].setParent(NULL);
+				roots.emplace(i);
+				// picked = i;
+			}
+			else {
+				links[i].parent->setParent(NULL);
+				uint32_t root = links[i].root()->value;
+				roots.emplace(root);
+				// picked = root;
+			}
 		}
+
+		// printf("i=%d depth=%d, root=%d, picked=%d\n\n", i, depth, links[i].root()->value, picked);
 	}
 
 	std::vector<std::vector<uint32_t>> merged_contours(roots.size());
@@ -485,12 +492,28 @@ extract_contours(
 			return a[0] < b[0];
 		});
 
+	// int i = 0;
+	// for (auto ct : contours) {
+	// 	printf("new contour %d\n", i++);
+	// 	for (auto val : ct) {
+	// 		printf("%d, ", val);
+	// 	}		
+	// 	printf("\n");
+	// }
+
+
 	std::vector<std::vector<uint32_t>> merged = merge_holes(contours, vcg, sx);
 
 	std::sort(merged.begin(), merged.end(),
 		[](const auto& a, const auto& b) {
 			return a[0] < b[0];
 		});
+
+	// i = 0;
+	// for (auto ct : merged) {
+	// 	printf("contour %d %d\n", i++, ct[0]);
+	// 	printf("\n");
+	// }
 
 	return merged;
 }
