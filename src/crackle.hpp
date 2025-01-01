@@ -627,8 +627,6 @@ point_cloud(
 	std::vector<uint8_t> vcg(header.sx * header.sy);
 	std::unique_ptr<uint32_t[]> ccl(new uint32_t[header.sx * header.sy]());
 
-	uint64_t label_i = 0;
-
 	uint16_t z = z_start;
 	for (auto crack_code : crack_codes) {
 		crack_code_to_vcg(
@@ -642,6 +640,8 @@ point_cloud(
 		std::vector<LABEL> label_map = decode_label_map<LABEL>(
 			header, binary, NULL, 0, z_start, z_start+1
 		);
+
+		uint64_t label_i = 0;
 
 		auto ccls = crackle::dual_graph::extract_contours(vcg, ccl, header.sx, header.sy);
 		for (auto ccl : ccls) {
