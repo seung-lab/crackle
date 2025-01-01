@@ -638,7 +638,7 @@ point_cloud(
 		);
 
 		std::vector<LABEL> label_map = decode_label_map<LABEL>(
-			header, binary, NULL, 0, z_start, z_start+1
+			header, binary, NULL, 0, z, z+1
 		);
 
 		uint64_t label_i = 0;
