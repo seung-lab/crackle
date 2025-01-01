@@ -512,6 +512,21 @@ LABEL* decompress(
 
 template <typename LABEL>
 LABEL* decompress(
+	const std::span<const unsigned char>& buffer,
+	LABEL* output = NULL,
+	const int64_t z_start = -1, const int64_t z_end = -1
+) {
+	return decompress<LABEL>(
+		buffer.data(),
+		buffer.size(),
+		output,
+		z_start, z_end
+	);
+}
+
+
+template <typename LABEL>
+LABEL* decompress(
 	const std::string &buffer,
 	LABEL* output = NULL,
 	const int64_t z_start = -1, const int64_t z_end = -1
