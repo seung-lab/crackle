@@ -327,15 +327,17 @@ bool polygonContainsPoint(
 		// need to check that a vertical chain actually touches
 		// a vertical boundary in the vcg
 		uint32_t barrier = 2 - popcount(vcg[poly[i]] & 0b1100); // at least one y barrier
-		uint32_t incr = ((pt_x == elem_x) && (elem_y < pt_y)) * barrier;
+		uint32_t incr = ((pt_x == elem_x) && ((elem_y+1) < pt_y)) * barrier;
 		// handle the special case of elem_y == pt_y where only up matters
-		incr += ((pt_x == elem_x) && (elem_y == pt_y)) && ((vcg[poly[i]] & 0b1000) == 0);
+		incr += (pt_x == elem_x) && (elem_y == pt_y) && ((vcg[poly[i]] & 0b1000) == 0);
+		incr += (pt_x == elem_x) && ((elem_y+1) == pt_y) && ((vcg[poly[i]] & 0b0100) == 0);
 		contacts_y += incr;
 
 		barrier = 2 - popcount(vcg[poly[i]] & 0b11); // at least one x barrier
-		incr = ((pt_y == elem_y) && (elem_x < pt_x)) * barrier;
+		incr = ((pt_y == elem_y) && ((elem_x+1) < pt_x)) * barrier;
 		// handle the special case of elem_x == pt_x where only the left matters
-		incr += ((pt_y == elem_y) && (elem_x == pt_x)) && ((vcg[poly[i]] & 0b10) == 0);
+		incr += (pt_y == elem_y) && (elem_x == pt_x) && ((vcg[poly[i]] & 0b10) == 0);
+		incr += (pt_y == elem_y) && ((elem_x + 1) == pt_x) && ((vcg[poly[i]] & 0b01) == 0);
 		contacts_x += incr;
 
 		seen.emplace(poly[i]);
