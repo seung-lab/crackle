@@ -619,10 +619,6 @@ point_cloud(
 		std::string err = "crackle: Point cloud is not compatible with pin label format.";
 		throw std::runtime_error(err);
 	}
-
-	std::vector<LABEL> label_map = decode_label_map<LABEL>(
-		header, binary, NULL, 0, z_start, z_end
-	);
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
@@ -641,6 +637,10 @@ point_cloud(
 			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
 			/*markov_model=*/markov_model,
 			/*slice_edges=*/vcg.data()
+		);
+
+		std::vector<LABEL> label_map = decode_label_map<LABEL>(
+			header, binary, NULL, 0, z_start, z_start+1
 		);
 
 		auto ccls = crackle::dual_graph::extract_contours(vcg, ccl, header.sx, header.sy);
