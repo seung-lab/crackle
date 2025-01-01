@@ -596,6 +596,10 @@ def condense_unique(binary:bytes) -> bytes:
     comps["crack_codes"],
   ])
 
+def point_cloud(binary:bytes) -> np.ndarray:
+  ptc = fastcrackle.point_cloud(binary, -1, -1)
+  return ptc.reshape([ ptc.size // 3, 3 ], order="C")
+
 def reencode(binary:bytes, markov_model_order:int):
   head = header(binary)
   if head.markov_model_order == markov_model_order:

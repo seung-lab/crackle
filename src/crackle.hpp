@@ -563,7 +563,7 @@ void decompress(
 	}
 }
 
-std::vector<std::vector<uint32_t>> point_cloud(
+std::vector<uint16_t> point_cloud(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
 	int64_t z_start = -1,
@@ -605,7 +605,7 @@ std::vector<std::vector<uint32_t>> point_cloud(
 	);
 
 	if (voxels == 0) {
-		return std::vector<std::vector<uint32_t>>();
+		return std::vector<uint16_t>();
 	}
 
 	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
@@ -615,8 +615,9 @@ std::vector<std::vector<uint32_t>> point_cloud(
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
-	std::vector<std::vector<uint32_t>> all_ccls;
+	std::vector<uint16_t> points;
 
+	uint16_t z = z_start;
 	for (auto crack_code : crack_codes) {
 		auto chains = crack_code_to_symbols(
 			/*code=*/crack_code,
@@ -625,10 +626,21 @@ std::vector<std::vector<uint32_t>> point_cloud(
 		);
 
 		auto ccls = crackle::dual_graph::crack_codes_to_dual_graph(chains, header.sx, header.sy);
-		all_ccls.insert(all_ccls.end(), ccls.begin(), ccls.end());
+		for (auto ccl : ccls) {
+			for (uint32_t loc : ccl) {
+				uint64_t y = loc / header.sx;
+				uint64_t x = loc - (header.sx * y);
+
+				points.push_back(x);
+				points.push_back(y);
+				points.push_back(z);
+			}
+		}
+
+		z++;
 	}
 
-	return all_ccls;
+	return points;
 }
 
 auto point_cloud(
