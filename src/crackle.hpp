@@ -613,7 +613,7 @@ point_cloud(
 		return std::unordered_map<uint64_t, std::vector<uint16_t>>();
 	}
 
-	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
+	std::span<const unsigned char> binary(buffer, num_bytes);
 
 	// only used for markov compressed streams
 	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
@@ -856,7 +856,7 @@ std::vector<unsigned char> reencode_with_markov_order(
 		i += crackle::lib::itoc(static_cast<uint32_t>(crack_codes[z].size()), z_index_binary, i);
 	}
 
-	std::vector<unsigned char> labels_binary = crackle::labels::raw_labels(binary);
+	std::span<const unsigned char> labels_binary = crackle::labels::raw_labels(binary);
 
 	std::vector<unsigned char> final_binary = header.tobytes();
 	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());

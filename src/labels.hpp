@@ -351,21 +351,20 @@ std::vector<unsigned char> encode_condensed_pins(
 }
 
 
-std::vector<unsigned char> raw_labels(
+std::span<const unsigned char> raw_labels(
 	const std::span<const unsigned char> &binary
 ) {
 	crackle::CrackleHeader header(binary);
 	uint64_t hb = crackle::CrackleHeader::header_size;
-	std::vector<unsigned char> labels_binary(
+	return std::span<const unsigned char>(
 		binary.begin() + hb + sizeof(uint32_t) * header.sz,
-		binary.begin() + hb + sizeof(uint32_t) * header.sz + header.num_label_bytes
+		header.num_label_bytes
 	);
-	return labels_binary;
 }
 
 uint64_t decode_num_labels(
 	const CrackleHeader &header,
-	const std::vector<unsigned char> &labels_binary
+	const std::span<const unsigned char> &labels_binary
 ) {
 	if (header.label_format == LabelFormat::FLAT) {
 		return crackle::lib::ctoi<uint64_t>(labels_binary.data(), 0);
@@ -378,7 +377,7 @@ uint64_t decode_num_labels(
 template <typename STORED_LABEL>
 std::vector<STORED_LABEL> decode_uniq(
 	const CrackleHeader &header,
-	const std::vector<unsigned char> &labels_binary
+	const std::span<const unsigned char> &labels_binary
 ) {
 	const uint64_t num_labels = decode_num_labels(header, labels_binary);
 	std::vector<STORED_LABEL> uniq(num_labels);
@@ -430,7 +429,7 @@ std::vector<LABEL> decode_flat(
 	const std::span<const unsigned char> &binary,
 	const uint64_t z_start, const uint64_t z_end
 ) {
-	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	std::span<const unsigned char> labels_binary = raw_labels(binary);
 	const unsigned char* buf = labels_binary.data();
 
 	const uint64_t num_labels = decode_num_labels(header, labels_binary);
@@ -487,7 +486,7 @@ std::vector<LABEL> decode_fixed_width_pins(
 	const uint64_t N,
 	const uint64_t z_start, const uint64_t z_end
 ) {
-	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	std::span<const unsigned char> labels_binary = raw_labels(binary);
 	const LABEL bgcolor = static_cast<LABEL>(
 		crackle::lib::ctoi<STORED_LABEL>(
 			labels_binary.data(), 0
@@ -550,7 +549,7 @@ std::vector<LABEL> decode_condensed_pins(
 	const uint64_t N, 
 	const uint64_t z_start, const uint64_t z_end
 ) {
-	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	std::span<const unsigned char> labels_binary = raw_labels(binary);
 	const LABEL bgcolor = static_cast<LABEL>(
 		crackle::lib::ctoi<STORED_LABEL>(
 			labels_binary.data(), 0
