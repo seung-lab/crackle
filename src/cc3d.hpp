@@ -144,6 +144,21 @@ OUT* relabel(
   return out_labels;
 }
 
+uint64_t estimate_provisional_label_count(
+  const std::vector<uint8_t>& vcg, const int64_t sx
+) {
+  uint64_t count = 0; // number of transitions between labels
+
+  for (int64_t loc = 0; loc < vcg.size(); loc += sx) {
+    count += 1;
+    for (int64_t x = 1; x < sx; x++) {
+      count += ((vcg[loc+x] & 0b0010) == 0);
+    }
+  }
+
+  return count;
+}
+
 template <typename OUT>
 OUT* color_connectivity_graph(
   const std::vector<uint8_t> &vcg, // voxel connectivity graph
@@ -155,7 +170,7 @@ OUT* color_connectivity_graph(
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = static_cast<uint64_t>(voxels) + 1; // + 1L for an array with no zeros
+  uint64_t max_labels = estimate_provisional_label_count(vcg, sx) + 1;
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   if (out_labels == NULL) {
