@@ -436,12 +436,17 @@ merge_holes(
 			// picked = root;
 		}
 		else if (depth == 1) {
-			uint32_t minpt = candidate_contours[i][0];
+			bool is_hole = false;
 
-			// if not blocked on up and left
-			// it'll be the same connected component
-			// (a hole)
-			if (vcg[minpt] & 0b1010) {
+			// detect if this is a thin object or not
+			for (auto pt : candidate_contours[i]) {
+				if (popcount(vcg[pt] & 0b1111) > 2) {
+					is_hole = true;
+					break;
+				}
+			}
+
+			if (is_hole) {
 				roots.emplace(root);
 				// picked = root;
 			}
