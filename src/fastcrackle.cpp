@@ -15,7 +15,8 @@ namespace py = pybind11;
 template <typename LABEL>
 py::array decompress_helper(
 	const crackle::CrackleHeader& head, 
-	const py::bytes &buffer,
+	const uint8_t* buffer,
+	const uint64_t num_bytes,
 	int64_t z_start, int64_t z_end
 ) {
 	int64_t voxels = head.sx * head.sy;
@@ -32,7 +33,7 @@ py::array decompress_helper(
 
 	py::array arr = py::array_t<LABEL>(voxels);
 	crackle::decompress<LABEL>(
-		buffer,
+		buffer, num_bytes,
 		reinterpret_cast<LABEL*>(const_cast<void*>(arr.data())),
 		z_start, z_end
 	);
@@ -40,24 +41,40 @@ py::array decompress_helper(
 }
 
 py::array decompress(
-	const py::bytes &buffer, 
+	const py::buffer buffer, 
 	const int64_t z_start = 0, const int64_t z_end = -1
 ) {
-	crackle::CrackleHeader head(buffer);
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+
+	crackle::CrackleHeader head(data);
 
 	py::array labels;
 
 	if (head.data_width == 1) {
-		labels = decompress_helper<uint8_t>(head, buffer, z_start, z_end);
+		labels = decompress_helper<uint8_t>(
+			head, data, info.size, z_start, z_end
+		);
 	}
 	else if (head.data_width == 2) {
-		labels = decompress_helper<uint16_t>(head, buffer, z_start, z_end);
+		labels = decompress_helper<uint16_t>(
+			head, data, info.size, z_start, z_end
+		);
 	}
 	else if (head.data_width == 4) {
-		labels = decompress_helper<uint32_t>(head, buffer, z_start, z_end);	
+		labels = decompress_helper<uint32_t>(
+			head, data, info.size, z_start, z_end
+		);	
 	}
 	else {
-		labels = decompress_helper<uint64_t>(head, buffer, z_start, z_end);
+		labels = decompress_helper<uint64_t>(
+			head, data, info.size, z_start, z_end
+		);
 	}
 	
 	return labels;
@@ -144,9 +161,16 @@ py::bytes compress(
 }
 
 py::bytes reencode_markov(
-	const py::bytes &buffer, const int markov_model_order
+	const py::buffer buffer, const int markov_model_order
 ) {
-	auto buf = crackle::reencode_with_markov_order(buffer, markov_model_order);
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	auto buf = crackle::reencode_with_markov_order(data, info.size, markov_model_order);
 	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
 }
 
@@ -232,8 +256,43 @@ auto compute_pins(const py::array &labels) {
 		return crackle::pins::compute<uint64_t>(
 			reinterpret_cast<uint64_t*>(const_cast<void*>(labels.data())),
 			sx, sy, sz
-		);		
+		);
 	}
+}
+
+py::dict point_cloud(	
+	const py::buffer buffer, 
+	const int64_t z_start = 0, 
+	const int64_t z_end = -1,
+	const int64_t label = -1
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	auto ptc = crackle::point_cloud(data, info.size, z_start, z_end, label);
+
+	py::dict py_ptc;
+	for (const auto& [key, vec] : ptc) {
+		py::array array = py::array_t<uint16_t>(vec.size());
+		std::memcpy(array.mutable_data(), vec.data(), vec.size() * sizeof(uint16_t));
+		py_ptc[py::int_(key)] = array;
+	}
+
+	return py_ptc;
+}
+
+py::array get_slice_vcg(
+	const py::bytes &buffer, 
+	const int64_t z
+) {
+	std::vector<uint8_t> vcg = crackle::decode_slice_vcg(buffer, z);
+	py::array array = py::array_t<uint8_t>(vcg.size());
+	std::memcpy(array.mutable_data(), vcg.data(), vcg.size() * sizeof(uint8_t));
+	return array;
 }
 
 PYBIND11_MODULE(fastcrackle, m) {
@@ -247,10 +306,12 @@ PYBIND11_MODULE(fastcrackle, m) {
 		"Perform 4-connected components in layers on a 3D array."
 	);
 	m.def("compute_pins", &compute_pins, "Compute a pinset.");
+	m.def("point_cloud", &point_cloud, "Extract one or more point clouds without decompressing.");
+	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
-	    .def(py::init<>())
-	    .def_readwrite("index", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::index)
-	    .def_readwrite("depth", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::depth)
-	    .def_readwrite("label", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::label);
+		.def(py::init<>())
+		.def_readwrite("index", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::index)
+		.def_readwrite("depth", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::depth)
+		.def_readwrite("label", &crackle::pins::Pin<uint64_t, uint64_t, uint64_t>::label);
 }

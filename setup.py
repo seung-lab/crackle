@@ -5,11 +5,11 @@ import sys
 extra_compile_args = []
 if sys.platform == 'win32':
   extra_compile_args += [
-    '/std:c++17', '/O2'
+    '/std:c++20', '/O2'
   ]
 else:
   extra_compile_args += [
-    '-std=c++17', '-O3'
+    '-std=c++2a', '-O3'
   ]
 
 setuptools.setup(

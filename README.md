@@ -60,6 +60,10 @@ arr[:,:,30] = 20 # write to a crackle array (whole z slices write faster)
 20 in arr # log(N) check
 arr = arr.numpy() # convert to a numpy array
 
+# low memory extraction of point clouds
+ptc = crackle.point_cloud(binary) # { label: np.ndarray, ... }
+ptc = crackle.point_cloud(binary, label=777)
+
 # building big arrays with low memory
 binary = crackle.zeros([5000,5000,5000], dtype=np.uint64, order='F')
 

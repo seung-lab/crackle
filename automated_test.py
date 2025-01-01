@@ -388,6 +388,45 @@ def test_refit():
   assert arr.dtype == np.uint8
 
 
+def test_point_cloud():
+  input_arr = np.array([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+  ], dtype=np.uint32, order="F")
+
+  binary = crackle.compress(input_arr)
+  ptc = crackle.point_cloud(binary, 0)[:,:2]
+
+  sx, sy = input_arr.shape
+
+  result = []
+  for x in range(sx):
+    result.append([x,0])
+    result.append([x,sy-1])
+  for y in range(1, sy -1):
+    result.append([0,y])
+    result.append([sx-1,y])
+
+  result.append([0,0]) # extra copy of 0,0
+
+  result = np.array(result)
+  result = np.sort(result, axis=0)
+  ptc = np.sort(ptc, axis=0)
+
+  assert np.all(result == ptc)
+
+
+
+
+
+
+
 
 
 

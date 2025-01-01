@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <span>
 #include <type_traits>
 
 #include "robin_hood.hpp"
@@ -256,7 +257,7 @@ namespace markov {
 	}
 
 	std::vector<uint8_t> decode_codepoints(
-		std::vector<unsigned char>& crack_code,
+		std::span<const unsigned char>& crack_code,
 		const std::vector<std::vector<uint8_t>>& model
 	) {
 		std::vector<uint8_t> data_stream;

@@ -5,7 +5,7 @@ from .codec import (
   compress, decompress, decompress_range, 
   labels, nbytes, contains, 
   header, crack_codes, num_labels,
-  components,
+  components, point_cloud,
 )
 from .operations import (
   astype,
@@ -86,6 +86,9 @@ class CrackleArray:
 
   def decompress(self, label:Optional[int] = None) -> bytes:
     return decompress(self.binary, label)
+
+  def point_cloud(self, label:Optional[int] = None) -> np.ndarray:
+    return point_cloud(self.binary, label)
 
   def save(self, filelike):
     import crackle.util

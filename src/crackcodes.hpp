@@ -4,30 +4,13 @@
 #include <vector>
 #include <unordered_map>
 #include <stack>
+#include <span>
 #include <cstdint>
 
 #include "robin_hood.hpp"
 #include "lib.hpp"
 #include "cc3d.hpp"
-
-#ifdef _MSC_VER
-#  include <intrin.h>
-#  define popcount __popcnt
-
-// https://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code
-unsigned long ctz(unsigned long value) {
-    unsigned long trailing_zero = 0;
-    if (_BitScanForward(&trailing_zero, value)) {
-        return trailing_zero;
-    }
-    else {
-        return 32;
-    }
-}
-#else
-#  define popcount __builtin_popcount
-#  define ctz __builtin_ctz
-#endif
+#include "builtins.hpp"
 
 namespace crackle {
 namespace crackcodes {
@@ -280,7 +263,7 @@ int64_t remove_initial_branch(
 }
 
 std::vector<uint64_t> read_boc_index(
-	const std::vector<unsigned char>& binary,
+	const std::span<const unsigned char>& binary,
 	const uint64_t sx, const uint64_t sy
 ) {
 	std::vector<uint64_t> nodes;
@@ -536,7 +519,7 @@ encode_boundaries(
 
 	for (int64_t z = 0; z < sz; z++) {
 		binary_components.push_back(
-				create_crack_codes(labels + z * sxy, sx, sy, permissible)
+			create_crack_codes(labels + z * sxy, sx, sy, permissible)
 		);
 	}
 
@@ -616,7 +599,7 @@ codepoints_to_symbols(
 }
 
 std::vector<uint8_t> unpack_codepoints(
-	const std::vector<unsigned char> &code, 
+	const std::span<const unsigned char> &code, 
 	const uint64_t sx, const uint64_t sy
 ) {
 	if (code.size() == 0) {
@@ -648,8 +631,8 @@ void decode_permissible_crack_code(
 	const int64_t sx, const int64_t sy,
 	uint8_t* edges
 ) {
-	// voxel connectivity
-	// four bits: -y-x+y+x true is passable
+	// voxel connectivity matches cc3d_graphs.hpp 4 connected
+	// four bits: -y+y-x+x true is passable
 	std::fill(edges, edges + sx * sy, 0);
 
 	int64_t sxe = sx + 1;
@@ -728,8 +711,8 @@ void decode_impermissible_crack_code(
 	const int64_t sx, const int64_t sy,
 	uint8_t* edges
 ) {
-	// voxel connectivity
-	// four bits: -y-x+y+x true is passable
+	// voxel connectivity matches cc3d_graphs.hpp 4 connected
+	// four bits: -y+y-x+x true is passable
 	std::fill(edges, edges + sx * sy, 0b1111);
 
 	int64_t sxe = sx + 1;

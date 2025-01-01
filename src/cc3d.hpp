@@ -148,8 +148,9 @@ uint64_t estimate_provisional_label_count(
   const std::vector<uint8_t>& vcg, const int64_t sx
 ) {
   uint64_t count = 0; // number of transitions between labels
+  int64_t voxels = static_cast<int64_t>(vcg.size());
 
-  for (int64_t loc = 0; loc < vcg.size(); loc += sx) {
+  for (int64_t loc = 0; loc < voxels; loc += sx) {
     count += 1;
     for (int64_t x = 1; x < sx; x++) {
       count += ((vcg[loc+x] & 0b0010) == 0);

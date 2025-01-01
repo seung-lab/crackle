@@ -1,6 +1,7 @@
 #ifndef __CRACKLE_LABELS_HXX__
 #define __CRACKLE_LABELS_HXX__
 
+#include <span>
 #include <vector>
 
 #include "robin_hood.hpp"
@@ -350,21 +351,20 @@ std::vector<unsigned char> encode_condensed_pins(
 }
 
 
-std::vector<unsigned char> raw_labels(
-	const std::vector<unsigned char> &binary
+std::span<const unsigned char> raw_labels(
+	const std::span<const unsigned char> &binary
 ) {
 	crackle::CrackleHeader header(binary);
 	uint64_t hb = crackle::CrackleHeader::header_size;
-	std::vector<unsigned char> labels_binary(
+	return std::span<const unsigned char>(
 		binary.begin() + hb + sizeof(uint32_t) * header.sz,
-		binary.begin() + hb + sizeof(uint32_t) * header.sz + header.num_label_bytes
+		header.num_label_bytes
 	);
-	return labels_binary;
 }
 
 uint64_t decode_num_labels(
 	const CrackleHeader &header,
-	const std::vector<unsigned char> &labels_binary
+	const std::span<const unsigned char> &labels_binary
 ) {
 	if (header.label_format == LabelFormat::FLAT) {
 		return crackle::lib::ctoi<uint64_t>(labels_binary.data(), 0);
@@ -377,7 +377,7 @@ uint64_t decode_num_labels(
 template <typename STORED_LABEL>
 std::vector<STORED_LABEL> decode_uniq(
 	const CrackleHeader &header,
-	const std::vector<unsigned char> &labels_binary
+	const std::span<const unsigned char> &labels_binary
 ) {
 	const uint64_t num_labels = decode_num_labels(header, labels_binary);
 	std::vector<STORED_LABEL> uniq(num_labels);
@@ -426,10 +426,10 @@ decode_components(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_flat(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint64_t z_start, const uint64_t z_end
 ) {
-	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	std::span<const unsigned char> labels_binary = raw_labels(binary);
 	const unsigned char* buf = labels_binary.data();
 
 	const uint64_t num_labels = decode_num_labels(header, labels_binary);
@@ -481,12 +481,12 @@ std::vector<LABEL> decode_flat(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_fixed_width_pins(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint32_t* cc_labels,
 	const uint64_t N,
 	const uint64_t z_start, const uint64_t z_end
 ) {
-	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	std::span<const unsigned char> labels_binary = raw_labels(binary);
 	const LABEL bgcolor = static_cast<LABEL>(
 		crackle::lib::ctoi<STORED_LABEL>(
 			labels_binary.data(), 0
@@ -544,12 +544,12 @@ std::vector<LABEL> decode_fixed_width_pins(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_condensed_pins(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint32_t* cc_labels,
 	const uint64_t N, 
 	const uint64_t z_start, const uint64_t z_end
 ) {
-	std::vector<unsigned char> labels_binary = raw_labels(binary);
+	std::span<const unsigned char> labels_binary = raw_labels(binary);
 	const LABEL bgcolor = static_cast<LABEL>(
 		crackle::lib::ctoi<STORED_LABEL>(
 			labels_binary.data(), 0
@@ -651,7 +651,7 @@ std::vector<LABEL> decode_condensed_pins(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_label_map(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint32_t* cc_labels,
 	const uint64_t N,
 	const uint64_t z_start, const uint64_t z_end
@@ -661,11 +661,21 @@ std::vector<LABEL> decode_label_map(
 		return decode_flat<LABEL, STORED_LABEL>(header, binary, z_start, z_end);
 	}
 	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
+		if (cc_labels == NULL) {
+			std::string err = "crackle: cc_labels must not be null.";
+			throw std::runtime_error(err);
+		}
+
 		label_map = decode_fixed_width_pins<LABEL, STORED_LABEL>(
 			header, binary, cc_labels, N, z_start, z_end
 		);
 	}
 	else if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
+		if (cc_labels == NULL) {
+			std::string err = "crackle: cc_labels must not be null.";
+			throw std::runtime_error(err);
+		}
+		
 		label_map = decode_condensed_pins<LABEL, STORED_LABEL>(
 			header, binary, cc_labels, N, z_start, z_end
 		);
