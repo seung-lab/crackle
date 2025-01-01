@@ -202,11 +202,12 @@ uint8_t compute_next_move(
 #undef TRY_LEFT
 #undef TRY_RIGHT
 
-void extract_contours_helper(
+std::vector<std::vector<uint32_t>> 
+extract_contours_helper(
 	std::vector<uint8_t>& vcg,
-	const uint64_t sx, const uint64_t sy,
-	std::vector<std::vector<uint32_t>>& contours
+	const uint64_t sx, const uint64_t sy
 ) {
+	std::vector<std::vector<uint32_t>> contours;
 
 	VCGGraph G(vcg, sx, sy);
 	for (uint64_t i = 0; i < sx; i++) {
@@ -297,8 +298,14 @@ void extract_contours_helper(
 
 		contours.push_back(std::move(rotated));
 	}
+
+	return contours;
 }
 
+/* This ray casting algorithm almost works, but breaks on
+ * thin objects that wrap around the internal contour.
+ * Probably need to use a winding algorithm instead.
+ */
 bool polygonContainsPoint(
 	const std::vector<uint32_t>& poly,
 	const std::vector<uint8_t>& vcg,
@@ -350,7 +357,7 @@ bool polygonContainsPoint(
 
 
 std::vector<std::vector<uint32_t>>
-merge_holes(
+merge_contours_via_geometry_matching(
 	std::vector<std::vector<uint32_t>>& candidate_contours,
 	const std::vector<uint8_t>& vcg,
 	const uint64_t sx, const uint64_t sy
@@ -504,21 +511,23 @@ merge_holes(
 		i++;
 	}
 
+	std::sort(merged_contours.begin(), merged_contours.end(),
+		[](const auto& a, const auto& b) {
+			return a[0] < b[0];
+		});
+
 	return merged_contours;
 }
 
-
-std::vector<std::vector<uint32_t>> 
-extract_contours(
-	std::vector<uint8_t>& vcg,
+// an alternative is the complex computational geometry strategy above...
+// which is much lower memory but hairy to implement and much slower so
+// long as we have that dang quadratic loop.
+std::vector<std::vector<uint32_t>> merge_contours_via_vcg_coloring(
+	const std::vector<std::vector<uint32_t>>& contours,
+	const std::vector<uint8_t>& vcg,
 	std::unique_ptr<uint32_t[]>& cc_labels,
-	const uint64_t sx, const uint64_t sy 
+	const uint64_t sx, const uint64_t sy
 ) {
-
-	std::vector<std::vector<uint32_t>> contours;
-
-	extract_contours_helper(vcg, sx, sy, contours);
-
 	uint64_t N = 0;
 	crackle::cc3d::color_connectivity_graph<uint32_t>(
 		vcg, sx, sy, 1, cc_labels.get(), N
@@ -529,12 +538,12 @@ extract_contours(
 		auto& contour = contours[i];
 		uint32_t cc_label = cc_labels[contour[0]];
 
-		auto insertion_point_it = merged_contours[i].end();
+		auto insertion_point_it = merged_contours[cc_label].end();
 		if (
 			merged_contours[cc_label].size() > 0 
 			&& merged_contours[cc_label][0] > contour[0]
 		) {
-			insertion_point_it = merged_contours[i].begin();
+			insertion_point_it = merged_contours[cc_label].begin();
 		}
 
 		merged_contours[cc_label].insert(
@@ -544,30 +553,18 @@ extract_contours(
 		);
 	}
 
-	// int i = 0;
-	// for (auto ct : contours) {
-	// 	printf("new contour %d\n", i++);
-	// 	for (auto val : ct) {
-	// 		printf("%d, ", val);
-	// 	}		
-	// 	printf("\n");
-	// }
-
-
-	// std::vector<std::vector<uint32_t>> merged = merge_holes(contours, vcg, sx, sy);
-
-	// std::sort(merged.begin(), merged.end(),
-	// 	[](const auto& a, const auto& b) {
-	// 		return a[0] < b[0];
-	// 	});
-
-	// i = 0;
-	// for (auto ct : merged) {
-	// 	printf("contour %d %d\n", i++, ct[0]);
-	// 	printf("\n");
-	// }
-
 	return merged_contours;
+}
+
+
+std::vector<std::vector<uint32_t>> 
+extract_contours(
+	std::vector<uint8_t>& vcg,
+	std::unique_ptr<uint32_t[]>& cc_labels,
+	const uint64_t sx, const uint64_t sy 
+) {
+	std::vector<std::vector<uint32_t>> contours = extract_contours_helper(vcg, sx, sy);
+	return merge_contours_via_vcg_coloring(contours, vcg, cc_labels, sx, sy);
 }
 
 };
