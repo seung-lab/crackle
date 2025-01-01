@@ -347,7 +347,7 @@ std::vector<std::vector<uint32_t>>
 merge_holes(
 	std::vector<std::vector<uint32_t>>& candidate_contours,
 	const std::vector<uint8_t>& vcg,
-	const uint64_t sx
+	const uint64_t sx, const uint64_t sy
 ) {
 
 	const libdivide::divider<uint32_t> fast_sx(sx);
@@ -359,13 +359,19 @@ merge_holes(
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
 		auto& vec = candidate_contours[i];
-		std::vector<uint32_t>::iterator it = std::max_element(vec.begin(), vec.end());
+		uint32_t minx = sx - 1;
+		uint32_t miny = sy - 1;
+		uint32_t maxx = 0;
+		uint32_t maxy = 0;
 
-		uint32_t miny = vec[0] / fast_sx;
-		uint32_t minx = vec[0] - miny * sx;
-
-		uint32_t maxy = (*it) / fast_sx;
-		uint32_t maxx = (*it) - maxy * sx;
+		for (auto pt : vec) {
+			uint32_t y = pt / fast_sx;
+			uint32_t x = pt - y * sx;
+			minx = std::min(minx, x);
+			maxx = std::max(maxx, x);
+			miny = std::min(miny, y);
+			maxy = std::max(maxy, y);
+		}
 
 		bboxes[i].first = std::make_pair(minx, miny);
 		bboxes[i].second = std::make_pair(maxx, maxy);
