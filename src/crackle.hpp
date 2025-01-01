@@ -721,6 +721,73 @@ auto point_cloud(
 	);
 }
 
+std::vector<uint8_t>
+decode_slice_vcg(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z
+) {
+
+	if (num_bytes < CrackleHeader::header_size) {
+		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
+		err += std::to_string(num_bytes);
+		throw std::runtime_error(err);
+	}
+
+	const CrackleHeader header(buffer);
+
+	if (header.format_version > 0) {
+		std::string err = "crackle: Invalid format version.";
+		err += std::to_string(header.format_version);
+		throw std::runtime_error(err);
+	}
+	if (z >= header.sz || z < 0) {
+		std::string err = "crackle: Invalid z: ";
+		err += std::to_string(z);
+		throw std::runtime_error(err);
+	}
+
+	const uint64_t voxels = (
+		static_cast<uint64_t>(header.sx) 
+		* static_cast<uint64_t>(header.sy) 
+	);
+
+	if (voxels == 0) {
+		return std::vector<uint8_t>();
+	}
+
+	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto crack_codes = get_crack_codes(header, binary, z, z+1);
+	std::vector<uint8_t> vcg(header.sx * header.sy);
+
+	for (auto crack_code : crack_codes) {
+		crack_code_to_vcg(
+			/*code=*/crack_code,
+			/*sx=*/header.sx, /*sy=*/header.sy,
+			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+			/*markov_model=*/markov_model,
+			/*slice_edges=*/vcg.data()
+		);
+	}
+
+	return vcg;
+}
+
+auto decode_slice_vcg(
+	const std::string &buffer,
+	const int64_t z
+) {
+	return decode_slice_vcg(
+		reinterpret_cast<const unsigned char*>(buffer.c_str()),
+		buffer.size(),
+		z
+	);
+}
+
 // take an existing crackle stream and change the markov order
 // returning a reencoded copy
 std::vector<unsigned char> reencode_with_markov_order(

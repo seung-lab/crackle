@@ -254,6 +254,15 @@ py::dict point_cloud(
 	return py_ptc;
 }
 
+py::array get_slice_vcg(
+	const py::bytes &buffer, 
+	const int64_t z
+) {
+	std::vector<uint8_t> vcg = crackle::decode_slice_vcg(buffer, z);
+	py::array array = py::array_t<uint8_t>(vcg.size());
+	std::memcpy(array.mutable_data(), vcg.data(), vcg.size() * sizeof(uint8_t));
+	return array;
+}
 
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
@@ -267,6 +276,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	);
 	m.def("compute_pins", &compute_pins, "Compute a pinset.");
 	m.def("point_cloud", &point_cloud, "Extract one or more point clouds without decompressing.");
+	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())
