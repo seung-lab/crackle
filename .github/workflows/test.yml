@@ -32,9 +32,6 @@ jobs:
 
       - name: Compile
         run: python setup.py develop
-        env:
-          CC:   gcc-10
-          CXX:  g++-10
 
       - name: Test with pytest
         run: pytest -v -x automated_test.py
