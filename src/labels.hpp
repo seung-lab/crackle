@@ -1,6 +1,7 @@
 #ifndef __CRACKLE_LABELS_HXX__
 #define __CRACKLE_LABELS_HXX__
 
+#include <span>
 #include <vector>
 
 #include "robin_hood.hpp"
@@ -351,7 +352,7 @@ std::vector<unsigned char> encode_condensed_pins(
 
 
 std::vector<unsigned char> raw_labels(
-	const std::vector<unsigned char> &binary
+	const std::span<const unsigned char> &binary
 ) {
 	crackle::CrackleHeader header(binary);
 	uint64_t hb = crackle::CrackleHeader::header_size;
@@ -426,7 +427,7 @@ decode_components(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_flat(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint64_t z_start, const uint64_t z_end
 ) {
 	std::vector<unsigned char> labels_binary = raw_labels(binary);
@@ -481,7 +482,7 @@ std::vector<LABEL> decode_flat(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_fixed_width_pins(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint32_t* cc_labels,
 	const uint64_t N,
 	const uint64_t z_start, const uint64_t z_end
@@ -544,7 +545,7 @@ std::vector<LABEL> decode_fixed_width_pins(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_condensed_pins(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint32_t* cc_labels,
 	const uint64_t N, 
 	const uint64_t z_start, const uint64_t z_end
@@ -651,7 +652,7 @@ std::vector<LABEL> decode_condensed_pins(
 template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_label_map(
 	const crackle::CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint32_t* cc_labels,
 	const uint64_t N,
 	const uint64_t z_start, const uint64_t z_end

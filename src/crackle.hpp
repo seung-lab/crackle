@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <span>
 #include <type_traits>
 #include <unordered_map>
 
@@ -197,7 +198,7 @@ std::vector<unsigned char> compress(
 
 std::vector<uint64_t> get_crack_code_offsets(
 	const CrackleHeader &header,
-	const std::vector<unsigned char> &binary
+	const std::span<const unsigned char> &binary
 ) {
 	uint64_t offset = CrackleHeader::header_size;
 
@@ -234,7 +235,7 @@ std::vector<uint64_t> get_crack_code_offsets(
 
 std::vector<std::vector<unsigned char>> get_crack_codes(
 	const CrackleHeader &header,
-	const std::vector<unsigned char> &binary,
+	const std::span<const unsigned char> &binary,
 	const uint64_t z_start, const uint64_t z_end
 ) {
 	std::vector<uint64_t> z_index = get_crack_code_offsets(header, binary);
@@ -260,7 +261,7 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 
 std::vector<std::vector<uint8_t>> decode_markov_model(
 	const CrackleHeader &header,
-	const std::vector<unsigned char> &binary
+	const std::span<const unsigned char> &binary
 ) {
 	if (header.markov_model_order == 0) {
 		return std::vector<std::vector<uint8_t>>();
@@ -348,7 +349,7 @@ CCL* crack_codes_to_cc_labels(
 template <typename LABEL>
 std::vector<LABEL> decode_label_map(
 	const CrackleHeader &header,
-	const std::vector<unsigned char>& binary,
+	const std::span<const unsigned char>& binary,
 	const uint32_t* cc_labels,
 	uint64_t N,
 	int64_t z_start,
@@ -447,7 +448,7 @@ LABEL* decompress(
 		return output;
 	}
 
-	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
+	std::span<const unsigned char> binary(buffer, num_bytes);
 
 	// only used for markov compressed streams
 	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
@@ -757,7 +758,7 @@ decode_slice_vcg(
 		return std::vector<uint8_t>();
 	}
 
-	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
+	std::span<const unsigned char> binary(buffer, num_bytes);
 
 	// only used for markov compressed streams
 	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
@@ -810,10 +811,10 @@ std::vector<unsigned char> reencode_with_markov_order(
 		throw std::runtime_error(err);
 	}
 
-	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
+	std::span<const unsigned char> binary(buffer, num_bytes);
 
 	if (header.markov_model_order == markov_model_order) {
-		return binary;
+		return std::vector<unsigned char>(binary.begin(), binary.end());
 	}
 
 	// only used for markov compressed streams

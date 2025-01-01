@@ -3,6 +3,8 @@
 
 #include "lib.hpp"
 #include <cstdint>
+#include <span>
+#include <vector>
 
 namespace crackle {
 
@@ -119,6 +121,10 @@ public:
 
 	CrackleHeader(const std::string &buf) {
 		assign_from_buffer(reinterpret_cast<const unsigned char*>(buf.c_str()));
+	}
+
+	CrackleHeader(const std::span<const unsigned char> &buf) {
+		assign_from_buffer(buf.data());
 	}
 
 	CrackleHeader(const std::vector<unsigned char> &buf) {
