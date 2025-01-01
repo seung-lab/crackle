@@ -7,6 +7,8 @@ import deflate
 import time
 
 def sample(labels, shape):
+  if shape == labels.shape:
+    return labels
   x,y,z = tuple(np.random.randint(0,max(labels.shape) - max(shape), size=(3,)))
   return labels[x:x+shape[0],y:y+shape[1],z:z+shape[2]]
 
