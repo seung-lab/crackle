@@ -9,25 +9,7 @@
 #include "robin_hood.hpp"
 #include "lib.hpp"
 #include "cc3d.hpp"
-
-#ifdef _MSC_VER
-#  include <intrin.h>
-#  define popcount __popcnt
-
-// https://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code
-unsigned long ctz(unsigned long value) {
-    unsigned long trailing_zero = 0;
-    if (_BitScanForward(&trailing_zero, value)) {
-        return trailing_zero;
-    }
-    else {
-        return 32;
-    }
-}
-#else
-#  define popcount __builtin_popcount
-#  define ctz __builtin_ctz
-#endif
+#include "builtins.hpp"
 
 namespace crackle {
 namespace crackcodes {
@@ -536,7 +518,7 @@ encode_boundaries(
 
 	for (int64_t z = 0; z < sz; z++) {
 		binary_components.push_back(
-				create_crack_codes(labels + z * sxy, sx, sy, permissible)
+			create_crack_codes(labels + z * sxy, sx, sy, permissible)
 		);
 	}
 

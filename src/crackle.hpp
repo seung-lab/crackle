@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <type_traits>
+#include <unordered_map>
 
 #include "robin_hood.hpp"
 
@@ -563,11 +564,13 @@ void decompress(
 	}
 }
 
-std::vector<uint16_t> point_cloud(
+template <typename LABEL>
+std::unordered_map<uint64_t, std::vector<uint16_t>>
+point_cloud(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
 	int64_t z_start = -1,
-	int64_t z_end = -1
+	int64_t z_end = -1,
 ) {
 
 	if (num_bytes < CrackleHeader::header_size) {
@@ -605,42 +608,96 @@ std::vector<uint16_t> point_cloud(
 	);
 
 	if (voxels == 0) {
-		return std::vector<uint16_t>();
+		return std::unordered_map<uint64_t, std::vector<uint16_t>>();
 	}
 
 	std::vector<unsigned char> binary(buffer, buffer + num_bytes);
 
 	// only used for markov compressed streams
 	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+
+	if (header.label_format != LabelFormat::FLAT) {
+		std::string err = "crackle: Point cloud is not compatible with pin label format.";
+		throw std::runtime_error(err);
+	}
+
+	std::vector<LABEL> label_map = decode_label_map<LABEL>(
+		header, binary, NULL, 0, z_start, z_end
+	);
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
-	std::vector<uint16_t> points;
+	std::unordered_map<uint64_t, std::vector<uint16_t>> ptc;
+
+	std::vector<uint8_t> vcg(header.sx * header.sy);
+
+	uint64_t label_i = 0;
 
 	uint16_t z = z_start;
 	for (auto crack_code : crack_codes) {
-		auto chains = crack_code_to_symbols(
+		crack_code_to_vcg(
 			/*code=*/crack_code,
 			/*sx=*/header.sx, /*sy=*/header.sy,
-			/*markov_model=*/markov_model
+			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+			/*markov_model=*/markov_model,
+			/*slice_edges=*/vcg.data()
 		);
 
-		auto ccls = crackle::dual_graph::crack_codes_to_dual_graph(chains, header.sx, header.sy);
+		auto ccls = crackle::dual_graph::extract_contours(vcg, header.sx, header.sy);
 		for (auto ccl : ccls) {
+			uint64_t label = label_map[label_i];
+			std::vector<uint16_t>& label_points = ptc[label];
+
 			for (uint32_t loc : ccl) {
 				uint64_t y = loc / header.sx;
 				uint64_t x = loc - (header.sx * y);
 
-				points.push_back(x);
-				points.push_back(y);
-				points.push_back(z);
+				label_points.push_back(x);
+				label_points.push_back(y);
+				label_points.push_back(z);
 			}
+
+			label_i++;
 		}
 
 		z++;
 	}
 
-	return points;
+	return ptc;
+}
+
+auto point_cloud(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.data_width == 1) {
+		return point_cloud<uint8_t>(
+			buffer, num_bytes,
+			z_start, z_end
+		);
+	}
+	else if (header.data_width == 2) {
+		return point_cloud<uint16_t>(
+			buffer, num_bytes,
+			z_start, z_end
+		);
+	}
+	else if (header.data_width == 4) {
+		return point_cloud<uint32_t>(
+			buffer, num_bytes,
+			z_start, z_end
+		);
+	}
+	else {
+		return point_cloud<uint64_t>(
+			buffer, num_bytes,
+			z_start, z_end
+		);
+	}
 }
 
 auto point_cloud(
