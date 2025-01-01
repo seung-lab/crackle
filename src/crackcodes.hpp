@@ -165,7 +165,7 @@ struct Graph {
 
 robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>
 symbols_to_codepoints(
-	std::vector<std::pair<int64_t, std::vector<char>>> &chains
+	std::vector<std::pair<uint64_t, std::vector<unsigned char>>> &chains
 ) {
 	robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>> encoded_chains;
 
@@ -222,7 +222,7 @@ symbols_to_codepoints(
 
 int64_t remove_initial_branch(
 	int64_t node,
-	std::vector<char>& code,
+	std::vector<unsigned char>& code,
 	const int64_t sx, const int64_t sy
 ) {
 	if (code.empty()) {
@@ -387,7 +387,7 @@ create_crack_codes(
 	Graph G;
 	bool any_edges = G.init(labels, sx, sy, permissible);
 
-	std::vector<std::pair<int64_t, std::vector<char>>> chains;
+	std::vector<std::pair<uint64_t, std::vector<unsigned char>>> chains;
 
 	if (!any_edges) {
 		return symbols_to_codepoints(chains);
@@ -405,7 +405,7 @@ create_crack_codes(
 	while ((start_node = G.next_cluster(start_node)) != -1) {
 		int64_t node = start_node;
 
-		std::vector<char> code;
+		std::vector<unsigned char> code;
 		code.reserve(sx >> 2);
 		robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
 		int64_t branches_taken = 1;
@@ -473,7 +473,7 @@ create_crack_codes(
 			start_node, code, sx, sy
 		);
 		chains.push_back(
-			std::make_pair(adjusted_start_node, code)
+			std::make_pair(static_cast<uint64_t>(adjusted_start_node), code)
 		);
 	}
 
@@ -585,8 +585,16 @@ codepoints_to_symbols(
 			continue;
 		}
 		else if (
-			(move == DirectionCode::UP && last_move == DirectionCode::DOWN)
-			|| (move == DirectionCode::LEFT && last_move == DirectionCode::RIGHT)
+			// equivalent to:
+			// move == DirectionCode::UP || move == DirectionCode::LEFT
+			// 
+			// which is equivalent to (because we already check 
+			// against last_move in move ^ last_move = 0b10) which
+			// means last move is guaranteed to be its opposite.
+			//
+			// (move == DirectionCode::UP && last_move == DirectionCode::DOWN)
+			// || (move == DirectionCode::LEFT && last_move == DirectionCode::RIGHT)
+			popcount(move) != 1 // 00 (LEFT) or 11 (UP), 7 operations -> 2
 		) {
 			symbols.back() = 't';
 			branches_taken--;

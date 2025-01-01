@@ -116,7 +116,7 @@ def save(
   ):
     return save_numpy(binary, filelike)
 
-  else:
+  if isinstance(labels, np.ndarray):
     binary = compress(labels, **kwargs)
 
   if hasattr(filelike, 'write'):
