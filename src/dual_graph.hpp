@@ -267,9 +267,9 @@ void extract_contours_helper(
 			do {
 				node += move_amt[next_move];
 				connected_component.push_back(node);
-				uint8_t visit_count = vcg[node] >> 4;
-				nodes_already_visited += (visit_count > 0);
-				vcg[node] = ((visit_count + 1) << 4) | (vcg[node] & 0b1111);
+				uint8_t is_visited = (vcg[node] >> 4) > 0;
+				nodes_already_visited += is_visited;
+				vcg[node] |= VISITED_BIT;
 				allowed_dirs = vcg[node] & 0b1111;
 
 				next_move = compute_next_move(
