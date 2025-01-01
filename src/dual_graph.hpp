@@ -533,7 +533,7 @@ extract_contours(
 	// }
 
 
-	std::vector<std::vector<uint32_t>> merged = merge_holes(contours, vcg, sx);
+	std::vector<std::vector<uint32_t>> merged = merge_holes(contours, vcg, sx, sy);
 
 	std::sort(merged.begin(), merged.end(),
 		[](const auto& a, const auto& b) {
