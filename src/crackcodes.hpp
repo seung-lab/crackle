@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <stack>
+#include <span>
 #include <cstdint>
 
 #include "robin_hood.hpp"
@@ -262,7 +263,7 @@ int64_t remove_initial_branch(
 }
 
 std::vector<uint64_t> read_boc_index(
-	const std::vector<unsigned char>& binary,
+	const std::span<const unsigned char>& binary,
 	const uint64_t sx, const uint64_t sy
 ) {
 	std::vector<uint64_t> nodes;
@@ -598,7 +599,7 @@ codepoints_to_symbols(
 }
 
 std::vector<uint8_t> unpack_codepoints(
-	const std::vector<unsigned char> &code, 
+	const std::span<const unsigned char> &code, 
 	const uint64_t sx, const uint64_t sy
 ) {
 	if (code.size() == 0) {

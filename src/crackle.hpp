@@ -233,7 +233,7 @@ std::vector<uint64_t> get_crack_code_offsets(
 	return z_index;
 }
 
-std::vector<std::vector<unsigned char>> get_crack_codes(
+std::vector<std::span<const unsigned char>> get_crack_codes(
 	const CrackleHeader &header,
 	const std::span<const unsigned char> &binary,
 	const uint64_t z_start, const uint64_t z_end
@@ -244,16 +244,13 @@ std::vector<std::vector<unsigned char>> get_crack_codes(
 		throw std::runtime_error("crackle: get_crack_codes: Unable to read past end of buffer.");
 	}
 
-	std::vector<std::vector<unsigned char>> crack_codes(z_end - z_start);
+	std::vector<std::span<const unsigned char>> crack_codes(z_end - z_start);
 
 	for (uint64_t z = z_start; z < z_end; z++) {
 		uint64_t code_size = z_index[z+1] - z_index[z];
-		std::vector<unsigned char> code;
-		code.reserve(code_size);
-		for (uint64_t i = z_index[z]; i < z_index[z+1]; i++) {
-			code.push_back(binary[i]);
-		}
-		crack_codes[z - z_start] = std::move(code);
+		crack_codes[z - z_start] = std::span<const unsigned char>(
+			&binary[z_index[z]], code_size
+		);
 	}
 
 	return crack_codes;
@@ -281,7 +278,7 @@ std::vector<std::vector<uint8_t>> decode_markov_model(
 
 std::vector<std::pair<uint64_t, std::vector<unsigned char>> >
 crack_code_to_symbols(
-  const std::vector<unsigned char>& code,
+  const std::span<const unsigned char>& code,
   const uint64_t sx, const uint64_t sy,
   const std::vector<std::vector<uint8_t>>& markov_model
 ) {
@@ -293,7 +290,7 @@ crack_code_to_symbols(
 	}
 	else {
 		uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
-		std::vector<uint8_t> markov_stream(code.begin() + index_size, code.end());
+		std::span<const uint8_t> markov_stream(code.begin() + index_size, code.size() - index_size);
 		codepoints = crackle::markov::decode_codepoints(markov_stream, markov_model);
 	}
 
@@ -302,7 +299,7 @@ crack_code_to_symbols(
 
 // vcg: voxel connectivity graph
 void crack_code_to_vcg(
-  const std::vector<unsigned char>& code,
+  const std::span<const unsigned char>& code,
   const uint64_t sx, const uint64_t sy,
   const bool permissible, 
   const std::vector<std::vector<uint8_t>>& markov_model,
@@ -316,7 +313,7 @@ void crack_code_to_vcg(
 
 template <typename CCL>
 CCL* crack_codes_to_cc_labels(
-  const std::vector<std::vector<unsigned char>>& crack_codes,
+  const std::vector<std::span<const unsigned char>>& crack_codes,
   const uint64_t sx, const uint64_t sy, const uint64_t sz,
   const bool permissible, uint64_t &N,
   const std::vector<std::vector<uint8_t>>& markov_model,
