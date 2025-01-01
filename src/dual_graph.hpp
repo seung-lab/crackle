@@ -381,7 +381,9 @@ merge_holes(
 	// printf("sz: %d\n", candidate_contours.size());
 
 	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
-		if (candidate_contours[i].size() == 1) {
+		// can't contain another object with a 4-connected contour
+		// with fewer than 7 pixels
+		if (candidate_contours[i].size() < 8) {
 			continue;
 		}
 
