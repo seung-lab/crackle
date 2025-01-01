@@ -158,7 +158,6 @@ extract_contours_helper(
 
 	// clockwise for outer boundaries
 	// counterclockwise for inner boundaries
-	// bool is_hole = false; 
 	bool clockwise = true;
 	int64_t start_node = 0;
 
