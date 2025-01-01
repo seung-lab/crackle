@@ -51,9 +51,6 @@ struct VCGGraph {
 				// condensing this conditional seems to save 5% in one speed test
 				// if (((vcg[idx] & 0b11) < 0b11) && (vcg[idx] & VISIT_COUNT) == 0) {
 				// -----
-				// vcg[idx] == 0b11100 means we are in a pinch that has been visited
-				// exactly once (it will need to be visited twice). 
-
 				// check that the next voxel isn't visited and is a barrier
 
 				if ((vcg[idx] & 0b110011) < 0b11 
@@ -68,72 +65,10 @@ struct VCGGraph {
 	}
 };
 
-struct TreeNode {
-public:
-	TreeNode* parent;
-	uint32_t value;
-	std::vector<TreeNode*> children;
-
-	TreeNode() : parent(NULL), value(0) {}
-
-	void setParent(TreeNode* parent_) {
-		if (parent_ != NULL) {
-			parent_->children.push_back(this);
-		}
-		if (parent != NULL && parent != parent_) {
-			parent->children.erase(
-				std::remove(parent->children.begin(), parent->children.end(), this), 
-				parent->children.end()
-			);
-		}
-		this->parent = parent_;
-	}
-
-	bool isRoot() const {
-		return parent == NULL;
-	}
-
-	const TreeNode* root() const {
-		const TreeNode* cur = this;
-		while (cur->parent != NULL) {
-			cur = cur->parent;
-		}
-		return cur;
-	}
-
-	int depth() const {
-		int depth = 0;
-		const TreeNode* cur = this;
-		while (cur->parent != NULL) {
-			cur = cur->parent;
-			depth++;
-		}
-		return depth;
-	}
-
-private:
-	void _allValuesHelper (std::vector<uint32_t>& all_vals) const {
-		all_vals.push_back(value);
-
-		for (TreeNode* node : children) {
-			node->_allValuesHelper(all_vals);
-		}
-	}
-
-public:
-	std::vector<uint32_t> allValues () const {
-		std::vector<uint32_t> all_vals;
-		_allValuesHelper(all_vals);
-		return all_vals;
-	}
-};
-
-
 #define TRY_LEFT if (allowed_dirs & VCGDirectionCode::LEFT) {return VCGDirectionCode::LEFT;}
 #define TRY_RIGHT if (allowed_dirs & VCGDirectionCode::RIGHT) {return VCGDirectionCode::RIGHT;}
 #define TRY_UP if (allowed_dirs & VCGDirectionCode::UP) {return VCGDirectionCode::UP;}
 #define TRY_DOWN if (allowed_dirs & VCGDirectionCode::DOWN) {return VCGDirectionCode::DOWN;}
-
 
 uint8_t compute_next_move(
 	const bool clockwise,
@@ -195,7 +130,6 @@ uint8_t compute_next_move(
 
 	return VCGDirectionCode::NONE;
 }
-
 
 #undef TRY_UP
 #undef TRY_DOWN
@@ -300,223 +234,6 @@ extract_contours_helper(
 	}
 
 	return contours;
-}
-
-/* This ray casting algorithm almost works, but breaks on
- * thin objects that wrap around the internal contour.
- * Probably need to use a winding algorithm instead.
- */
-bool polygonContainsPoint(
-	const std::vector<uint32_t>& poly,
-	const std::vector<uint8_t>& vcg,
-	const uint32_t pt,
-	const uint64_t sx
-) {
-
-	const libdivide::divider<uint32_t> fast_sx(sx); 
-
-	uint32_t pt_y = pt / fast_sx;
-	uint32_t pt_x = pt - pt_y * sx;
-	uint32_t contacts_y = 0;
-	uint32_t contacts_x = 0;
-
-	robin_hood::unordered_set<uint32_t> seen;
-	seen.reserve(poly.size());
-
-	for (uint64_t i = 0; i < poly.size(); i++) {
-		if (seen.count(poly[i])) {
-			continue;
-		}
-
-		uint32_t elem_y = poly[i] / fast_sx;
-		uint32_t elem_x = poly[i] - elem_y * sx;
-
-		// need to check that a vertical chain actually touches
-		// a vertical boundary in the vcg
-		uint32_t barrier = 2 - popcount(vcg[poly[i]] & 0b1100); // at least one y barrier
-		uint32_t incr = ((pt_x == elem_x) && ((elem_y+1) < pt_y)) * barrier;
-		// handle the special case of elem_y == pt_y where only up matters
-		incr += (pt_x == elem_x) && (elem_y == pt_y) && ((vcg[poly[i]] & 0b1100) < 0b1100);
-		incr += (pt_x == elem_x) && ((elem_y+1) == pt_y) && ((vcg[poly[i]] & 0b1100) < 0b1100);
-		contacts_y += incr;
-
-		barrier = 2 - popcount(vcg[poly[i]] & 0b11); // at least one x barrier
-		incr = ((pt_y == elem_y) && ((elem_x+1) < pt_x)) * barrier;
-		// handle the special case of elem_x == pt_x where only the left matters
-		incr += (pt_y == elem_y) && (elem_x == pt_x) && ((vcg[poly[i]] & 0b11) < 0b11);
-		incr += (pt_y == elem_y) && ((elem_x + 1) == pt_x) && ((vcg[poly[i]] & 0b11) < 0b11);
-		contacts_x += incr;
-
-		seen.emplace(poly[i]);
-	}
-
-	// printf("poly %d pt %d contacts x%d y%d\n", poly[0], pt, contacts_x, contacts_y);
-
-	return (contacts_y & 0b1) && (contacts_x & 0b1);
-}
-
-
-std::vector<std::vector<uint32_t>>
-merge_contours_via_geometry_matching(
-	std::vector<std::vector<uint32_t>>& candidate_contours,
-	const std::vector<uint8_t>& vcg,
-	const uint64_t sx, const uint64_t sy
-) {
-
-	const libdivide::divider<uint32_t> fast_sx(sx);
-	
-	std::vector<
-		std::pair<std::pair<uint32_t, uint32_t>, std::pair<uint32_t, uint32_t>>
-	> bboxes(candidate_contours.size());
-	std::vector<TreeNode> links(candidate_contours.size());
-
-	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
-		auto& vec = candidate_contours[i];
-		uint32_t minx = sx - 1;
-		uint32_t miny = sy - 1;
-		uint32_t maxx = 0;
-		uint32_t maxy = 0;
-
-		for (auto pt : vec) {
-			uint32_t y = pt / fast_sx;
-			uint32_t x = pt - y * sx;
-			minx = std::min(minx, x);
-			maxx = std::max(maxx, x);
-			miny = std::min(miny, y);
-			maxy = std::max(maxy, y);
-		}
-
-		bboxes[i].first = std::make_pair(minx, miny);
-		bboxes[i].second = std::make_pair(maxx, maxy);
-		links[i].value = i;
-	}
-
-	// printf("sz: %d\n", candidate_contours.size());
-
-	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
-		// can't contain another object with a 4-connected contour
-		// with fewer than 7 pixels
-		if (candidate_contours[i].size() < 8) {
-			continue;
-		}
-
-		for (uint64_t j = i + 1; j < candidate_contours.size(); j++) {
-			auto& bbx1 = bboxes[i];
-			auto& bbx2 = bboxes[j];
-
-			// non-intersecting bounding boxes
-			if (bbx2.first.second > bbx1.second.second) {
-				break;
-			}
-			else if (!(
-				(bbx2.first.first >= bbx1.first.first && bbx2.first.second >= bbx1.first.second)
-			 && (bbx2.second.first <= bbx1.second.first && bbx2.second.second <= bbx1.second.second)
-			)) {
-				continue;
-			}
-
-			if (polygonContainsPoint(candidate_contours[i], vcg, candidate_contours[j][0], sx)) {
-				// printf("link i %d j %d (idx %d %d)\n", i, j, candidate_contours[i][0], candidate_contours[j][0]);
-				links[j].setParent(&links[i]);
-			}
-		}
-	}
-
-	robin_hood::unordered_set<uint32_t> roots;
-	roots.reserve(candidate_contours.size() / 10);
-
-	for (uint64_t i = 0; i < candidate_contours.size(); i++) {
-		uint32_t depth = links[i].depth();
-		uint32_t root = links[i].root()->value;
-
-		// printf("i=%d depth=%d, root=%d, nchild=%d\n", 
-		// 	i, depth, links[i].root()->value, links[i].children.size());
-		// uint64_t picked = 666;
-		
-		if (links[i].children.size() == 0) {
-			links[i].setParent(NULL);
-			roots.emplace(i);
-			// picked = i;
-		}
-		else if (depth == 0) {
-			roots.emplace(root);
-			// picked = root;
-		}
-		else if (depth == 1) {
-			bool is_hole = false;
-
-			// detect if this is a thin object or not
-			for (auto pt : candidate_contours[i]) {
-				if (popcount(vcg[pt] & 0b1111) > 2) {
-					is_hole = true;
-					break;
-				}
-			}
-
-			if (is_hole) {
-				roots.emplace(root);
-				// picked = root;
-			}
-			else {
-				links[i].setParent(NULL);
-				roots.emplace(i);
-				// picked = i;				
-			}
-		}
-		else {
-			auto& vec = candidate_contours[root];
-			auto it = std::find(vec.begin(), vec.end(), candidate_contours[i][0]);
-			if (it != vec.end()) {
-				links[i].setParent(&links[root]);
-				roots.emplace(root);
-				// picked = root;
-			}
-			else if ((depth & 0b0) == 0) {
-				links[i].setParent(NULL);
-				roots.emplace(i);
-				// picked = i;
-			}
-			else {
-				links[i].parent->setParent(NULL);
-				uint32_t root = links[i].root()->value;
-				roots.emplace(root);
-				// picked = root;
-			}
-		}
-
-		// printf("i=%d depth=%d, root=%d, picked=%d\n\n", i, depth, links[i].root()->value, picked);
-	}
-
-	std::vector<std::vector<uint32_t>> merged_contours(roots.size());
-
-	uint64_t i = 0;
-	for (auto root : roots) {
-		auto vals = links[root].allValues();
-		for (uint32_t val : vals) {
-
-			auto insertion_point_it = merged_contours[i].end();
-			if (
-				merged_contours[i].size() > 0 
-				&& merged_contours[i][0] > candidate_contours[val][0]
-			) {
-				insertion_point_it = merged_contours[i].begin();
-			}
-
-			merged_contours[i].insert(
-				insertion_point_it, 
-				candidate_contours[val].begin(), 
-				candidate_contours[val].end()
-			);
-		}
-		i++;
-	}
-
-	std::sort(merged_contours.begin(), merged_contours.end(),
-		[](const auto& a, const auto& b) {
-			return a[0] < b[0];
-		});
-
-	return merged_contours;
 }
 
 // an alternative is the complex computational geometry strategy above...
