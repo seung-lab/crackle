@@ -820,7 +820,6 @@ std::vector<unsigned char> reencode_with_markov_order(
 	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
 	
 	auto existing_crack_codes = get_crack_codes(header, binary, 0, header.sz);
-	const bool permissible = (header.crack_format == CrackFormat::PERMISSIBLE);
 
 	std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> crack_codepoints;
 	for (auto& crack_code : existing_crack_codes) {
