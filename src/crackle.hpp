@@ -631,6 +631,7 @@ point_cloud(
 	std::unordered_map<uint64_t, std::vector<uint16_t>> ptc;
 
 	std::vector<uint8_t> vcg(header.sx * header.sy);
+	std::unique_ptr<uint32_t[]> ccl(new uint32_t[header.sx * header.sy]());
 
 	uint64_t label_i = 0;
 
@@ -644,7 +645,7 @@ point_cloud(
 			/*slice_edges=*/vcg.data()
 		);
 
-		auto ccls = crackle::dual_graph::extract_contours(vcg, header.sx, header.sy);
+		auto ccls = crackle::dual_graph::extract_contours(vcg, ccl, header.sx, header.sy);
 		for (auto ccl : ccls) {
 			uint64_t current_label = label_map[label_i];
 			

@@ -511,6 +511,7 @@ merge_holes(
 std::vector<std::vector<uint32_t>> 
 extract_contours(
 	std::vector<uint8_t>& vcg,
+	std::unique_ptr<uint32_t[]>& cc_labels,
 	const uint64_t sx, const uint64_t sy 
 ) {
 
@@ -518,10 +519,30 @@ extract_contours(
 
 	extract_contours_helper(vcg, sx, sy, contours);
 
-	std::sort(contours.begin(), contours.end(),
-		[](const auto& a, const auto& b) {
-			return a[0] < b[0];
-		});
+	uint64_t N = 0;
+	crackle::cc3d::color_connectivity_graph<uint32_t>(
+		vcg, sx, sy, 1, cc_labels.get(), N
+	);
+
+	std::vector<std::vector<uint32_t>> merged_contours(N);
+	for (uint64_t i = 0; i < contours.size(); i++) {
+		auto& contour = contours[i];
+		uint32_t cc_label = cc_labels[contour[0]];
+
+		auto insertion_point_it = merged_contours[i].end();
+		if (
+			merged_contours[cc_label].size() > 0 
+			&& merged_contours[cc_label][0] > contour[0]
+		) {
+			insertion_point_it = merged_contours[i].begin();
+		}
+
+		merged_contours[cc_label].insert(
+			insertion_point_it, 
+			contour.begin(), 
+			contour.end()
+		);
+	}
 
 	// int i = 0;
 	// for (auto ct : contours) {
@@ -533,12 +554,12 @@ extract_contours(
 	// }
 
 
-	std::vector<std::vector<uint32_t>> merged = merge_holes(contours, vcg, sx, sy);
+	// std::vector<std::vector<uint32_t>> merged = merge_holes(contours, vcg, sx, sy);
 
-	std::sort(merged.begin(), merged.end(),
-		[](const auto& a, const auto& b) {
-			return a[0] < b[0];
-		});
+	// std::sort(merged.begin(), merged.end(),
+	// 	[](const auto& a, const auto& b) {
+	// 		return a[0] < b[0];
+	// 	});
 
 	// i = 0;
 	// for (auto ct : merged) {
@@ -546,7 +567,7 @@ extract_contours(
 	// 	printf("\n");
 	// }
 
-	return merged;
+	return merged_contours;
 }
 
 };
