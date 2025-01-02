@@ -18,26 +18,39 @@ std::vector<unsigned char> encode_flat(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz
 ) {
-
+	const int64_t sxy = sx * sy;
 	const int64_t voxels = sx * sy * sz;
 
 	std::vector<uint64_t> num_components_per_slice(sz);
+	std::unique_ptr<uint32_t[]> cc_labels(new uint32_t[sxy]);
+
+	std::vector<STORED_LABEL> mapping;
+	mapping.reserve(voxels / 50);
+
 	uint64_t N = 0;
-	std::unique_ptr<uint32_t[]> cc_labels(crackle::cc3d::connected_components<LABEL, uint32_t>(
-		labels, sx, sy, sz,
-		num_components_per_slice,
-		NULL, N
-	));
 
-	std::vector<STORED_LABEL> mapping(N);
+	for (int64_t z = 0; z < sz; z++) {
+		uint64_t tmp_N = 0;
+		crackle::cc3d::connected_components2d_4<LABEL, uint32_t>(
+			(labels + sxy * z), 
+			sx, sy, 1, 
+			cc_labels.get(),
+			0, tmp_N
+		);
 
-	uint32_t last = cc_labels[0];
-	mapping[cc_labels[0]] = labels[0];
-	for (int64_t i = 1; i < voxels; i++) {
-		if (cc_labels[i] != last) {
-			mapping[cc_labels[i]] = labels[i];
-			last = cc_labels[i];
+		mapping.resize(N + tmp_N);
+
+		uint64_t last = cc_labels[0];
+		mapping[cc_labels[0] + N] = labels[sxy * z];
+		for (int64_t i = 1; i < sxy; i++) {
+			if (cc_labels[i] != last) {
+				mapping[cc_labels[i] + N] = labels[sxy * z + i];
+				last = cc_labels[i];
+			}
 		}
+
+		num_components_per_slice[z] = tmp_N;
+		N += tmp_N;
 	}
 
 	cc_labels.reset();
