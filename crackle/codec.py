@@ -507,28 +507,45 @@ def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -
 
 def compress(
   labels:np.ndarray, 
-  allow_pins:bool = False,
+  allow_pins:int = 0,
   markov_model_order:int = 0
 ) -> bytes:
   """
   Compress the 3D labels array into a Crackle bytestream.
 
+  markov_movel_order: run crack codes through a finite context markov
+    model. The order represents the number of crack codes in the window.
+    Each additional order will increase the model size by 4^N * 5/8 bytes
+    but will hopefully decrease the size of the crack code by more.
+
+    Reasonable values range from 0 (no model (0B), 
+    larger crack code size, fast decode) to about 10 (655kB). 
+    Values of 5 (model:640B) to 7 (model:10kB) are typical.
+
   [EXPERIMENTAL]
   BINARIES ENCODED USING THIS OPTION MAY BREAK IN FUTURE VERSIONS
-  allow_pins: If True, when the number of voxel pairs in the 
+  allow_pins: 
+    0: disabled
+    1: use fast pin algorithm
+    2: use slow pin algorithm w/ potentially slightly smaller final file size
+
+    If enabled (1 or 2), when the number of voxel pairs in the 
     volume is > 50% of the number of voxels, use the pin encoding
     strategy. Pins use 3D information to encode the label map.
-    However, they are still investigational and currently work 
-    best on simpler images. Pin computation requires appoximately
-    solving a set cover problem and can be slow on larger images.
-    However, it can likely be improved.
+    However, they are still investigational.
+    Pin computation requires appoximately solving a set cover problem and 
+    can be very slow on larger images using the slow algorithm.
   """
   if np.issubdtype(labels.dtype, np.signedinteger):
     raise TypeError("Signed integer data types are not currently supported.")
 
   f_order = labels.flags.f_contiguous
   labels = np.asfortranarray(labels)
-  return fastcrackle.compress(labels, allow_pins, f_order, markov_model_order)
+  optimize_pins = (allow_pins == 2)
+  return fastcrackle.compress(
+    labels, allow_pins, f_order,
+    markov_model_order, optimize_pins
+  )
 
 def extract_keys(binary:bytes) -> np.ndarray:
   head = header(binary)

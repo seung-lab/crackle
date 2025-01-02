@@ -351,7 +351,8 @@ std::tuple<
 >
 compute(
 	const LABEL* labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool optimize
 ) {
 	std::vector<uint64_t> num_components_per_slice(sz);
 	uint64_t N_total = 0;
@@ -372,8 +373,10 @@ compute(
 		labels, cc_labels.get(), sx, sy, sz, N_total
 	);
 
+	auto find_pins_fn = optimize ? find_optimal_pins : find_suboptimal_pins;
+
 	for (auto [label, pins] : pinsets) {
-		all_pins[label] = find_suboptimal_pins(
+		all_pins[label] = find_pins_fn(
 			pins, multiverse[label], cc_labels, 
 			sx, sy, sz
 		);

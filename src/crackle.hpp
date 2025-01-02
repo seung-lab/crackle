@@ -33,7 +33,8 @@ std::vector<unsigned char> compress_helper(
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const bool allow_pins = false,
 	const bool fortran_order = true,
-	const uint64_t markov_model_order = 0
+	const uint64_t markov_model_order = 0,
+	const bool optimize_pins = false
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -124,7 +125,7 @@ std::vector<unsigned char> compress_helper(
 	
 	std::vector<unsigned char> labels_binary;
 	if (label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
-		auto [all_pins, num_components_per_slice, num_components] = crackle::pins::compute(labels, sx, sy, sz);
+		auto [all_pins, num_components_per_slice, num_components] = crackle::pins::compute(labels, sx, sy, sz, optimize_pins);
 		labels_binary = crackle::labels::encode_condensed_pins<LABEL, STORED_LABEL>(
 			all_pins,
 			sx, sy, sz,
@@ -133,7 +134,7 @@ std::vector<unsigned char> compress_helper(
 		);
 	}
 	// else if (label_format == LabelFormat::PINS_FIXED_WIDTH) {
-	// 	auto [all_pins, num_components_per_slice, num_components] = crackle::pins::compute(labels, sx, sy, sz);
+	// 	auto [all_pins, num_components_per_slice, num_components] = crackle::pins::compute(labels, sx, sy, sz, optimize_pins);
 	// 	labels_binary = crackle::labels::encode_fixed_width_pins<LABEL, STORED_LABEL>(
 	// 		all_pins,
 	// 		sx, sy, sz,
@@ -172,7 +173,8 @@ std::vector<unsigned char> compress(
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const bool allow_pins = false,
 	const bool fortran_order = true,
-	const uint64_t markov_model_order = 0
+	const uint64_t markov_model_order = 0,
+	const bool optimize_pins = false
 ) {
 	const int64_t voxels = sx * sy * sz;
 	uint8_t stored_data_width = crackle::lib::compute_byte_width(
@@ -180,16 +182,28 @@ std::vector<unsigned char> compress(
 	);
 
 	if (stored_data_width == 1) {
-		return compress_helper<LABEL, uint8_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
+		return compress_helper<LABEL, uint8_t>(
+			labels, sx, sy, sz, 
+			allow_pins, fortran_order, markov_model_order, optimize_pins
+		);
 	}
 	else if (stored_data_width == 2) {
-		return compress_helper<LABEL, uint16_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
+		return compress_helper<LABEL, uint16_t>(
+			labels, sx, sy, sz, 
+			allow_pins, fortran_order, markov_model_order, optimize_pins
+		);
 	}
 	else if (stored_data_width == 4) {
-		return compress_helper<LABEL, uint32_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
+		return compress_helper<LABEL, uint32_t>(
+			labels, sx, sy, sz,
+			allow_pins, fortran_order, markov_model_order, optimize_pins
+		);
 	}
 	else {
-		return compress_helper<LABEL, uint64_t>(labels, sx, sy, sz, allow_pins, fortran_order, markov_model_order);
+		return compress_helper<LABEL, uint64_t>(
+			labels, sx, sy, sz,
+			allow_pins, fortran_order,markov_model_order, optimize_pins
+		);
 	}
 }
 
