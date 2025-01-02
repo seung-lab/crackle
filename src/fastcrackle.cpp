@@ -85,7 +85,8 @@ py::bytes compress_helper(
 	const py::array &labels, 
 	const bool allow_pins = false,
 	const bool fortran_order = true,
-	const uint64_t markov_model_order = 0
+	const uint64_t markov_model_order = 0,
+	const bool optimize_pins = false
 ) {
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.ndim() < 2
@@ -100,7 +101,8 @@ py::bytes compress_helper(
 		sx, sy, sz,
 		allow_pins,
 		fortran_order,
-		markov_model_order
+		markov_model_order,
+		optimize_pins
 	);
 	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
 }
@@ -109,7 +111,8 @@ py::bytes compress(
 	const py::array &labels, 
 	const bool allow_pins = false,
 	const bool fortran_order = true,
-	const uint64_t markov_model_order = 0
+	const uint64_t markov_model_order = 0,
+	const bool optimize_pins = false
 ) {
 	int width = labels.dtype().itemsize();
 	bool is_signed = labels.dtype().kind() == 'i';
@@ -117,44 +120,44 @@ py::bytes compress(
 	if (is_signed) {
 		if (width == 1) {
 			return compress_helper<int8_t>(
-				labels, allow_pins, fortran_order, markov_model_order
+				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
 			);
 		}
 		else if (width == 2) {
 			return compress_helper<int16_t>(
-				labels, allow_pins, fortran_order, markov_model_order
+				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
 			);
 		}
 		else if (width == 4) {
 			return compress_helper<int32_t>(
-				labels, allow_pins, fortran_order, markov_model_order
+				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
 			);
 		}
 		else {
 			return compress_helper<int64_t>(
-				labels, allow_pins, fortran_order, markov_model_order
+				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
 			);
 		}
 	}
 	else {
 		if (width == 1) {
 			return compress_helper<uint8_t>(
-				labels, allow_pins, fortran_order, markov_model_order
+				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
 			);
 		}
 		else if (width == 2) {
 			return compress_helper<uint16_t>(
-				labels, allow_pins, fortran_order, markov_model_order
+				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
 			);
 		}
 		else if (width == 4) {
 			return compress_helper<uint32_t>(
-				labels, allow_pins, fortran_order, markov_model_order
+				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
 			);
 		}
 		else {
 			return compress_helper<uint64_t>(
-				labels, allow_pins, fortran_order, markov_model_order
+				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
 			);
 		}
 	}
@@ -237,25 +240,25 @@ auto compute_pins(const py::array &labels) {
 	if (width == 1) {
 		return crackle::pins::compute<uint8_t>(
 			reinterpret_cast<uint8_t*>(const_cast<void*>(labels.data())),
-			sx, sy, sz
+			sx, sy, sz, false
 		);
 	}
 	else if (width == 2) {
 		return crackle::pins::compute<uint16_t>(
 			reinterpret_cast<uint16_t*>(const_cast<void*>(labels.data())),
-			sx, sy, sz
+			sx, sy, sz, false
 		);
 	}
 	else if (width == 4) {
 		return crackle::pins::compute<uint32_t>(
 			reinterpret_cast<uint32_t*>(const_cast<void*>(labels.data())),
-			sx, sy, sz
+			sx, sy, sz, false
 		);
 	}
 	else {
 		return crackle::pins::compute<uint64_t>(
 			reinterpret_cast<uint64_t*>(const_cast<void*>(labels.data())),
-			sx, sy, sz
+			sx, sy, sz, false
 		);
 	}
 }
