@@ -543,7 +543,7 @@ def compress(
   labels = np.asfortranarray(labels)
   optimize_pins = (allow_pins == 2)
   return fastcrackle.compress(
-    labels, allow_pins, f_order,
+    labels, bool(allow_pins), f_order,
     markov_model_order, optimize_pins
   )
 
