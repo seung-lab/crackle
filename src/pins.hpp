@@ -311,6 +311,7 @@ std::vector<CandidatePin> find_suboptimal_pins(
 	final_pins.reserve(pinsets.size() / 10);
 
 	robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> component_to_pins;
+	component_to_pins.reserve(universe.size());
 
 	for (uint64_t i = 0; i < pinsets.size(); i++) {
 		CandidatePin& pin = pinsets[i];
