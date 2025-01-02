@@ -230,11 +230,12 @@ std::vector<CandidatePin> find_optimal_pins(
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {	
 	std::vector<CandidatePin> final_pins;
-	final_pins.reserve(final_pins.size() / 10);
 
 	if (pinsets.size() == 0) {
 		return final_pins;
 	}
+
+	final_pins.reserve(pinsets.size() / 10);
 
 	crackle::pairing_heap::MinHeap<int64_t, int64_t> heap;
 
