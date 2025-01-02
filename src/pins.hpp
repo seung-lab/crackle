@@ -296,6 +296,54 @@ std::vector<CandidatePin> find_optimal_pins(
 	return final_pins;
 }
 
+std::vector<CandidatePin> find_suboptimal_pins(
+	std::vector<CandidatePin> &pinsets,
+	robin_hood::unordered_flat_set<uint32_t> &universe,
+	const std::unique_ptr<uint32_t[]> &cc_labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {	
+	std::vector<CandidatePin> final_pins;
+
+	if (pinsets.size() == 0) {
+		return final_pins;
+	}
+
+	final_pins.reserve(pinsets.size() / 10);
+
+	robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> component_to_pins;
+	component_to_pins.reserve(universe.size());
+
+	for (uint64_t i = 0; i < pinsets.size(); i++) {
+		CandidatePin& pin = pinsets[i];
+		for (uint64_t label : pin.ccids) {
+			component_to_pins[label].push_back(i);
+		}
+	}
+
+	while (universe.size()) {
+		uint32_t picked_ccid = *universe.begin();
+		auto& pins = component_to_pins[picked_ccid];
+
+		CandidatePin max_pin = pinsets[pins[0]];
+		int max_depth = max_pin.z_e - max_pin.z_s;
+		for (uint64_t i = 1; i < pins.size(); i++) {
+			CandidatePin cur = pinsets[pins[i]];
+			int depth = cur.z_e - cur.z_s;
+			if (depth > max_depth) {
+				max_pin = cur;
+			}
+		}
+
+		for (uint32_t ccid : max_pin.ccids) {
+			universe.erase(ccid);
+		}
+
+		final_pins.push_back(max_pin);
+	}
+
+	return final_pins;
+}
+
 template <typename LABEL>
 std::tuple<
 	std::unordered_map<uint64_t, std::vector<CandidatePin>>,
@@ -304,7 +352,8 @@ std::tuple<
 >
 compute(
 	const LABEL* labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool optimize
 ) {
 	std::vector<uint64_t> num_components_per_slice(sz);
 	uint64_t N_total = 0;
@@ -325,8 +374,10 @@ compute(
 		labels, cc_labels.get(), sx, sy, sz, N_total
 	);
 
+	auto find_pins_fn = optimize ? find_optimal_pins : find_suboptimal_pins;
+
 	for (auto [label, pins] : pinsets) {
-		all_pins[label] = find_optimal_pins(
+		all_pins[label] = find_pins_fn(
 			pins, multiverse[label], cc_labels, 
 			sx, sy, sz
 		);
