@@ -1,6 +1,7 @@
 from typing import Optional, Union
 
 import io
+import mmap
 import os
 import gzip
 import lzma
@@ -10,7 +11,7 @@ from .codec import compress, decompress
 
 import numpy as np
 
-def _load(filelike):
+def _load(filelike, allow_mmap:bool = False):
   if hasattr(filelike, 'read'):
     binary = filelike.read()
   elif (
@@ -27,13 +28,16 @@ def _load(filelike):
       binary = f.read()
   else:
     with open(filelike, 'rb') as f:
-      binary = f.read()
+      if allow_mmap:
+        binary = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+      else:
+        binary = f.read()
   
   return binary
 
-def aload(filelike) -> CrackleArray:
+def aload(filelike, allow_mmap=False) -> CrackleArray:
   """Load a CrackleArray from a file."""
-  return CrackleArray(_load(filelike))
+  return CrackleArray(_load(filelike, allow_mmap=allow_mmap))
 
 def load(filelike, label:Optional[int] = None) -> np.ndarray:
   """Load an image from a file-like object or file path."""

@@ -108,7 +108,7 @@ def compress_file(src, allow_pins, markov, gzip):
 		data = crackle.util.load_numpy(src)
 	except ValueError:
 		try:
-			data = crackle.aload(src)
+			data = crackle.aload(src, allow_mmap=True)
 			is_crackle = True
 		except:
 			print(f"crackle: {src} is not a numpy or crackle file.")
