@@ -57,7 +57,7 @@ def max(binary:bytes) -> int:
       return bgcolor
     return arrmin
 
-def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
+def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> bytes:
   """
   Remap the labels in a crackle bystream without decompressing.
   
