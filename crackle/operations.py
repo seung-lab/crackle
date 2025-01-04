@@ -449,11 +449,16 @@ def full(shape, fill_value, dtype=None, order='C') -> bytes:
   ])
 
 def zeros(shape, dtype=None, order="C"):
+  """
+  Return a new array of given shape and type, filled with zeros.
+  """
   return full(shape, 0, dtype, order)
 
 def ones(shape, dtype=None, order="C"):
+  """
+  Return a new array of given shape and type, filled with ones.
+  """
   return full(shape, 1, dtype, order)
-
 
 def operator(binary:bytes, fn) -> bytes:
   head = header(binary)
