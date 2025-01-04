@@ -31,15 +31,11 @@ components are much fewer than the labels themselves.
 
 There is also an alternative label encoding called
 "pins" that draws a line segment connecting several
-connected components at once that works well for
-simpler images, but can be more expensive
-on more complicated images. The pin encoding method is
-experimental and its format is subject to change and
-is by default disabled.
+connected components at once.
 
 Author: William Silversmith
 Affiliation: Princeton Neuroscience Institute
-Date: December 2022 - March 2023
+Date: December 2022 - January 2025
 """
 from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
