@@ -133,11 +133,11 @@ DD: 2^(DD) = byte width of returned array (1,2,4,8 bytes)
 SS: 2^(SS) = byte width of stored labels (sometimes you can store values in 2 bytes when the final array is 8 bytes)  
 C: 1: crack codes denote impermissible boundaries 0: they denote permissible boundaries.  
 LL: 0: "flat" label format, 1: fixed width pins (unused?) 2: variable width pins 3: reserved  
-F: whether the array is to be rendered as C (0) or F (1) order
-G: Signed (if (1), data are signed int, otherwise unsigned int)
-OOOO: Nth-Order of Markov Chain (as an unsigned integer, typical values 0, or 3 to 7). If 0, markov compression is disabled.
-U: if 0, unique labels are sorted, else, unsorted
-R: Reserved
+F: whether the array is to be rendered as C (0) or F (1) order  
+G: Signed (if (1), data are signed int, otherwise unsigned int)  
+OOOO: Nth-Order of Markov Chain (as an unsigned integer, typical values 0, or 3 to 7). If 0, markov compression is disabled.  
+U: if 0, unique labels are sorted, else, unsorted  
+R: Reserved  
 
 ### Flat Label Format
 
