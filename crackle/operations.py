@@ -362,7 +362,7 @@ def asfortranarray(binary:bytes) -> bytes:
 
   return b''.join([
     head.tobytes(),
-    binary[HEADER_BYTES:],
+    binary[CrackleHeader.HEADER_BYTES:],
   ])
 
 def ascontiguousarray(binary:bytes) -> bytes:
@@ -375,7 +375,7 @@ def ascontiguousarray(binary:bytes) -> bytes:
 
   return b''.join([
     head.tobytes(),
-    binary[HEADER_BYTES:],
+    binary[CrackleHeader.HEADER_BYTES:],
   ])
 
 def full(shape, fill_value, dtype=None, order='C') -> bytes:

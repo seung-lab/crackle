@@ -49,7 +49,7 @@ from .codec import (
 	point_cloud,
 )
 from .operations import (
-	astype,
+	astype, ascontiguousarray, asfortranarray,
 	remap, refit, renumber,
 	min, max, 
 	zstack, zsplit, 

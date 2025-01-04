@@ -387,6 +387,24 @@ def test_refit():
   arr = arr.refit()
   assert arr.dtype == np.uint8
 
+def test_contiguous_fortran():
+  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
+  
+  binary2 = crackle.asfortranarray(binary)
+  assert binary == binary2
+
+  binary2 = crackle.ascontiguousarray(binary)
+  assert binary != binary2
+
+  head = crackle.header(binary2)
+  assert head.fortran_order == False
+
+  arr = crackle.decompress(binary2)
+  assert arr.flags.f_contiguous == False
+  assert arr.flags.c_contiguous == True
+
+  binary2 = crackle.asfortranarray(binary2)
+  assert binary2 == binary
 
 def test_point_cloud():
   input_arr = np.array([
