@@ -149,73 +149,6 @@ STORED_LABEL find_bgcolor(
 }
 
 template <typename LABEL, typename STORED_LABEL>
-std::vector<unsigned char> encode_fixed_width_pins(
-	std::unordered_map<uint64_t, std::vector<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>>& all_pins,
-	const int64_t sx, const int64_t sy, const int64_t sz,
-	const int64_t index_width, const int64_t z_width
-) {
-
-	STORED_LABEL bgcolor = find_bgcolor<STORED_LABEL>(all_pins, sz);
-	all_pins.erase(bgcolor);
-
-	std::vector<std::tuple<uint64_t, uint64_t, uint64_t>> linear;
-	for (auto& [label, pins] : all_pins) {
-		for (auto& pin : pins) {
-			linear.emplace_back(
-				pin.label, pin.index, pin.depth
-			);
-		}
-	}
-
-	struct {
-		bool operator()(
-			std::tuple<uint64_t,uint64_t,uint64_t>& a, std::tuple<uint64_t,uint64_t,uint64_t>& b
-		) const { 
-			return std::get<1>(a) < std::get<1>(b); 
-		}
-	} CmpIndex;
-
-	std::sort(linear.begin(), linear.end(), CmpIndex);
-
-	std::vector<STORED_LABEL> all_labels;
-	all_labels.reserve(all_pins.size());
-	for (auto& [label, pins] : all_pins) {
-		all_labels.push_back(label);
-	}
-	std::sort(all_labels.begin(), all_labels.end());
-
-	robin_hood::unordered_flat_map<STORED_LABEL, STORED_LABEL> renumbering;
-	renumbering.reserve(all_labels.size());
-	for (uint64_t i = 0; i < all_labels.size(); i++) {
-		renumbering[all_labels[i]] = static_cast<STORED_LABEL>(i);
-	}
-
-	int renum_data_width = crackle::lib::compute_byte_width(all_labels.size());
-
-	std::vector<unsigned char> binary(
-		sizeof(STORED_LABEL) // bgcolor
-		+ 8 // num labels
-		+ sizeof(STORED_LABEL) * all_labels.size()
-		+ (renum_data_width + index_width + z_width) * linear.size()
-	);
-
-	int64_t i = 0;
-	i += crackle::lib::itoc(bgcolor, binary, i);
-	i += crackle::lib::itoc(static_cast<uint64_t>(all_labels.size()), binary, i);
-	for (auto label : all_labels) {
-		i += crackle::lib::itoc(label, binary, i);
-	}
-
-	for (auto& pin : linear) {
-		i += crackle::lib::itocd(renumbering[std::get<0>(pin)], binary, i, renum_data_width);
-		i += crackle::lib::itocd(std::get<1>(pin), binary, i, index_width);
-		i += crackle::lib::itocd(std::get<2>(pin), binary, i, z_width);
-	}
-
-	return binary;
-}
-
-template <typename LABEL, typename STORED_LABEL>
 std::vector<unsigned char> encode_condensed_pins(
 	std::unordered_map<uint64_t, std::vector<crackle::pins::CandidatePin>>& all_pins,
 	const int64_t sx, const int64_t sy, const int64_t sz,
@@ -492,69 +425,6 @@ std::vector<LABEL> decode_flat(
 }
 
 template <typename LABEL, typename STORED_LABEL>
-std::vector<LABEL> decode_fixed_width_pins(
-	const crackle::CrackleHeader &header,
-	const std::span<const unsigned char> &binary,
-	const uint32_t* cc_labels,
-	const uint64_t N,
-	const uint64_t z_start, const uint64_t z_end
-) {
-	std::span<const unsigned char> labels_binary = raw_labels(binary);
-	const LABEL bgcolor = static_cast<LABEL>(
-		crackle::lib::ctoi<STORED_LABEL>(
-			labels_binary.data(), 0
-		)
-	);
-	const uint64_t num_labels = decode_num_labels(header, labels_binary);
-	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
-
-	// bgcolor, num labels (u64), N labels, pins
-	const uint64_t renum_width = crackle::lib::compute_byte_width(num_labels);
-	const uint64_t index_width = header.pin_index_width();
-	const uint64_t depth_width = header.depth_width();
-
-	typedef crackle::pins::Pin<uint64_t, uint64_t, uint64_t> PinType;
-	const unsigned char* buf = labels_binary.data();
-
-	const uint64_t pin_size = renum_width + index_width + depth_width;
-
-	uint64_t offset = 8 + sizeof(STORED_LABEL) * (uniq.size() + 1);
-	const uint64_t num_pins = (labels_binary.size() - offset) / pin_size;
-
-	std::vector<PinType> pins(num_pins);
-	for (uint64_t i = 0, j = offset; i < num_pins; i++) {
-		j += pins[i].dynamic_decode_buffer(
-			buf, j,
-			renum_width, index_width, depth_width
-		);
-	}
-
-	const int64_t sx = header.sx;
-	const int64_t sy = header.sy;
-
-	const int64_t sxy = sx * sy;
-
-	std::vector<LABEL> label_map(N, bgcolor);
-	for (auto& pin : pins) {
-		int64_t pin_z = pin.index / sxy;
-		int64_t loc = pin.index - (pin_z * sxy);
-		int64_t pin_z_start = std::max(pin_z, static_cast<int64_t>(z_start));
-		int64_t pin_z_end = pin_z + pin.depth + 1;
-		pin_z_end = std::min(pin_z_end, static_cast<int64_t>(z_end));
-
-		pin_z_start -= static_cast<int64_t>(z_start);
-		pin_z_end -= static_cast<int64_t>(z_start);
-
-		for (int64_t z = pin_z_start; z < pin_z_end; z++) {
-			auto cc_id = cc_labels[loc + sxy * z];
-			label_map[cc_id] = uniq[pin.label];
-		}
-	}
-
-	return label_map;
-}
-
-template <typename LABEL, typename STORED_LABEL>
 std::vector<LABEL> decode_condensed_pins(
 	const crackle::CrackleHeader &header,
 	const std::span<const unsigned char> &binary,
@@ -672,16 +542,6 @@ std::vector<LABEL> decode_label_map(
 	std::vector<LABEL> label_map;
 	if (header.label_format == LabelFormat::FLAT) {
 		return decode_flat<LABEL, STORED_LABEL>(header, binary, z_start, z_end);
-	}
-	else if (header.label_format == LabelFormat::PINS_FIXED_WIDTH) {
-		if (cc_labels == NULL) {
-			std::string err = "crackle: cc_labels must not be null.";
-			throw std::runtime_error(err);
-		}
-
-		label_map = decode_fixed_width_pins<LABEL, STORED_LABEL>(
-			header, binary, cc_labels, N, z_start, z_end
-		);
 	}
 	else if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
 		if (cc_labels == NULL) {

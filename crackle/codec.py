@@ -156,9 +156,7 @@ def background_color(binary:bytes) -> int:
 def decode_pins(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
 
-  if header.label_format == LabelFormat.PINS_FIXED_WIDTH:
-    return decode_fixed_pins(binary)
-  elif header.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+  if header.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
     return decode_condensed_pins(binary)[0]
   else:
     raise FormatError("Cannot decode pins from flat format.")
@@ -258,49 +256,6 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     single_labels[uniq[label]] = cc_labels
 
   return pins, single_labels
-
-def decode_fixed_pins(binary:bytes) -> np.ndarray:
-  """For pin encodings only, extract the pins."""
-  header = CrackleHeader.frombytes(binary)
-  hb = CrackleHeader.HEADER_BYTES
-
-  if header.label_format != LabelFormat.PINS_FIXED_WIDTH:
-    raise FormatError("This function can only extract pins from fixed width streams.")
-
-  # bgcolor, num labels (u64), N labels, pins
-  offset = hb + header.stored_data_width + header.sz * 4
-  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
-  offset += 8
-  labels = np.frombuffer(
-    binary[offset:offset+num_labels*header.stored_data_width],
-    dtype=header.stored_dtype
-  )
-  offset += num_labels*header.stored_data_width
-  renum_width = compute_byte_width(len(labels))
-
-  pinset = binary[
-    offset:hb+header.num_label_bytes
-  ]
-
-  dtype = np.dtype([
-    ('label', width2dtype[renum_width]),
-    ('idx', width2dtype[header.index_width()]), 
-    ('depth', width2dtype[header.depth_width()])
-  ])
-  pinset = np.frombuffer(pinset, dtype=dtype).copy()
-
-  dtype_big = np.dtype([
-    ('label', header.stored_dtype),
-    ('idx', width2dtype[header.index_width()]), 
-    ('depth', width2dtype[header.depth_width()])
-  ])
-  embiggened = np.empty((len(pinset),), dtype=dtype_big)
-  embiggened[:] = pinset
-  del pinset
-
-  for pin in embiggened:
-    pin['label'] = labels[pin['label']]
-  return embiggened
 
 def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
   head = header(binary)
