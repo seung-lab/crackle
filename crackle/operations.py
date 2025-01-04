@@ -9,7 +9,7 @@ from .codec import (
   compress, decompress, labels, 
   header, raw_labels, decode_flat_labels,
   num_labels, crack_codes, components,
-  reencode
+  reencode, background_color,
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype
@@ -79,7 +79,7 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False):
   # pins: bgcolor, num labels (u64), N labels, pins
 
   offset = hb + 4 * head.sz
-  if head.label_format == LabelFormat.PINS_FIXED_WIDTH:
+  if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
     bgcolor = int.from_bytes(binary[offset:offset+head.stored_data_width], 'little')
 
     try:

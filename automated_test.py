@@ -448,9 +448,26 @@ def test_point_cloud():
 
   assert np.all(result == ptc)
 
+@pytest.mark.parametrize("allow_pins", [False, True])
+@pytest.mark.parametrize("dtype", [np.uint16, np.uint32])
+def test_min_max(allow_pins, dtype):
+  labels = np.random.randint(0,500,size=(20,20,20), dtype=dtype)
+  binary = crackle.compress(labels, allow_pins=allow_pins)
 
+  ans_min = np.min(labels)
+  ans_max = np.max(labels)
 
+  assert ans_min == crackle.min(binary)
+  assert ans_max == crackle.max(binary)
 
+  labels = np.ones((20,20,20), dtype=dtype)
+  binary = crackle.compress(labels, allow_pins=allow_pins)
+
+  ans_min = np.min(labels)
+  ans_max = np.max(labels)
+
+  assert ans_min == crackle.min(binary)
+  assert ans_max == crackle.max(binary)
 
 
 
