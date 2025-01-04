@@ -324,6 +324,15 @@ def test_zsplit():
   after = crackle.decompress(after)
   assert np.all(after == labels[:,:,4:])
 
+def test_zshatter():
+  labels = np.ones([256,256,7], dtype=np.uint32)
+  binary = crackle.compress(labels)
+  levels = crackle.zshatter(binary)
+
+  for i in range(7):
+    arr = crackle.decompress(levels[i])
+    assert np.all(arr == 1)
+
 
 def test_edit_array():
   labels = np.ones([256,256,10], dtype=np.uint32)

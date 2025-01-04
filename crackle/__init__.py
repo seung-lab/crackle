@@ -48,7 +48,7 @@ from .operations import (
 	astype, ascontiguousarray, asfortranarray,
 	remap, refit, renumber,
 	min, max, 
-	zstack, zsplit, 
+	zstack, zsplit, zshatter,
 	full, zeros, ones,
 	add_scalar, subtract_scalar,
 	multiply_scalar, floordiv_scalar,

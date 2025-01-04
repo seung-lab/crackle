@@ -280,27 +280,14 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     crack_binary
   ])
 
-def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
-  """
-  Given a crackle binary, split that binary at a given z
-  into before, middle, and after binaries.
-  
-  Combined with zstack, this gives you a way to start editing
-  binaries without full decompression.
-  """
+def _zsplit_helper(binary:bytes):
   head = header(binary)
-  if z < 0 or z >= head.sz:
-    raise ValueError(f"{z} is outside the range 0 to {head.sz}.")
 
   if head.label_format != LabelFormat.FLAT:
     raise ValueError("Label format not currently supported.")
 
-  if head.sz == 1 and z == 0:
-    return (b'', binary, b'')
-
   uniq = labels(binary)
   raw = raw_labels(binary)
-  ccs = crack_codes(binary)
 
   N = num_labels(binary)
   idx_bytes = head.component_width() * head.sz
@@ -313,11 +300,9 @@ def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
   label_idx_offsets = np.concatenate([ [0], label_idx ])
   label_idx_offsets = np.cumsum(label_idx_offsets)
 
-  before_keys = keys[:label_idx_offsets[z]]
-  middle_keys = keys[label_idx_offsets[z]:label_idx_offsets[z+1]]
-  after_keys = keys[label_idx_offsets[z+1]:]
-
   all_zindex = np.frombuffer(components(binary)["z_index"], dtype=np.uint32)
+
+  cracks = crack_codes(binary)
 
   def synth(head, zindex, local_label_idx, keys, cracks):
     local_uniq = fastremap.unique(uniq[keys])
@@ -344,13 +329,54 @@ def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
       *cracks
     ])
 
-  cracks = crack_codes(binary)
-  before = synth(head, all_zindex[:z], label_idx[:z], before_keys, cracks[:z])
-  middle = synth(head, all_zindex[z:z+1], label_idx[z:z+1], middle_keys, cracks[z:z+1])
-  after = synth(head,  all_zindex[z+1:], label_idx[z+1:], after_keys, cracks[z+1:])
+  def synth_z_range(z_start, z_end):
+    return synth(
+      head, 
+      all_zindex[z_start:z_end], 
+      label_idx[z_start:z_end], 
+      keys[label_idx_offsets[z_start]:label_idx_offsets[z_end]],
+      cracks[z_start:z_end]
+    )
+
+  return synth_z_range
+
+def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
+  """
+  Given a crackle binary, split that binary at a given z
+  into before, middle, and after binaries.
+  
+  Combined with zstack, this gives you a way to start editing
+  binaries without full decompression.
+  """
+  head = header(binary)
+
+  if z < 0 or z >= head.sz:
+    raise ValueError(f"{z} is outside the range 0 to {head.sz}.")
+
+  if head.sz == 1 and z_start == 0:
+    return (b'', binary, b'')
+
+  crt = _zsplit_helper(binary)
+  before = crt(0, z)
+  middle = crt(z, z+1)
+  after = crt(z+1, head.sz)
 
   return (before, middle, after)
 
+def zshatter(binary:bytes) -> List[bytes]:
+  """
+  Given a crackle binary, split that binary into
+  individual z slices.
+  
+  Combined with zstack, this gives you a way to edit
+  binaries without full decompression.
+  """
+  head = header(binary)
+  crt = _zsplit_helper(binary)
+  return [
+    crt(z, z+1)
+    for z in range(head.sz)
+  ]
 
 def asfortranarray(binary:bytes) -> bytes:
   """Convert a crackle binary to Fortran (column-major) order."""
