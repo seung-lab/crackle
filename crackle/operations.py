@@ -329,7 +329,7 @@ def _zsplit_helper(binary:bytes):
       *cracks
     ])
 
-  def synth_z_range(z_start, z_end):
+  def synth_z_range(z_start:int, z_end:int) -> bytes:
     return synth(
       head, 
       all_zindex[z_start:z_end], 
