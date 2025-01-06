@@ -169,7 +169,7 @@ def decode_condensed_pins_components(binary:bytes) -> dict:
   if head.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
     raise FormatError("This function can only extract pins from variable width streams.")
 
-  # bgcolor, num labels (u64), N labels, pins
+  # bg color, N unique, unique, cc_per_grid, fmt_byte, pins
   labels_binary = raw_labels(binary)
   bgcolor = background_color(binary)
   offset = head.stored_data_width

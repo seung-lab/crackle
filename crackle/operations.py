@@ -1,5 +1,5 @@
-from typing import List, Optional, Tuple, Sequence, Union
-from collections import namedtuple
+from typing import List, Optional, Tuple, Sequence, Union, Dict
+from collections import namedtuple, defaultdict
 
 import numpy as np
 import fastremap
@@ -8,8 +8,9 @@ import fastcrackle
 from .codec import (
   compress, decompress, labels, 
   header, raw_labels, decode_flat_labels,
+  decode_condensed_pins_components,
   num_labels, crack_codes, components,
-  reencode, background_color,
+  reencode, background_color, 
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype
@@ -154,6 +155,156 @@ def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
 
   return (binary, mapping)
 
+def _zstack_flat_labels(
+  uniq_map:Dict[int,int], binaries:List[bytes]
+) -> bytes:
+  """
+  Convert a list of crackle binaries with flat label 
+  type into a merged labels binary section.
+  """
+  component_index = []
+  all_keys = []
+
+  for binary in binaries:
+    if binary is None:
+      continue
+    elements = decode_flat_labels(binary)
+    component_index.append(elements["components_per_grid"])
+    
+    local_uniq = elements["unique"]
+    cc_map = elements["cc_map"]
+    all_keys += [ uniq_map[key] for key in local_uniq[cc_map] ]
+  
+  first_head.stored_data_width = compute_byte_width(uniq.max())
+  key_width = compute_byte_width(len(uniq))
+
+  # labels binary
+  return b''.join([
+    len(uniq).to_bytes(8, 'little'),
+    uniq.astype(first_head.stored_dtype, copy=False).tobytes(),
+    np.concatenate(component_index).tobytes(),
+    np.array(all_keys, dtype=f'u{key_width}').tobytes(),
+  ])
+
+def _zstack_pins(
+  uniq:np.ndarray, 
+  binaries:List[bytes],
+) -> bytes:
+  if len(binaries) <= 1:
+    return binaries
+
+  binaries = [
+    binary
+    for binary in binaries 
+    if binary is not None 
+  ]
+
+  head = CrackleHeader(binaries[0])
+
+  component_index = []
+
+  # fmt: 
+  # bg color, N unique, unique, cc_per_grid, fmt_byte, pins
+  first_bgcolor = background_color(binaries[0])
+  component_offset = 0
+  z = 0
+  sxy = head.sx * head.sy
+
+  all_pins = defaultdict(list)
+  all_single_labels = defaultdict(list)
+
+  for binary in binaries:
+    bgcolor = background_color(binary)
+    if bgcolor != first_bgcolor:
+      raise ValueError(
+        f"Unable to stack pins with different background colors. "
+        f"Got: {first_bgcolor} and {bgcolor}"
+      )
+    elems = decode_condensed_pins_components(binary)
+    cpg = elems["components_per_grid"]
+    component_index.append(cpg)
+    del elems
+    pins, single_labels = decode_condensed_pins(binary)
+    for label, cc_labels in single_labels.items():
+      cc_labels += component_offset
+      all_single_labels[label].extend(list(cc_labels))
+
+    component_offset += np.sum(cpg)
+
+    PinTuple = namedtuple('Pin', ['index', 'depth'])
+
+    for label in pins.keys():
+      all_pins[label] += [
+        PinTuple(pin.index + z * sxy, pin.depth)
+        for pin in pins[label]
+      ]
+
+    head = CrackleHeader(binary)
+    z += head.sz
+
+  num_pins = max([ len(v) for v in all_pins.values() ])
+  max_depth = max((
+    pin.depth
+    for pin in pins
+    for label, pins in all_pins.items() 
+  ))
+  max_ccl = max((
+    ccl
+    for ccl in ccls
+    for label, ccls in all_single_labels.items() 
+  ))
+
+  num_pins_width = int(np.ceil(np.log2(num_pins)))
+  depth_width = int(np.ceil(np.log2(max_depth)))
+  cc_label_width = int(np.ceil(np.log2(max_ccl)))
+
+  fmt_byte = (
+    num_pins_width 
+    | (depth_width << 2)
+    | (combined_width << 4)
+  )
+
+  # pins: | num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N 
+  #       | DEPTH_0 | DEPTH_1 | ... | DEPTH_N | 
+  #         num_single_labels | CC 0 | CC 1 | ... | CC N |
+
+  index_width = header.pin_index_width()
+
+  pin_binaries = []
+  for label in uniq:
+    pinset = all_pins[label]
+    singles = all_single_labels[label]
+    pinset.sort(lambda a,b: a.index < b.index)
+
+    indices = np.array([ p.index for p in pinset ], dtype=f"u{index_width}")
+    indices = np.diff(indices, prepend=0)
+
+    depths = np.array([ p.depth for p in pinset ], dtype=f"u{depth_width}")
+
+    single_labels = np.array(all_single_labels[label], dtype=f"u{cc_label_width}")
+    single_labels.sort()
+    single_labels = np.diff(single_labels, prepend=0)
+
+    pin_section = b''.join([
+      len(pinset).to_bytes(num_pins_width, 'little'),
+      indices.tobytes(),
+      depths.tobytes(),
+      len(single_labels).to_bytes(cc_label_width, 'little'),
+      single_labels.tobytes(),
+    ])
+    pin_binaries.append(pin_section)
+
+  # labels binary
+  return b''.join([
+    int(first_bgcolor).to_bytes(first_head.stored_data_width, 'little'),
+    len(uniq).to_bytes(8, 'little'),
+    uniq.astype(first_head.stored_dtype, copy=False).tobytes(),
+    np.concatenate(component_index).tobytes(),
+    fmt_byte.tobytes(1, 'little'),
+    *pin_binaries
+  ])
+
+
 def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
   """
   Given a set of arrays or crackle compressed binaries that
@@ -198,8 +349,9 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
         f"All images must have the same width and height. "
         f"Expected sx={first_head.sx} sy={first_head.sy} ; Got: sx={head.sx} sy={head.sy}"
       )
-    if head.label_format != LabelFormat.FLAT:
-      raise ValueError("Only the FLAT label format is compatible (for now).")
+    if first_head.label_format != head.label_format:
+      raise ValueError(f"Label formats must match. First: {first_head.label_format} Got: {head.label_format}")
+
     if head.grid_size != first_head.grid_size:
       raise ValueError("Grid sizes must match.")
     if head.crack_format != first_head.crack_format:
@@ -227,35 +379,12 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     for i, u in enumerate(uniq)
   }
 
-  component_index = []
-  all_keys = []
-  for binary in binaries:
-    if binary is None:
-      continue
-
-    head = CrackleHeader.frombytes(binary)
-    N = num_labels(binary)
-    raw = raw_labels(binary)
-    idx_bytes = head.component_width() * head.sz
-    offset = 8 + N * head.stored_data_width
-    component_index.append(
-      np.frombuffer(raw[offset:offset + idx_bytes], dtype=f"u{head.component_width()}")
-    )
-    offset += idx_bytes
-    key_width = compute_byte_width(N)
-    keys = np.frombuffer(raw[offset:], dtype=f'u{key_width}')
-    local_uniq = labels(binary)
-    all_keys += [ uniq_map[key] for key in local_uniq[keys] ]
-
-  first_head.stored_data_width = compute_byte_width(uniq.max())
-  key_width = compute_byte_width(len(uniq))
-
-  labels_binary = b''.join([
-    len(uniq).to_bytes(8, 'little'),
-    uniq.astype(first_head.stored_dtype).tobytes(),
-    np.concatenate(component_index).tobytes(),
-    np.array(all_keys, dtype=f'u{key_width}').tobytes(),
-  ])
+  if first_head.label_format == LabelFormat.FLAT:
+    labels_binary = _zstack_flat_labels(uniq_map, binaries)
+  elif first_head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+    labels_binary = _zstack_pins(uniq, binaries)
+  else:
+    raise ValueError(f"Unsupported label format: {first_head.label_format}")
 
   crack_codes_lst = []
   zindex = np.zeros((first_head.sz,), dtype=np.uint32)

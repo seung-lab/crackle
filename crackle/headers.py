@@ -112,6 +112,9 @@ class CrackleHeader:
       self.num_label_bytes.to_bytes(4, 'little'),
     ])
 
+  def pin_index_width(self):
+    return compute_byte_width(self.sx * self.sy * self.sz)
+
   def component_width(self): 
     """The size of the flat encoding type components per a grid."""
     return compute_byte_width(self.sx * self.sy)
