@@ -474,9 +474,15 @@ std::vector<LABEL> decode_condensed_pins(
 
 	std::vector<PinType> pins;
 	
-	for (uint64_t i = offset, label = 0; label < uniq.size(); label++) {
-		uint64_t num_pins = crackle::lib::ctoid(buf, i, num_pins_width);
+	int64_t remaining = labels_binary.size() - offset;
 
+	for (uint64_t i = offset, label = 0; label < uniq.size(); label++) {
+		if (i >= remaining) {
+			break;
+		}
+
+		uint64_t num_pins = crackle::lib::ctoid(buf, i, num_pins_width);
+		
 		i += num_pins_width;
 		for (uint64_t j = 0; j < num_pins; j++) {
 			uint64_t index = crackle::lib::ctoid(buf, i + (j * index_width), index_width);
