@@ -478,7 +478,7 @@ std::vector<LABEL> decode_condensed_pins(
 
 	for (uint64_t i = offset, label = 0; label < uniq.size(); label++) {
 		if (i >= remaining) {
-			break;
+			throw std::runtime_error("crackle: pin section is malformed or corrupted.");
 		}
 
 		uint64_t num_pins = crackle::lib::ctoid(buf, i, num_pins_width);
