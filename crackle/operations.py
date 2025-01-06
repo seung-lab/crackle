@@ -8,7 +8,7 @@ import fastcrackle
 from .codec import (
   compress, decompress, labels, 
   header, raw_labels, decode_flat_labels,
-  decode_condensed_pins_components,
+  decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
   reencode, background_color, 
 )
@@ -206,7 +206,7 @@ def _zstack_pins(
     if binary is not None 
   ]
 
-  head = CrackleHeader(binaries[0])
+  first_head = CrackleHeader.frombytes(binaries[0])
 
   component_index = []
 
@@ -215,7 +215,7 @@ def _zstack_pins(
   first_bgcolor = background_color(binaries[0])
   component_offset = 0
   z = 0
-  sxy = head.sx * head.sy
+  sxy = first_head.sx * first_head.sy
 
   all_pins = defaultdict(list)
   all_single_labels = defaultdict(list)
@@ -246,42 +246,44 @@ def _zstack_pins(
         for pin in pins[label]
       ]
 
-    head = CrackleHeader(binary)
+    head = CrackleHeader.frombytes(binary)
     z += head.sz
 
-  num_pins = max([ len(v) for v in all_pins.values() ])
-  max_depth = max((
+  maxfn = __builtins__["max"] # name collision
+  num_pins = maxfn([ len(v) for v in all_pins.values() ])
+
+  max_depth = maxfn((
     pin.depth
-    for pin in pins
     for label, pins in all_pins.items() 
+    for pin in pins
   ))
-  max_ccl = max((
+  max_ccl = maxfn((
     ccl
-    for ccl in ccls
-    for label, ccls in all_single_labels.items() 
+    for label, ccls in all_single_labels.items()
+    for ccl in ccls 
   ))
 
-  num_pins_width = int(np.ceil(np.log2(num_pins)))
-  depth_width = int(np.ceil(np.log2(max_depth)))
-  cc_label_width = int(np.ceil(np.log2(max_ccl)))
+  num_pins_width = compute_byte_width(num_pins)
+  depth_width = compute_byte_width(max_depth)
+  cc_label_width = compute_byte_width(max_ccl)
 
   fmt_byte = (
-    num_pins_width 
-    | (depth_width << 2)
-    | (combined_width << 4)
+    int(np.log2(num_pins_width))
+    | (int(np.log2(depth_width)) << 2)
+    | (int(np.log2(cc_label_width)) << 4)
   )
 
   # pins: | num_pins | INDEX_0 | INDEX_1 | ... | INDEX_N 
   #       | DEPTH_0 | DEPTH_1 | ... | DEPTH_N | 
   #         num_single_labels | CC 0 | CC 1 | ... | CC N |
 
-  index_width = header.pin_index_width()
+  index_width = first_head.pin_index_width()
 
   pin_binaries = []
   for label in uniq:
     pinset = all_pins[label]
     singles = all_single_labels[label]
-    pinset.sort(lambda a,b: a.index < b.index)
+    pinset.sort(key=lambda a: a.index)
 
     indices = np.array([ p.index for p in pinset ], dtype=f"u{index_width}")
     indices = np.diff(indices, prepend=0)
@@ -307,7 +309,7 @@ def _zstack_pins(
     len(uniq).to_bytes(8, 'little'),
     uniq.astype(first_head.stored_dtype, copy=False).tobytes(),
     np.concatenate(component_index).tobytes(),
-    fmt_byte.tobytes(1, 'little'),
+    fmt_byte.to_bytes(1, 'little'),
     *pin_binaries
   ])
 
