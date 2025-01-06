@@ -281,6 +281,8 @@ def _zstack_pins(
 
   pin_binaries = []
   for label in uniq:
+    if label == first_bgcolor:
+      continue
     pinset = all_pins[label]
     singles = all_single_labels[label]
     pinset.sort(key=lambda a: a.index)
