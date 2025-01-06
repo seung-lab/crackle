@@ -156,7 +156,7 @@ def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
   return (binary, mapping)
 
 def _zstack_flat_labels(
-  uniq_map:Dict[int,int], binaries:List[bytes]
+  uniq:np.ndarray, binaries:List[bytes]
 ) -> bytes:
   """
   Convert a list of crackle binaries with flat label 
@@ -165,16 +165,23 @@ def _zstack_flat_labels(
   component_index = []
   all_keys = []
 
+  uniq_map = {
+    u: i
+    for i, u in enumerate(uniq)
+  }
+
   for binary in binaries:
     if binary is None:
       continue
-    elements = decode_flat_labels(binary)
+    head = CrackleHeader.frombytes(binary)
+    elements = decode_flat_labels(binary, head.stored_dtype, head.dtype, head.sz)
     component_index.append(elements["components_per_grid"])
     
     local_uniq = elements["unique"]
     cc_map = elements["cc_map"]
     all_keys += [ uniq_map[key] for key in local_uniq[cc_map] ]
   
+  first_head = CrackleHeader.frombytes(binaries[0])
   first_head.stored_data_width = compute_byte_width(uniq.max())
   key_width = compute_byte_width(len(uniq))
 
@@ -374,13 +381,8 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     uniq.extend(labels(binary))
   uniq = fastremap.unique(uniq)
 
-  uniq_map = {
-    u: i
-    for i, u in enumerate(uniq)
-  }
-
   if first_head.label_format == LabelFormat.FLAT:
-    labels_binary = _zstack_flat_labels(uniq_map, binaries)
+    labels_binary = _zstack_flat_labels(uniq, binaries)
   elif first_head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
     labels_binary = _zstack_pins(uniq, binaries)
   else:
