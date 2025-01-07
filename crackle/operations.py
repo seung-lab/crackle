@@ -74,7 +74,7 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
   binary = bytearray(binary)
   
   head = CrackleHeader.frombytes(binary)
-  hb = CrackleHeader.HEADER_BYTES
+  hb = head.header_bytes
 
   # flat: num_labels, N labels, remapped labels
   # pins: bgcolor, num labels (u64), N labels, pins
@@ -122,7 +122,7 @@ def astype(binary:bytes, dtype) -> bytes:
   head.data_width = np.dtype(dtype).itemsize
   return b''.join([ 
     head.tobytes(), 
-    binary[CrackleHeader.HEADER_BYTES:] 
+    binary[head.header_bytes:] 
   ])
 
 def refit(binary:bytes) -> bytes:
@@ -150,7 +150,7 @@ def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
     head.is_sorted = True
     binary = b''.join([
       head.tobytes(),
-      binary[CrackleHeader.HEADER_BYTES:]
+      binary[head.header_bytes:]
     ])
 
   return (binary, mapping)
@@ -527,7 +527,7 @@ def asfortranarray(binary:bytes) -> bytes:
 
   return b''.join([
     head.tobytes(),
-    binary[CrackleHeader.HEADER_BYTES:],
+    binary[head.header_bytes:],
   ])
 
 def ascontiguousarray(binary:bytes) -> bytes:
@@ -540,7 +540,7 @@ def ascontiguousarray(binary:bytes) -> bytes:
 
   return b''.join([
     head.tobytes(),
-    binary[CrackleHeader.HEADER_BYTES:],
+    binary[head.header_bytes:],
   ])
 
 def full(shape, fill_value, dtype=None, order='C') -> bytes:

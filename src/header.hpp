@@ -32,7 +32,10 @@ enum CrackFormat {
  */
 struct CrackleHeader {
 public:
-	static constexpr size_t header_size{24};
+	static constexpr size_t header_size{28};
+	static constexpr size_t header_size_v0{24};
+	static constexpr size_t header_size_v1{28};
+	static constexpr uint8_t current_version{1}; 
 
 	static constexpr char magic[4]{ 'c', 'r', 'k', 'l' }; 
 	uint8_t format_version; 
@@ -45,13 +48,13 @@ public:
 	uint32_t sy;
 	uint32_t sz;
 	uint32_t grid_size;
-	uint32_t num_label_bytes;
+	uint64_t num_label_bytes;
 	bool fortran_order;
 	uint8_t markov_model_order;
 	bool is_sorted;
 
 	CrackleHeader() :
-		format_version(0),
+		format_version(1),
 		label_format(LabelFormat::FLAT),
 		crack_format(CrackFormat::IMPERMISSIBLE),
 		is_signed(false),
@@ -92,7 +95,7 @@ public:
 		bool valid_magic = (buf[0] == 'c' && buf[1] == 'r' && buf[2] == 'k' && buf[3] == 'l');
 		format_version = buf[4];
 
-		if (!valid_magic || format_version > 0) {
+		if (!valid_magic || format_version > 1) {
 			throw std::runtime_error("crackle: Data stream is not valid. Unable to decompress.");
 		}
 
@@ -103,7 +106,12 @@ public:
 		grid_size = static_cast<uint32_t>(
 			pow(2, lib::ctoi<uint8_t>(buf, 19))
 		);
-		num_label_bytes = lib::ctoi<uint32_t>(buf, 20);
+		if (format_version == 0) {
+			num_label_bytes = lib::ctoi<uint32_t>(buf, 20);
+		}
+		else {
+			num_label_bytes = lib::ctoi<uint64_t>(buf, 20);
+		}
 
 		data_width = pow(2, (format_bytes & 0b00000011));
 		stored_data_width = pow(2, (format_bytes & 0b00001100) >> 2);
@@ -131,6 +139,15 @@ public:
 		assign_from_buffer(buf.data());
 	}
 
+	uint64_t header_bytes() const {
+		if (format_version == 0) {
+			return header_size_v0;
+		}
+		else {
+			return header_size;
+		}
+	}
+
 	uint64_t voxels() const {
 		return static_cast<uint64_t>(sx) * static_cast<uint64_t>(sy) * static_cast<uint64_t>(sz);
 	}
@@ -152,7 +169,7 @@ public:
 	}
 
 	size_t tochars(std::vector<unsigned char> &buf, size_t idx = 0) const {
-		if ((idx + CrackleHeader::header_size) > buf.size()) {
+		if ((idx + header_bytes()) > buf.size()) {
 			throw std::runtime_error("crackle: Unable to write past end of buffer.");
 		}
 
@@ -171,13 +188,27 @@ public:
 		format_bytes |= static_cast<uint16_t>((markov_model_order & 0b1111) << 9);
 		format_bytes |= static_cast<uint16_t>((!is_sorted) << 13); // is_sorted
 
-		i += lib::itoc(format_version, buf, i);
+		uint8_t fmt_ver = format_version;
+		// try to use the set format version unless it hits the upper
+		// limit. it's better to write a more advanced version than
+		// crash I suppose.
+		if (num_label_bytes > std::numeric_limits<uint32_t>::max()) {
+			fmt_ver = 1;
+		}
+
+		i += lib::itoc(fmt_ver, buf, i);
 		i += lib::itoc(format_bytes, buf, i);
 		i += lib::itoc(sx, buf, i);
 		i += lib::itoc(sy, buf, i);
 		i += lib::itoc(sz, buf, i);
 		i += lib::itoc(static_cast<uint8_t>(log2(grid_size)), buf, i);
-		i += lib::itoc(num_label_bytes, buf, i);
+
+		if (fmt_ver == 0) {
+			i += lib::itoc(static_cast<uint32_t>(num_label_bytes), buf, i);
+		}
+		else {
+			i += lib::itoc(static_cast<uint64_t>(num_label_bytes), buf, i);
+		}
 
 		return i - idx;
 	}
@@ -215,7 +246,7 @@ public:
 	static bool valid_header(unsigned char* buf) {
 		bool valid_magic = (buf[0] == 'c' && buf[1] == 'r' && buf[2] == 'k' && buf[3] == 'l');
 		uint8_t format_version = buf[4];
-		return valid_magic && (format_version == 0);
+		return valid_magic && (format_version <= CrackleHeader::current_version);
 	}
 
 	static CrackleHeader fromchars(unsigned char* buf) {

@@ -18,7 +18,7 @@ def labels(binary:bytes) -> np.ndarray:
   if head.voxels() == 0:
     return np.zeros((0,), dtype=head.dtype)
 
-  hb = CrackleHeader.HEADER_BYTES
+  hb = head.header_bytes
   offset = hb + head.sz * 4
 
   if head.label_format == LabelFormat.FLAT:
@@ -46,7 +46,7 @@ def labels(binary:bytes) -> np.ndarray:
 def num_labels(binary:bytes) -> int:
   """Returns the number of unique labels."""
   head = header(binary)
-  hb = CrackleHeader.HEADER_BYTES
+  hb = head.header_bytes
 
   if head.voxels() == 0:
     return 0
@@ -66,7 +66,7 @@ def contains(binary:bytes, label:int) -> bool:
   if not head.is_sorted:
     return label in labels(binary)
 
-  hb = CrackleHeader.HEADER_BYTES
+  hb = head.header_bytes
   offset = hb + head.sz * 4
 
   # bgcolor, num labels (u64), N labels, pins
@@ -148,7 +148,7 @@ def background_color(binary:bytes) -> int:
   if header.label_format == LabelFormat.FLAT:
     raise FormatError("Background color can only be extracted from pin encoded streams.")
 
-  offset = CrackleHeader.HEADER_BYTES + header.sz * 4
+  offset = header.header_bytes + header.sz * 4
   dtype = width2dtype[header.stored_data_width]
   bgcolor = np.frombuffer(binary[offset:offset+header.stored_data_width], dtype=dtype)
   return int(bgcolor[0])
@@ -164,7 +164,7 @@ def decode_pins(binary:bytes) -> np.ndarray:
 def decode_condensed_pins_components(binary:bytes) -> dict:
   components = {}
   head = CrackleHeader.frombytes(binary)
-  hb = CrackleHeader.HEADER_BYTES
+  hb = head.header_bytes
 
   if head.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
     raise FormatError("This function can only extract pins from variable width streams.")

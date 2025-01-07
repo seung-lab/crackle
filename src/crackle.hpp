@@ -57,7 +57,7 @@ std::vector<unsigned char> compress_helper(
 	}
 
 	CrackleHeader header(
-		/*format_version=*/0,
+		/*format_version=*/CrackleHeader::current_version,
 		/*label_format=*/label_format,
 		/*crack_format=*/crack_format,
 		/*is_signed=*/is_signed,
@@ -206,7 +206,7 @@ std::vector<uint64_t> get_crack_code_offsets(
 	const CrackleHeader &header,
 	const std::span<const unsigned char> &binary
 ) {
-	uint64_t offset = CrackleHeader::header_size;
+	uint64_t offset = header.header_bytes();
 
 	const uint64_t z_width = sizeof(uint32_t);
 	const uint64_t zindex_bytes = z_width * header.sz;
@@ -421,7 +421,7 @@ LABEL* decompress(
 
 	const CrackleHeader header(buffer);
 
-	if (header.format_version > 0) {
+	if (header.format_version > CrackleHeader::current_version) {
 		std::string err = "crackle: Invalid format version.";
 		err += std::to_string(header.format_version);
 		throw std::runtime_error(err);
@@ -601,7 +601,7 @@ point_cloud(
 
 	const CrackleHeader header(buffer);
 
-	if (header.format_version > 0) {
+	if (header.format_version > CrackleHeader::current_version) {
 		std::string err = "crackle: Invalid format version.";
 		err += std::to_string(header.format_version);
 		throw std::runtime_error(err);
@@ -756,7 +756,7 @@ decode_slice_vcg(
 
 	const CrackleHeader header(buffer);
 
-	if (header.format_version > 0) {
+	if (header.format_version > CrackleHeader::current_version) {
 		std::string err = "crackle: Invalid format version.";
 		err += std::to_string(header.format_version);
 		throw std::runtime_error(err);
@@ -823,7 +823,7 @@ std::vector<unsigned char> reencode_with_markov_order(
 
 	CrackleHeader header(buffer);
 
-	if (header.format_version > 0) {
+	if (header.format_version > CrackleHeader::current_version) {
 		std::string err = "crackle: Invalid format version.";
 		err += std::to_string(header.format_version);
 		throw std::runtime_error(err);

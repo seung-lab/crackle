@@ -21,8 +21,10 @@ class CrackFormat(IntEnum):
 
 class CrackleHeader:
   MAGIC = b'crkl'
-  FORMAT_VERSION = 0
-  HEADER_BYTES = 24
+  FORMAT_VERSION = 1
+  HEADER_BYTES = 28
+  HEADER_BYTES_V0 = 24
+  HEADER_BYTES_V1 = 28
 
   def __init__(
     self, 
@@ -36,7 +38,9 @@ class CrackleHeader:
     signed:bool,
     markov_model_order:int,
     is_sorted:bool,
+    format_version:int,
   ):
+    self.format_version = format_version
     self.label_format = label_format
     self.crack_format = crack_format
     self.data_width = int(data_width)
@@ -57,8 +61,10 @@ class CrackleHeader:
       raise FormatError(f"Bytestream too short. Got: {buffer}")
     if buffer[:4] != CrackleHeader.MAGIC:
       raise FormatError(f"Incorrect magic number. Got: {buffer[:4]} Expected: {CrackleHeader.MAGIC}")
-    if buffer[4] != CrackleHeader.FORMAT_VERSION:
-      raise FormatError(f"Wrong format version. Got: {buffer[4]} Expected: {CrackleHeader.FORMAT_VERSION}")
+
+    format_version = buffer[4]
+    if format_version not in [0,1]:
+      raise FormatError(f"Wrong format version. Got: {format_version} Expected: {CrackleHeader.FORMAT_VERSION}")
 
     values = unpack_bits(
       int.from_bytes(buffer[5:7], byteorder='little', signed=False), 
@@ -66,6 +72,10 @@ class CrackleHeader:
       2, 2, 1, 2, 1,
       1, 4, 1
     ])
+
+    header_size = CrackleHeader.HEADER_BYTES_V1 
+    if format_version == 0:
+      header_size = CrackleHeader.HEADER_BYTES_V0
 
     return CrackleHeader(
       label_format=values[3],
@@ -76,12 +86,20 @@ class CrackleHeader:
     	sy=int.from_bytes(buffer[11:15], byteorder='little', signed=False),
     	sz=int.from_bytes(buffer[15:19], byteorder='little', signed=False),
       grid_size=(2 ** int(buffer[19])),
-    	num_label_bytes=int.from_bytes(buffer[20:24], byteorder='little', signed=False),
+    	num_label_bytes=int.from_bytes(buffer[20:header_size], byteorder='little', signed=False),
       fortran_order=bool(values[4]),
       signed=bool(values[5]),
       markov_model_order=int(values[6]),
       is_sorted=(not bool(values[7])),
+      format_version=format_version,
     )
+
+  @property
+  def header_bytes(self):
+    if self.format_version == 0:
+      return CrackleHeader.HEADER_BYTES_V0
+    else:
+      return CrackleHeader.HEADER_BYTES_V1
 
   def tobytes(self) -> bytes:
     fmt_byte = pack_bits([
