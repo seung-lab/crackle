@@ -1,3 +1,4 @@
+from typing import List, Optional
 from enum import IntEnum
 
 import numpy as np
@@ -19,12 +20,34 @@ class CrackFormat(IntEnum):
   IMPERMISSIBLE = 0
   PERMISSIBLE = 1
 
+# Code from stackoverflow by Dr. Mark Adler
+# https://stackoverflow.com/questions/10564491/function-to-calculate-a-crc16-checksum#comment83704063_10569892
+# Polynomial 0xac9a is selected as "best" for messages up to
+# 241 bits and gives a guarantee of detecting up to 4 bit flips
+# according to Phil Koopman. By coincidence, this polynomial
+# is palindromic, so works for both little and big endian.
+# https://users.ece.cmu.edu/~koopman/crc/
+def crc16(data:List[int]) -> int:
+  # use implicit +1 representation for right shift, LSB first
+  # use explicit +1 representation for left shit, MSB first
+  polynomial = 0xac9a # implicit
+  crc = 0xFFFF # detects zeroed data better than 0x0000
+  for i in range(len(data)):
+    crc ^= data[i]
+    for k in range(8):
+      if crc & 1:
+        crc = (crc >> 1) ^ polynomial
+      else:
+        crc = crc >> 1
+
+  return int(crc & 0xFFFF)
+
 class CrackleHeader:
   MAGIC = b'crkl'
   FORMAT_VERSION = 1
-  HEADER_BYTES = 28
+  HEADER_BYTES = 30
   HEADER_BYTES_V0 = 24
-  HEADER_BYTES_V1 = 28
+  HEADER_BYTES_V1 = 30
 
   def __init__(
     self, 
@@ -39,6 +62,7 @@ class CrackleHeader:
     markov_model_order:int,
     is_sorted:bool,
     format_version:int = 1,
+    crc:Optional[int] = None,
   ):
     self.label_format = label_format
     self.crack_format = crack_format
@@ -54,9 +78,10 @@ class CrackleHeader:
     self.markov_model_order = int(markov_model_order)
     self.is_sorted = bool(is_sorted)
     self.format_version = format_version
+    self.crc = crc
 
   @classmethod
-  def frombytes(kls, buffer:bytes):
+  def frombytes(kls, buffer:bytes, ignore_crc_check:bool = False):
     if len(buffer) < CrackleHeader.HEADER_BYTES:
       raise FormatError(f"Bytestream too short. Got: {buffer}")
     if buffer[:4] != CrackleHeader.MAGIC:
@@ -73,9 +98,18 @@ class CrackleHeader:
       1, 4, 1
     ])
 
-    header_size = CrackleHeader.HEADER_BYTES_V1 
+    nlabel_width = 8
     if format_version == 0:
-      header_size = CrackleHeader.HEADER_BYTES_V0
+      nlabel_width = 4
+      computed_crc = None
+    else:
+      stored_crc = int.from_bytes(buffer[28:30], 'little')
+      computed_crc = crc16(buffer[5:28])
+      if not ignore_crc_check and stored_crc != computed_crc:
+        raise FormatError(
+          f"The header appears to be corrupted. CRC check failed. "
+          f"Computed: {computed_crc} Stored: {stored_crc}"
+        )
 
     return CrackleHeader(
       label_format=values[3],
@@ -86,12 +120,13 @@ class CrackleHeader:
     	sy=int.from_bytes(buffer[11:15], byteorder='little', signed=False),
     	sz=int.from_bytes(buffer[15:19], byteorder='little', signed=False),
       grid_size=(2 ** int(buffer[19])),
-    	num_label_bytes=int.from_bytes(buffer[20:header_size], byteorder='little', signed=False),
+    	num_label_bytes=int.from_bytes(buffer[20:20+nlabel_width], byteorder='little', signed=False),
       fortran_order=bool(values[4]),
       signed=bool(values[5]),
       markov_model_order=int(values[6]),
       is_sorted=(not bool(values[7])),
       format_version=format_version,
+      crc=stored_crc,
     )
 
   @property
@@ -123,9 +158,7 @@ class CrackleHeader:
     else:
       label_bytes_width = 8
 
-    return b''.join([
-      self.MAGIC,
-      self.format_version.to_bytes(1, 'little'),
+    interpretable_data = b''.join([
       fmt_byte.to_bytes(1, 'little'),
       fmt_byte2.to_bytes(1, 'little'),
       self.sx.to_bytes(4, 'little'),
@@ -133,6 +166,20 @@ class CrackleHeader:
       self.sz.to_bytes(4, 'little'),
       log_grid_size.to_bytes(1, 'little'),
       self.num_label_bytes.to_bytes(label_bytes_width, 'little'),
+    ])
+
+    if self.format_version == 0:
+      label_bytes_width = 4
+      crc = b''
+    else:
+      label_bytes_width = 8
+      crc = crc16(interpretable_data).to_bytes(2, 'little')
+
+    return b''.join([
+      self.MAGIC,
+      self.format_version.to_bytes(1, 'little'),
+      interpretable_data,
+      crc
     ])
 
   def pin_index_width(self):
@@ -195,6 +242,7 @@ class CrackleHeader:
     label bytes:   {self.num_label_bytes}
     fortran order: {self.fortran_order}
     grid_size:     {self.grid_size}
+    crc:           {self.crc}
     ---
     BOC width:     {self.index_width()}
     z index width: {self.z_index_width()}

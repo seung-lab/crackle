@@ -28,13 +28,14 @@ enum CrackFormat {
  *     bit  4:   crack format (impermissible or permissible)
  *     bits 5-6: label format
  *   sx, sy, sz        : size of each dimension (4 bytes x3)
- *   num_label_bytes   : number of label format bytes
+ *   num_label_bytes   : number of label format bytes (8 bytes)
+ *   crc16
  */
 struct CrackleHeader {
 public:
-	static constexpr size_t header_size{28};
+	static constexpr size_t header_size{30};
 	static constexpr size_t header_size_v0{24};
-	static constexpr size_t header_size_v1{28};
+	static constexpr size_t header_size_v1{30};
 	static constexpr uint8_t current_version{1}; 
 
 	static constexpr char magic[4]{ 'c', 'r', 'k', 'l' }; 
@@ -52,6 +53,7 @@ public:
 	bool fortran_order;
 	uint8_t markov_model_order;
 	bool is_sorted;
+	uint16_t crc;
 
 	CrackleHeader() :
 		format_version(1),
@@ -61,7 +63,7 @@ public:
 		data_width(1), stored_data_width(1),
 		sx(1), sy(1), sz(1), grid_size(2147483648),
 		num_label_bytes(0), fortran_order(true),
-		markov_model_order(0), is_sorted(1)
+		markov_model_order(0), is_sorted(1), crc(0xFFFF)
 	{}
 
 	CrackleHeader(
@@ -76,7 +78,8 @@ public:
 		const uint32_t _num_label_bytes,
 		const bool _fortran_order,
 		const uint8_t _markov_model_order,
-		const bool _is_sorted
+		const bool _is_sorted,
+		const uint16_t _crc
 	) : 
 		format_version(_format_version),
 		label_format(_label_fmt),
@@ -88,7 +91,7 @@ public:
 		num_label_bytes(_num_label_bytes), 
 		fortran_order(_fortran_order), 
 		markov_model_order(_markov_model_order),
-		is_sorted(_is_sorted)
+		is_sorted(_is_sorted), crc(_crc)
 	{}
 
 	void assign_from_buffer(const unsigned char* buf) {
@@ -121,6 +124,28 @@ public:
 		is_signed = static_cast<bool>((format_bytes >> 8) & 0b1);
 		markov_model_order = static_cast<uint8_t>((format_bytes >> 9) & 0b1111);
 		is_sorted = !static_cast<bool>((format_bytes >> 13) & 0b1);
+
+		if (format_version == 0) {
+			return; // no support for CRC
+		}
+
+		crc = lib::ctoi<uint16_t>(buf, 28);
+
+		// calculate crc only on values that impact data interpretation
+		// as lzip author Antonio Diaz Diaz noted, it's important to
+		// deliver the message if possible even if the envelope is 
+		// has a spot on it. for example, "crkl" magic word is human
+		// correctable.
+
+		// So compute starting from format bitfield to num_label_bytes.
+		// We use CRC16 using a polynomial that is good up to 241 bits.
+		// CRC16 is used to reduce false positives vs CRC32 since the
+		// crc field can be damaged itself. CRC8 is too small.
+		const uint16_t computed_crc = crackle::lib::crc16(buf + 5, 28 - 5);
+
+		if (computed_crc != crc) {
+			throw std::runtime_error("crackle: CRC16 check failed. Header is corrupted.");
+		}
 	}
 
 	CrackleHeader(const unsigned char* buf) {
@@ -209,6 +234,24 @@ public:
 		else {
 			i += lib::itoc(static_cast<uint64_t>(num_label_bytes), buf, i);
 		}
+
+		if (fmt_ver == 0) {
+			return i - idx; // no support for CRC
+		}
+
+		// calculate crc only on values that impact data interpretation
+		// as lzip author Antonio Diaz Diaz noted, it's important to
+		// deliver the message if possible even if the envelope is 
+		// has a spot on it. for example, "crkl" magic word is human
+		// correctable.
+
+		// So compute starting from format bitfield to num_label_bytes.
+		// We use CRC16 using a polynomial that is good up to 241 bits.
+		// CRC16 is used to reduce false positives vs CRC32 since the
+		// crc field can be damaged itself. CRC8 is too small.
+		uint64_t useful_offset = 5;
+		const uint16_t crc = crackle::lib::crc16(buf.data() + useful_offset, CrackleHeader::header_size - sizeof(uint16_t) - useful_offset);
+		i += lib::itoc(crc, buf, i);
 
 		return i - idx;
 	}

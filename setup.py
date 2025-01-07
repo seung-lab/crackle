@@ -24,6 +24,8 @@ setuptools.setup(
     Pybind11Extension(
         "fastcrackle",
         ["src/fastcrackle.cpp"],
+        include_dirs=["./third_party/crc32c/include"],
+        libraries=["crc32c"],
         extra_compile_args=extra_compile_args,
         language="c++",
     ),
