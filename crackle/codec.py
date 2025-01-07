@@ -438,10 +438,13 @@ def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -
   if z_end is None:
     z_end = sz
 
+  z_start = int(z_start)
+  z_end = int(z_end)
+
   if (sx * sy * sz == 0):
     labels = np.zeros((0,), dtype=header.dtype)
   else:
-    labels = fastcrackle.decompress(binary, int(z_start), int(z_end))
+    labels = fastcrackle.decompress(binary, z_start, z_end)
 
   order = 'F' if header.fortran_order else 'C'
   labels = labels.reshape((sx,sy,z_end - z_start), order=order)
