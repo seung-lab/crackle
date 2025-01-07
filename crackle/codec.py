@@ -169,7 +169,7 @@ def decode_condensed_pins_components(binary:bytes) -> dict:
   if head.label_format != LabelFormat.PINS_VARIABLE_WIDTH:
     raise FormatError("This function can only extract pins from variable width streams.")
 
-  # bgcolor, num labels (u64), N labels, pins
+  # bg color, N unique, unique, cc_per_grid, fmt_byte, pins
   labels_binary = raw_labels(binary)
   bgcolor = background_color(binary)
   offset = head.stored_data_width
@@ -239,9 +239,7 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     n_pins = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
     index_arr = np.frombuffer(pinset[offset:offset+n_pins*idtype.itemsize], dtype=idtype)
-    index_arr = index_arr.copy()
-    for i in range(1, len(index_arr)):
-      index_arr[i] += index_arr[i-1]
+    index_arr = np.cumsum(index_arr)
     offset += n_pins*idtype.itemsize
     depth_arr = np.frombuffer(pinset[offset:offset+n_pins*ddtype.itemsize], dtype=ddtype)
     offset += n_pins * ddtype.itemsize
@@ -346,7 +344,7 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
       z_end = z + 1
       break
 
-  return (z_start, z_end+1)
+  return (int(z_start), int(z_end+1))
 
 def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   head = header(binary)
@@ -392,7 +390,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     z_end = max(z_end, z+pin.depth + 1)
 
   if len(single_labels) == 0:
-    return (z_start, z_end)
+    return (int(z_start), int(z_end))
 
   for lbl in  [ single_labels[0], single_labels[-1] ]:
     z = np.searchsorted(components_per_grid, lbl) - 1
@@ -402,7 +400,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   z_start = max(z_start, 0)
   z_end = min(z_end + 2, head.sz)
 
-  return (z_start, z_end)
+  return (int(z_start), int(z_end))
 
 def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
@@ -439,6 +437,9 @@ def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -
     z_start = 0
   if z_end is None:
     z_end = sz
+
+  z_start = int(z_start)
+  z_end = int(z_end)
 
   if (sx * sy * sz == 0):
     labels = np.zeros((0,), dtype=header.dtype)
