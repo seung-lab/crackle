@@ -306,6 +306,8 @@ def _zstack_pins(
     ])
     pin_binaries.append(pin_section)
 
+  uniq = uniq[uniq != first_bgcolor]
+
   # labels binary
   return b''.join([
     int(first_bgcolor).to_bytes(first_head.stored_data_width, 'little'),
