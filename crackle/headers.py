@@ -38,9 +38,8 @@ class CrackleHeader:
     signed:bool,
     markov_model_order:int,
     is_sorted:bool,
-    format_version:int,
+    format_version:int = 1,
   ):
-    self.format_version = format_version
     self.label_format = label_format
     self.crack_format = crack_format
     self.data_width = int(data_width)
@@ -54,6 +53,7 @@ class CrackleHeader:
     self.signed = bool(signed)
     self.markov_model_order = int(markov_model_order)
     self.is_sorted = bool(is_sorted)
+    self.format_version = format_version
 
   @classmethod
   def frombytes(kls, buffer:bytes):
@@ -118,16 +118,21 @@ class CrackleHeader:
 
     log_grid_size = int(np.log2(self.grid_size))
 
+    if self.format_version == 0:
+      label_bytes_width = 4
+    else:
+      label_bytes_width = 8
+
     return b''.join([
       self.MAGIC,
-      self.FORMAT_VERSION.to_bytes(1, 'little'),
+      self.format_version.to_bytes(1, 'little'),
       fmt_byte.to_bytes(1, 'little'),
       fmt_byte2.to_bytes(1, 'little'),
       self.sx.to_bytes(4, 'little'),
       self.sy.to_bytes(4, 'little'),
       self.sz.to_bytes(4, 'little'),
       log_grid_size.to_bytes(1, 'little'),
-      self.num_label_bytes.to_bytes(4, 'little'),
+      self.num_label_bytes.to_bytes(label_bytes_width, 'little'),
     ])
 
   def pin_index_width(self):
@@ -179,7 +184,7 @@ class CrackleHeader:
 
     return f"""
     magic:         {CrackleHeader.MAGIC}
-    version:       {CrackleHeader.FORMAT_VERSION}
+    version:       {self.format_version}
     label fmt:     {label_fmt}
     crack fmt:     {'PERMISSIBLE' if self.crack_format == CrackFormat.PERMISSIBLE else 'IMPERMISSIBLE' }
     data width:    {self.data_width}
