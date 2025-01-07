@@ -154,9 +154,15 @@ std::vector<unsigned char> encode_condensed_pins(
 	const int64_t sx, const int64_t sy, const int64_t sz,
 	const int64_t index_width, 
 	const std::vector<uint64_t>& num_components_per_slice,
-	const uint64_t num_components
+	const uint64_t num_components,
+	const bool auto_bgcolor = true,
+	const STORED_LABEL manual_bgcolor = 0
 ) {
-	STORED_LABEL bgcolor = find_bgcolor<STORED_LABEL>(all_pins, sz);
+	STORED_LABEL bgcolor = manual_bgcolor;
+	if (auto_bgcolor) {
+		bgcolor = find_bgcolor<STORED_LABEL>(all_pins, sz);
+	}
+
 	all_pins.erase(bgcolor);
 
 	uint64_t max_pins = 0;

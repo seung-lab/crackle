@@ -464,7 +464,8 @@ def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -
 def compress(
   labels:np.ndarray, 
   allow_pins:int = 0,
-  markov_model_order:int = 0
+  markov_model_order:int = 0,
+  bgcolor:Optional[int] = None,
 ) -> bytes:
   """
   Compress the 3D labels array into a Crackle bytestream.
@@ -477,9 +478,7 @@ def compress(
     Reasonable values range from 0 (no model (0B), 
     larger crack code size, fast decode) to about 10 (655kB). 
     Values of 5 (model:640B) to 7 (model:10kB) are typical.
-
-  [EXPERIMENTAL]
-  BINARIES ENCODED USING THIS OPTION MAY BREAK IN FUTURE VERSIONS
+  
   allow_pins: 
     0: disabled
     1: use fast pin algorithm
@@ -488,9 +487,11 @@ def compress(
     If enabled (1 or 2), when the number of voxel pairs in the 
     volume is > 50% of the number of voxels, use the pin encoding
     strategy. Pins use 3D information to encode the label map.
-    However, they are still investigational.
+    
     Pin computation requires appoximately solving a set cover problem and 
     can be very slow on larger images using the slow algorithm.
+
+    
   """
   if np.issubdtype(labels.dtype, np.signedinteger):
     raise TypeError("Signed integer data types are not currently supported.")
@@ -498,9 +499,13 @@ def compress(
   f_order = labels.flags.f_contiguous
   labels = np.asfortranarray(labels)
   optimize_pins = (allow_pins == 2)
+  auto_bgcolor = (bgcolor is None)
+  manual_bgcolor = 0 if bgcolor is None else int(bgcolor)
+
   return fastcrackle.compress(
     labels, bool(allow_pins), f_order,
-    markov_model_order, optimize_pins
+    markov_model_order, optimize_pins,
+    auto_bgcolor, manual_bgcolor
   )
 
 def extract_keys(binary:bytes) -> np.ndarray:
