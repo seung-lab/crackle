@@ -239,9 +239,7 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
     n_pins = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
     index_arr = np.frombuffer(pinset[offset:offset+n_pins*idtype.itemsize], dtype=idtype)
-    index_arr = index_arr.copy()
-    for i in range(1, len(index_arr)):
-      index_arr[i] += index_arr[i-1]
+    index_arr = np.cumsum(index_arr)
     offset += n_pins*idtype.itemsize
     depth_arr = np.frombuffer(pinset[offset:offset+n_pins*ddtype.itemsize], dtype=ddtype)
     offset += n_pins * ddtype.itemsize
