@@ -288,19 +288,20 @@ def _zstack_pins(
     pinset.sort(key=lambda a: a.index)
 
     indices = np.array([ p.index for p in pinset ], dtype=f"u{index_width}")
-    indices = np.diff(indices, prepend=0)
+    indices = np.diff(indices, prepend=0).astype(f"u{index_width}")
 
     depths = np.array([ p.depth for p in pinset ], dtype=f"u{depth_width}")
 
     single_labels = np.array(all_single_labels[label], dtype=f"u{cc_label_width}")
     single_labels.sort()
     single_labels = np.diff(single_labels, prepend=0)
+    single_labels = single_labels.astype(f"u{cc_label_width}")
 
     pin_section = b''.join([
       len(pinset).to_bytes(num_pins_width, 'little'),
       indices.tobytes(),
       depths.tobytes(),
-      len(single_labels).to_bytes(cc_label_width, 'little'),
+      len(single_labels).to_bytes(num_pins_width, 'little'),
       single_labels.tobytes(),
     ])
     pin_binaries.append(pin_section)
