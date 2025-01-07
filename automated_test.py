@@ -530,6 +530,19 @@ def test_crc_check_one_bit_error(dtype):
 
       binary[i] = val
 
+  for i in range(5, 30):
+    for j in range(8):
+      val = binary[i]
+      binary[i] = binary[i] & ~(0b1 << j)
+
+      try:
+        head = crackle.header(binary) # crashes if bad
+        assert False, i
+      except:
+        pass
+
+      binary[i] = val
+
 
 
 
