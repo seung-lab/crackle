@@ -234,10 +234,10 @@ def _zstack_pins(
     del elems
     pins, single_labels = decode_condensed_pins(binary)
     for label, cc_labels in single_labels.items():
-      cc_labels += component_offset
+      cc_labels += int(component_offset)
       all_single_labels[label].extend(list(cc_labels))
 
-    component_offset += np.sum(cpg)
+    component_offset += int(np.sum(cpg))
 
     PinTuple = namedtuple('Pin', ['index', 'depth'])
 
