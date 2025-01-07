@@ -515,6 +515,7 @@ def test_crc_check_one_bit_error(dtype):
   binary[4] = 1
   head = crackle.header(binary) # crashes if bad
 
+  # Hamming Distance 1
   # now to see if crc actually works....
   # tests 28, 29 are false positives btw
   for i in range(5, 30):
@@ -542,6 +543,47 @@ def test_crc_check_one_bit_error(dtype):
         pass
 
       binary[i] = val
+
+
+  # Hamming Distance 2
+  orig_binary = bytearray(binary)
+  N = 184
+
+  for i in range(N):
+    for j in range(i, N):
+      binary = bytearray(orig_binary)
+
+      ii = i // 8
+      jj = j // 8
+      iib = i - ii * 8
+      jjb = j - jj * 8
+
+      binary[ii] |= (0b1 << iib)
+      binary[jj] |= (0b1 << jjb)
+
+      try:
+        head = crackle.header(binary) # crashes if bad
+        assert False, i
+      except:
+        pass
+
+  for i in range(N):
+    for j in range(i, N):
+      binary = bytearray(orig_binary)
+
+      ii = i // 8
+      jj = j // 8
+      iib = i - ii * 8
+      jjb = j - jj * 8
+
+      binary[ii] = binary[ii] & ~(0b1 << iib)
+      binary[jj] = binary[jj] & ~(0b1 << jjb)
+
+      try:
+        head = crackle.header(binary) # crashes if bad
+        assert False, i
+      except:
+        pass
 
 
 
