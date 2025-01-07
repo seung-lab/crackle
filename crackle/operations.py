@@ -170,6 +170,10 @@ def _zstack_flat_labels(
     for i, u in enumerate(uniq)
   }
 
+  first_head = CrackleHeader.frombytes(binaries[0])
+  first_head.stored_data_width = compute_byte_width(uniq.max())
+  key_width = compute_byte_width(len(uniq))
+
   for binary in binaries:
     if binary is None:
       continue
@@ -179,18 +183,15 @@ def _zstack_flat_labels(
     
     local_uniq = elements["unique"]
     cc_map = elements["cc_map"]
-    all_keys += [ uniq_map[key] for key in local_uniq[cc_map] ]
+    remap = np.array([ uniq_map[key] for key in local_uniq  ], dtype=f"u{key_width}")
+    all_keys.append(remap[cc_map])
   
-  first_head = CrackleHeader.frombytes(binaries[0])
-  first_head.stored_data_width = compute_byte_width(uniq.max())
-  key_width = compute_byte_width(len(uniq))
-
   # labels binary
   return b''.join([
     len(uniq).to_bytes(8, 'little'),
     uniq.astype(first_head.stored_dtype, copy=False).tobytes(),
     np.concatenate(component_index).tobytes(),
-    np.array(all_keys, dtype=f'u{key_width}').tobytes(),
+    np.concatenate(all_keys).tobytes(),
   ])
 
 def _zstack_pins(
