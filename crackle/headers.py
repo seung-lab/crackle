@@ -216,6 +216,9 @@ class CrackleHeader:
   def voxels(self) -> int:
     return self.sx * self.sy * self.sz
 
+  def compute_crc(self) -> int:
+    return int.from_bytes(self.tobytes()[-2:], 'little')
+
   @property
   def num_markov_model_bytes(self) -> int:
     if self.markov_model_order == 0:

@@ -67,7 +67,7 @@ def print_header(src):
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
 
-	head = arr.header()
+	head = arr.header(ignore_crc_check=True)
 	print(f"Filename: {src}")
 	for key,val in head.__dict__.items():
 		print(f"{key}: {val}")

@@ -8,9 +8,9 @@ import fastcrackle
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype
 
-def header(binary:bytes) -> CrackleHeader:
+def header(binary:bytes, ignore_crc_check:bool = False) -> CrackleHeader:
   """Decode the header from a Crackle bytestream."""
-  return CrackleHeader.frombytes(binary)
+  return CrackleHeader.frombytes(binary, ignore_crc_check=ignore_crc_check)
 
 def labels(binary:bytes) -> np.ndarray:
   """Extract the unique labels from a Crackle bytestream."""
