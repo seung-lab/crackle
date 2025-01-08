@@ -86,7 +86,9 @@ py::bytes compress_helper(
 	const bool allow_pins = false,
 	const bool fortran_order = true,
 	const uint64_t markov_model_order = 0,
-	const bool optimize_pins = false
+	const bool optimize_pins = false,
+	const bool auto_bgcolor = true,
+	const int64_t manual_bgcolor = 0
 ) {
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.ndim() < 2
@@ -102,7 +104,9 @@ py::bytes compress_helper(
 		allow_pins,
 		fortran_order,
 		markov_model_order,
-		optimize_pins
+		optimize_pins,
+		auto_bgcolor,
+		manual_bgcolor
 	);
 	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
 }
@@ -112,55 +116,47 @@ py::bytes compress(
 	const bool allow_pins = false,
 	const bool fortran_order = true,
 	const uint64_t markov_model_order = 0,
-	const bool optimize_pins = false
+	const bool optimize_pins = false,
+	const bool auto_bgcolor = true,
+	const int64_t manual_bgcolor = 0
 ) {
 	int width = labels.dtype().itemsize();
 	bool is_signed = labels.dtype().kind() == 'i';
 
+#define CALL_COMPRESS_HELPER(LABELS_T) compress_helper<LABELS_T>(\
+		labels, allow_pins, fortran_order, markov_model_order,\
+		optimize_pins, auto_bgcolor, manual_bgcolor\
+	)
+
 	if (is_signed) {
 		if (width == 1) {
-			return compress_helper<int8_t>(
-				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
-			);
+			return CALL_COMPRESS_HELPER(int8_t);
 		}
 		else if (width == 2) {
-			return compress_helper<int16_t>(
-				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
-			);
+			return CALL_COMPRESS_HELPER(int16_t);
 		}
 		else if (width == 4) {
-			return compress_helper<int32_t>(
-				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
-			);
+			return CALL_COMPRESS_HELPER(int32_t);
 		}
 		else {
-			return compress_helper<int64_t>(
-				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
-			);
+			return CALL_COMPRESS_HELPER(int64_t);
 		}
 	}
 	else {
 		if (width == 1) {
-			return compress_helper<uint8_t>(
-				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
-			);
+			return CALL_COMPRESS_HELPER(uint8_t);
 		}
 		else if (width == 2) {
-			return compress_helper<uint16_t>(
-				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
-			);
+			return CALL_COMPRESS_HELPER(uint16_t);
 		}
 		else if (width == 4) {
-			return compress_helper<uint32_t>(
-				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
-			);
+			return CALL_COMPRESS_HELPER(uint32_t);
 		}
 		else {
-			return compress_helper<uint64_t>(
-				labels, allow_pins, fortran_order, markov_model_order, optimize_pins
-			);
+			return CALL_COMPRESS_HELPER(uint64_t);
 		}
 	}
+#undef CALL_COMPRESS_HELPER
 }
 
 py::bytes reencode_markov(

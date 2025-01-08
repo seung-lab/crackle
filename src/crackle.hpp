@@ -34,7 +34,9 @@ std::vector<unsigned char> compress_helper(
 	const bool allow_pins = false,
 	const bool fortran_order = true,
 	const uint64_t markov_model_order = 0,
-	const bool optimize_pins = false
+	const bool optimize_pins = false,
+	const bool auto_bgcolor = true,
+	const bool manual_bgcolor = 0
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -131,7 +133,8 @@ std::vector<unsigned char> compress_helper(
 			all_pins,
 			sx, sy, sz,
 			header.pin_index_width(),
-			num_components_per_slice, num_components
+			num_components_per_slice, num_components,
+			auto_bgcolor, manual_bgcolor
 		);
 	}
 	else {
@@ -167,37 +170,35 @@ std::vector<unsigned char> compress(
 	const bool allow_pins = false,
 	const bool fortran_order = true,
 	const uint64_t markov_model_order = 0,
-	const bool optimize_pins = false
+	const bool optimize_pins = false,
+	const bool auto_bgcolor = true,
+	const int64_t manual_bgcolor = 0
 ) {
 	const int64_t voxels = sx * sy * sz;
 	uint8_t stored_data_width = crackle::lib::compute_byte_width(
 		crackle::lib::max_label(labels, voxels)
 	);
 
+#define CALL_COMPRESS_HELPER(STORED_T) compress_helper<LABEL, STORED_T>(\
+		labels, sx, sy, sz,\
+		allow_pins, fortran_order, markov_model_order,\
+		optimize_pins, auto_bgcolor, manual_bgcolor\
+	)
+
 	if (stored_data_width == 1) {
-		return compress_helper<LABEL, uint8_t>(
-			labels, sx, sy, sz, 
-			allow_pins, fortran_order, markov_model_order, optimize_pins
-		);
+		return CALL_COMPRESS_HELPER(uint8_t);
 	}
 	else if (stored_data_width == 2) {
-		return compress_helper<LABEL, uint16_t>(
-			labels, sx, sy, sz, 
-			allow_pins, fortran_order, markov_model_order, optimize_pins
-		);
+		return CALL_COMPRESS_HELPER(uint16_t);
 	}
 	else if (stored_data_width == 4) {
-		return compress_helper<LABEL, uint32_t>(
-			labels, sx, sy, sz,
-			allow_pins, fortran_order, markov_model_order, optimize_pins
-		);
+		return CALL_COMPRESS_HELPER(uint32_t);
 	}
 	else {
-		return compress_helper<LABEL, uint64_t>(
-			labels, sx, sy, sz,
-			allow_pins, fortran_order,markov_model_order, optimize_pins
-		);
+		return CALL_COMPRESS_HELPER(uint64_t);
 	}
+
+#undef CALL_COMPRESS_HELPER
 }
 
 
