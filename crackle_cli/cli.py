@@ -62,12 +62,12 @@ def print_labels(src):
 
 def print_header(src):
 	try:
-		arr = crackle.aload(src)
+		arr = crackle.util.rload(src, ignore_header_crc_check=True)
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
 
-	head = arr.header(ignore_crc_check=True)
+	head = arr.header
 	print(f"Filename: {src}")
 	for key,val in head.__dict__.items():
 		print(f"{key}: {val}")

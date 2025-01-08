@@ -1,6 +1,6 @@
 from typing import Optional, Union, Any, Dict
 
-from .headers import CrackleHeader
+from .headers import CrackleHeader, LabelFormat
 from .codec import (
   compress, decompress, decompress_range, 
   labels, nbytes, contains, 
@@ -212,12 +212,12 @@ class CrackleArray:
 
 class CrackleRemoteArray(CrackleArray):
   """EXPERIMENTAL DO NOT RELY ON THIS INTERFACE."""
-  def __init__(self, cloudpath:str):
+  def __init__(self, cloudpath:str, ignore_header_crc_check:bool = False):
     from cloudfiles import CloudFile
     self.cloudpath = cloudpath
     self.cf = CloudFile(cloudpath)
     self.header_binary = self.cf[:CrackleHeader.HEADER_BYTES]
-    self.header = header(self.header_binary)
+    self.header = header(self.header_binary, ignore_crc_check=ignore_header_crc_check)
     (
       self.z_index, 
       self.labels_binary,
@@ -228,12 +228,24 @@ class CrackleRemoteArray(CrackleArray):
     binary = self._synthetic_crackle_file(0, b'')
     return CrackleArray(binary).labels()
 
+  def num_labels(self):
+    hb = self.header.header_bytes
+    offset = hb + self.header.sz * 4
+    sdw = self.header.stored_data_width
+
+    if self.header.label_format == LabelFormat.FLAT:
+      num_labels_binary = self.cf[offset:offset+8]
+    else:
+      num_labels_binary = self.cf[offset+sdw:offset+sdw+8]
+
+    return int.from_bytes(num_labels_binary, 'little')
+
   def __contains__(self, elem:int):
     binary = self._synthetic_crackle_file(0, b'')
     return elem in CrackleArray(binary)
   
   def fetch_z_index_labels_markov_model(self):
-    hb = CrackleHeader.HEADER_BYTES
+    hb = self.header.header_bytes
     z_offset = self.header.sz * 4
     offset = (
       z_offset 
@@ -263,26 +275,30 @@ class CrackleRemoteArray(CrackleArray):
     if self.header.markov_model_order == 0:
       return b''
 
-    hb = CrackleHeader.HEADER_BYTES
+    hb = self.header.header_bytes
     off = hb + self.header.sz * 4
     off += self.header.num_label_bytes
     return self.cf[off:off+self.header.num_markov_model_bytes]
 
   def fetch_all_labels(self) -> bytes:
-    hb = CrackleHeader.HEADER_BYTES
+    hb = self.header.header_bytes
     off = hb + self.header.sz * 4
     return self.cf[off:off+self.header.num_label_bytes]
 
   def fetch_crack_code(self, z:int) -> bytes:
     return self.cf[self.z_index[z]:self.z_index[z+1]]
 
-  def _synthetic_crackle_file(self, z:int, crackcode:bytes) -> bytes:
+  def _synthetic_crackle_file(self, z:int, crackcode:bytes, labels_binary:Optional[bytes] = None) -> bytes:
     zindex = np.zeros((self.header.sz,), dtype=np.uint32)
     zindex[z] = len(crackcode)
+
+    if labels_binary is None:
+      labels_binary = self.labels_binary
+
     return b''.join([ 
       self.header_binary,
       zindex.tobytes(),
-      self.labels_binary,
+      labels_binary,
       self.markov_model,
       crackcode
     ])

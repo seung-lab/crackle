@@ -6,34 +6,39 @@ import os
 import gzip
 import lzma
 
-from .array import CrackleArray
+from .array import CrackleArray, CrackleRemoteArray
 from .codec import compress, decompress
+from .headers import CrackleHeader
 
 import numpy as np
 
-def _load(filelike, allow_mmap:bool = False):
+def _load(filelike, allow_mmap:bool = False, size:int = -1):
   if hasattr(filelike, 'read'):
-    binary = filelike.read()
+    binary = filelike.read(size)
   elif (
     isinstance(filelike, str) 
     and os.path.splitext(filelike)[1] == '.gz'
   ):
     with gzip.open(filelike, 'rb') as f:
-      binary = f.read()
+      binary = f.read(size)
   elif (
     isinstance(filelike, str) 
     and os.path.splitext(filelike)[1] in ('.lzma', '.xz')
   ):
     with lzma.open(filelike, 'rb') as f:
-      binary = f.read()
+      binary = f.read(size)
   else:
     with open(filelike, 'rb') as f:
       if allow_mmap:
         binary = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
       else:
-        binary = f.read()
+        binary = f.read(size)
   
   return binary
+
+def rload(filelike, **kwargs):
+  """Load the array using a memory efficient remote interface."""
+  return CrackleRemoteArray(filelike, **kwargs)
 
 def aload(filelike, allow_mmap=False) -> CrackleArray:
   """Load a CrackleArray from a file."""
