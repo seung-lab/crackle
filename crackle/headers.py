@@ -42,12 +42,28 @@ def crc16(data:List[int]) -> int:
 
   return int(crc & 0xFFFF)
 
+def crc8(data:List[int]) -> int:
+  # use implicit +1 representation for right shift, LSB first
+  # use explicit +1 representation for left shit, MSB first
+  polynomial = 0xe7 # implicit
+  crc = 0xFF # detects zeroed data better than 0x0000
+  for i in range(len(data)):
+    crc ^= data[i]
+    for k in range(8):
+      if crc & 1:
+        crc = (crc >> 1) ^ polynomial
+      else:
+        crc = crc >> 1
+
+  return int(crc & 0xFF)
+
+
 class CrackleHeader:
   MAGIC = b'crkl'
   FORMAT_VERSION = 1
-  HEADER_BYTES = 30
+  HEADER_BYTES = 29
   HEADER_BYTES_V0 = 24
-  HEADER_BYTES_V1 = 30
+  HEADER_BYTES_V1 = 29
 
   def __init__(
     self, 
@@ -103,8 +119,8 @@ class CrackleHeader:
       nlabel_width = 4
       computed_crc = None
     else:
-      stored_crc = int.from_bytes(buffer[28:30], 'little')
-      computed_crc = crc16(buffer[5:28])
+      stored_crc = int.from_bytes(buffer[28:29], 'little')
+      computed_crc = crc8(buffer[5:28])
       if not ignore_crc_check and stored_crc != computed_crc:
         raise FormatError(
           f"The header appears to be corrupted. CRC check failed. "
@@ -173,7 +189,7 @@ class CrackleHeader:
       crc = b''
     else:
       label_bytes_width = 8
-      crc = crc16(interpretable_data).to_bytes(2, 'little')
+      crc = crc8(interpretable_data).to_bytes(1, 'little')
 
     return b''.join([
       self.MAGIC,
