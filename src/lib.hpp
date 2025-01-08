@@ -4,6 +4,27 @@
 namespace crackle {
 namespace lib {
 
+// Code from stackoverflow by Dr. Mark Adler
+// https://stackoverflow.com/questions/10564491/function-to-calculate-a-crc16-checksum#comment83704063_10569892
+// Polynomial 0xe7 is selected as "best" for messages up to
+// 247 bits and gives a guarantee of detecting up to 2 bit flips
+// according to Phil Koopman.
+uint8_t crc8(uint8_t const *data, uint64_t size) {
+	// use implicit +1 representation for right shift, LSB first
+	// use explicit +1 representation for left shit, MSB first
+	constexpr uint8_t polynomial = 0xe7; // implicit
+	uint8_t crc = 0xFF; // detects zeroed data better than 0x00
+	while (size--) {
+		crc ^= *data++;
+		for (unsigned int k = 0; k < 8; k++) {
+			crc = crc & 1
+				? (crc >> 1) ^ polynomial
+				: crc >> 1;
+		}
+	}
+	return crc;
+}
+
 // d is for dynamic
 inline uint64_t itocd(uint64_t x, std::vector<unsigned char> &buf, uint64_t idx, int byte_width) { 
 	for (int i = 0; i < byte_width; i++) {

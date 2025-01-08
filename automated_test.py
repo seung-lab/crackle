@@ -488,6 +488,108 @@ def test_min_max(allow_pins, dtype):
   assert ans_min == crackle.min(binary)
   assert ans_max == crackle.max(binary)
 
+@pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
+def test_crc_check_one_bit_error(dtype):
+  arr = np.random.randint(0, 255, size=[11,23,37], dtype=dtype)
+  binary = bytearray(crackle.compress(arr))
+
+  head = crackle.header(binary) # crashes if bad
+  binary[0] = ord('z')
+
+  try:
+    head = crackle.header(binary) # crashes if bad
+    assert False
+  except:
+    pass
+
+  binary[0] = ord('c') # fixes
+  head = crackle.header(binary) # crashes if bad
+  binary[4] = 100
+  
+  try:
+    head = crackle.header(binary) # crashes if bad
+    assert False
+  except:
+    pass
+
+  binary[4] = 1
+  head = crackle.header(binary) # crashes if bad
+
+  # Hamming Distance 1
+  # now to see if crc actually works....
+  # tests 28, 29 are false positives btw
+  for i in range(5, 30):
+    for j in range(8):
+      val = binary[i]
+      binary[i] |= (0b1 << j)
+
+      try:
+        head = crackle.header(binary) # crashes if bad
+        assert False, i
+      except:
+        pass
+
+      binary[i] = val
+
+  for i in range(5, 30):
+    for j in range(8):
+      val = binary[i]
+      binary[i] = binary[i] & ~(0b1 << j)
+
+      try:
+        head = crackle.header(binary) # crashes if bad
+        assert False, i
+      except:
+        pass
+
+      binary[i] = val
+
+
+  # Hamming Distance 2
+  orig_binary = bytearray(binary)
+  N = 184
+
+  for i in range(N):
+    for j in range(i, N):
+      binary = bytearray(orig_binary)
+
+      ii = i // 8
+      jj = j // 8
+      iib = i - ii * 8
+      jjb = j - jj * 8
+
+      binary[ii] |= (0b1 << iib)
+      binary[jj] |= (0b1 << jjb)
+
+      try:
+        head = crackle.header(binary) # crashes if bad
+        assert False, i
+      except:
+        pass
+
+  for i in range(N):
+    for j in range(i, N):
+      binary = bytearray(orig_binary)
+
+      ii = i // 8
+      jj = j // 8
+      iib = i - ii * 8
+      jjb = j - jj * 8
+
+      binary[ii] = binary[ii] & ~(0b1 << iib)
+      binary[jj] = binary[jj] & ~(0b1 << jjb)
+
+      try:
+        head = crackle.header(binary) # crashes if bad
+        assert False, i
+      except:
+        pass
+
+
+
+
+
+
 
 
 

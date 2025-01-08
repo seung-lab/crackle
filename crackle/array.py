@@ -30,8 +30,8 @@ class CrackleArray:
   def __len__(self):
     return len(self.binary)
 
-  def header(self):
-    return header(self.binary)
+  def header(self, ignore_crc_check:bool = False):
+    return header(self.binary, ignore_crc_check=ignore_crc_check)
 
   @property
   def random_access(self):

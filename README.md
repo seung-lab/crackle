@@ -100,16 +100,17 @@ See benchmarks for more information on Crackle's size and compute effiency.
 
 ## Versions
 
-| Major Version | Format Version | Description                                                    |
+| Format Version | Description                                                    |
 |---------------|----------------|----------------------------------------------------------------|
-| 1             | 0              | Initial release w/ flat, pins, crack codes with finite context modeling. Beta. |
+| 0              | Initial release w/ flat, pins, crack codes with finite context modeling. Beta. |
+| 1              | Incr. header to 30 bytes from 24. num_label_bytes u32->u64, adds crc8 to protect header. |
 
 
 ## Stream Format
 
 | Section   | Bytes                                     | Description                                                                                                     |
 |-----------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| Header    | 24                                        | Metadata incl. length of fields.                                                                                |
+| Header    | v0: 24, v1: 29                            | Metadata incl. length of fields.                                                                                |
 | Crack Index     | header.sz * sizeof(uint32)             | Number of bytes for the crack codes in each slice.
 | Labels       | header.num_label_bytes        | Can be either "flat" labels or "pins". Describes how to color connected components.                                                                                   |
 | Crack Codes    | Variable length.           | Instructions for drawing crack boundaries.             |
@@ -124,7 +125,8 @@ See benchmarks for more information on Crackle's size and compute effiency.
 | format_field      | bitfield          | u16     | See below.                 |
 | sx, sy, sz        | >= 0              | u32 x 3 | Size of array dimensions.                       |
 | grid_size         | log2(grid_size)   | u8      | Stores log2 of grid dimensions in voxels.          |
-| num_label_bytes   | Any.              | u32      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
+| num_label_bytes   | Any.              | u64      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
+| crc8             | Any.              | u8      | CRC8 of format_field thru num_label_bytes using polynomial 0xe7 (implicit) and 0xFF initialization. |
 
 
 Format Field (u16): DDSSCLLFGOOOOURR (each letter represents a bit, left is LSB)
@@ -138,6 +140,8 @@ G: Signed (if (1), data are signed int, otherwise unsigned int)
 OOOO: Nth-Order of Markov Chain (as an unsigned integer, typical values 0, or 3 to 7). If 0, markov compression is disabled.  
 U: if 0, unique labels are sorted, else, unsorted  
 R: Reserved  
+
+CRC8 only covers the header. It doesn't cover the magic number or format version since those are easily human correctable if needed.
 
 ### Flat Label Format
 
