@@ -95,7 +95,7 @@ class CrackleHeader:
     nlabel_width = 8
     if format_version == 0:
       nlabel_width = 4
-      computed_crc = None
+      stored_crc = None
     else:
       stored_crc = int.from_bytes(buffer[28:29], 'little')
       computed_crc = crc8(buffer[5:28])
