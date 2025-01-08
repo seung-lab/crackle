@@ -90,7 +90,7 @@ def contains(binary:bytes, label:int) -> bool:
 
 def raw_labels(binary:bytes) -> bytes:
   header = CrackleHeader.frombytes(binary)
-  offset = header.HEADER_BYTES + header.sz * 4
+  offset = header.header_bytes + header.sz * 4
   return binary[offset:offset+header.num_label_bytes]
 
 def nbytes(binary:bytes) -> np.ndarray:
