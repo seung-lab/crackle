@@ -585,6 +585,14 @@ def test_crc_check_one_bit_error(dtype):
       except:
         pass
 
+def test_array_works_z():
+  labels = np.arange(0,64).reshape((4,4,4), order="F").astype(np.uint32)
+  compressed = crackle.compress(labels)
+  arr = crackle.CrackleArray(compressed)
+  assert np.all(arr[:,:,3] == labels[:,:,3])
+
+
+
 
 
 
