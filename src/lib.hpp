@@ -6,29 +6,6 @@ namespace lib {
 
 // Code from stackoverflow by Dr. Mark Adler
 // https://stackoverflow.com/questions/10564491/function-to-calculate-a-crc16-checksum#comment83704063_10569892
-// Polynomial 0xac9a is selected as "best" for messages up to
-// 241 bits and gives a guarantee of detecting up to 4 bit flips
-// according to Phil Koopman. By coincidence, this polynomial
-// is palindromic, so works for both little and big endian.
-// https://users.ece.cmu.edu/~koopman/crc/
-uint16_t crc16(uint8_t const *data, uint64_t size) {
-	// use implicit +1 representation for right shift, LSB first
-	// use explicit +1 representation for left shit, MSB first
-	constexpr uint16_t polynomial = 0xac9a; // implicit
-	uint16_t crc = 0xFFFF; // detects zeroed data better than 0x0000
-	while (size--) {
-		crc ^= *data++;
-		for (unsigned int k = 0; k < 8; k++) {
-			crc = crc & 1
-				? (crc >> 1) ^ polynomial
-				: crc >> 1;
-		}
-	}
-	return crc;
-}
-
-// Code from stackoverflow by Dr. Mark Adler
-// https://stackoverflow.com/questions/10564491/function-to-calculate-a-crc16-checksum#comment83704063_10569892
 // Polynomial 0xe7 is selected as "best" for messages up to
 // 247 bits and gives a guarantee of detecting up to 2 bit flips
 // according to Phil Koopman.
