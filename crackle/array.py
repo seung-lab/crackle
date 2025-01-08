@@ -218,11 +218,10 @@ class CrackleRemoteArray(CrackleArray):
     self.cf = CloudFile(cloudpath)
     self.header_binary = self.cf[:CrackleHeader.HEADER_BYTES]
     self.header = header(self.header_binary, ignore_crc_check=ignore_header_crc_check)
-    (
-      self.z_index, 
-      self.labels_binary,
-      self.markov_model
-    ) = self.fetch_z_index_labels_markov_model()
+
+    self.z_index = None
+    self.labels_binary = None
+    self.markov_model = None
 
   def labels(self):
     binary = self._synthetic_crackle_file(0, b'')
@@ -304,6 +303,13 @@ class CrackleRemoteArray(CrackleArray):
     ])
 
   def __getitem__(self, z:int) -> np.ndarray:
+    if self.z_index is None:
+      (
+        self.z_index, 
+        self.labels_binary,
+        self.markov_model
+      ) = self.fetch_z_index_labels_markov_model()
+
     crackcode = self.fetch_crack_code(z)
     binary = self._synthetic_crackle_file(z, crackcode)
     return CrackleArray(binary)[:,:,z]
