@@ -147,7 +147,11 @@ class CrackleHeader:
 
     log_grid_size = int(np.log2(self.grid_size))
 
-    if self.format_version == 0:
+    fmt_ver = self.format_version
+    if fmt_ver == 0 and label_bytes_width > np.iinfo(np.uint32).max:
+      fmt_ver = 1
+
+    if fmt_ver == 0:
       label_bytes_width = 4
     else:
       label_bytes_width = 8
@@ -162,7 +166,7 @@ class CrackleHeader:
       self.num_label_bytes.to_bytes(label_bytes_width, 'little'),
     ])
 
-    if self.format_version == 0:
+    if fmt_ver == 0:
       label_bytes_width = 4
       crc = b''
     else:
@@ -171,7 +175,7 @@ class CrackleHeader:
 
     return b''.join([
       self.MAGIC,
-      self.format_version.to_bytes(1, 'little'),
+      fmt_ver.to_bytes(1, 'little'),
       interpretable_data,
       crc
     ])
