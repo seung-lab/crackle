@@ -148,7 +148,7 @@ class CrackleHeader:
     log_grid_size = int(np.log2(self.grid_size))
 
     fmt_ver = self.format_version
-    if fmt_ver == 0 and label_bytes_width > np.iinfo(np.uint32).max:
+    if fmt_ver == 0 and self.num_label_bytes > np.iinfo(np.uint32).max:
       fmt_ver = 1
 
     if fmt_ver == 0:
