@@ -36,6 +36,26 @@ def _load(filelike, allow_mmap:bool = False, size:int = -1):
   
   return binary
 
+def load_header(filelike, **kwargs):
+  """Load the header using minimal or near minimal data loading."""
+  binary = _load(filelike, CrackleHeader.HEADER_BYTES)
+  return CrackleHeader.frombytes(binary, **kwargs)
+
+def load_num_labels(filelike, **kwargs):
+  """Load the number of labels using near minimal data reads."""
+  startpos = 0
+  if hasattr(filelike, "tell"):
+    startpos = filelike.tell()
+
+  head = load_header(filelike, ignore_crc_check=kwargs.get("ignore_crc_check", False))
+  readlen = head.header_bytes + head.sz * 4 + 16
+  if hasattr(filelike, "seek"):
+    filelike.seek(startpos)
+
+  binary = _load(filelike, readlen)
+  arr = CrackleArray(binary)
+  return arr.num_labels()
+
 def rload(filelike, **kwargs):
   """Load the array using a memory efficient remote interface."""
   return CrackleRemoteArray(filelike, **kwargs)

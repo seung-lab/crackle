@@ -62,16 +62,17 @@ def print_labels(src):
 
 def print_header(src):
 	try:
-		arr = crackle.util.rload(src, ignore_header_crc_check=True)
+		head = crackle.util.load_header(src, ignore_crc_check=True)
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
 
-	head = arr.header
+	num_labels = crackle.util.load_num_labels(src)
+
 	print(f"Filename: {src}")
 	for key,val in head.__dict__.items():
 		print(f"{key}: {val}")
-	print(f"num_labels: {arr.num_labels()}")
+	print(f"num_labels: {num_labels}")
 	print()
 
 def decompress_file(src):
