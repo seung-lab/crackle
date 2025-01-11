@@ -873,14 +873,22 @@ std::vector<unsigned char> reencode_with_markov_order(
 		}
 	}
 
+	uint64_t code_size = 0;
 	std::vector<unsigned char> z_index_binary(sizeof(uint32_t) * header.sz);
 	for (int64_t i = 0, z = 0; z < header.sz; z++) {
+		code_size += crack_codes[z].size();
 		i += crackle::lib::itoc(static_cast<uint32_t>(crack_codes[z].size()), z_index_binary, i);
 	}
 
 	std::span<const unsigned char> labels_binary = crackle::labels::raw_labels(binary);
 
 	std::vector<unsigned char> final_binary = header.tobytes();
+	final_binary.reserve(
+		final_binary.size()
+		+ z_index_binary.size() + labels_binary.size() 
+		+ stored_model.size() + code_size
+	);
+
 	final_binary.insert(final_binary.end(), z_index_binary.begin(), z_index_binary.end());
 	final_binary.insert(final_binary.end(), labels_binary.begin(), labels_binary.end());
 	if (header.markov_model_order > 0) {
