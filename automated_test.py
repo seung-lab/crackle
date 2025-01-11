@@ -591,7 +591,20 @@ def test_array_works_z():
   arr = crackle.CrackleArray(compressed)
   assert np.all(arr[:,:,3] == labels[:,:,3])
 
+@pytest.mark.parametrize('allow_pins', [False,True])
+def test_reencode(allow_pins):
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels, allow_pins=allow_pins)
+  
+  markov_binary = crackle.codec.reencode(binary, markov_model_order=5)
+  assert len(markov_binary) < len(binary)
 
+  recovered = crackle.decompress(binary)
+  assert np.all(recovered == labels)
+  del recovered
+
+  recovered = crackle.decompress(markov_binary)
+  assert np.all(labels == recovered)  
 
 
 
