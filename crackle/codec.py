@@ -98,19 +98,45 @@ def nbytes(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   return header.data_width * header.sx * header.sy * header.sz
 
+def labels_crc(binary:bytes) -> Optional[int]:
+  """Retrieve the stored labels crc32c."""
+  head = CrackleHeader.frombytes(binary)
+
+  if head.format_version == 0:
+    return None
+
+  crcl = head.sz * 4 + 4 
+  return int.from_bytes(binary[-crcl:-crcl+4], 'little')
+
+def crack_crcs(binary:bytes) -> Optional[int]:
+  """Retrieve the stored crack code crc32cs."""
+  head = CrackleHeader.frombytes(binary)
+
+  if head.format_version == 0:
+    return None
+
+  crcl = head.sz * 4 
+  return np.frombuffer(binary[-crcl:], 'little')
+
 def components(binary:bytes):
   head = CrackleHeader.frombytes(binary)
 
   hl = head.header_bytes
   ll = head.num_label_bytes
   il = head.grid_index_bytes
-  cl = len(binary) - hl - ll - il
+
+  crcl = 0
+  if head.format_version > 0:
+    crcl = head.sz * 4 + 4 
+
+  cl = len(binary) - hl - ll - il - crcl
 
   return {
     'header': binary[:hl],
     'z_index': binary[hl:hl+il],
     'labels': binary[hl+il:hl+ll+il],
-    'crack_codes': binary[-cl:],
+    'crack_codes': binary[-cl:-crcl],
+    'crcs': binary[-crcl:],
   }
 
 def component_lengths(binary:bytes):

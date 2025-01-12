@@ -14,7 +14,10 @@ namespace crackle {
 namespace labels {
 
 template <typename LABEL, typename STORED_LABEL>
-std::vector<unsigned char> encode_flat(
+std::tuple<
+	std::vector<unsigned char>,
+	std::vector<uint32_t>
+> encode_flat(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz
 ) {
@@ -22,6 +25,7 @@ std::vector<unsigned char> encode_flat(
 	const int64_t voxels = sx * sy * sz;
 
 	std::vector<uint64_t> num_components_per_slice(sz);
+	std::vector<uint32_t> crcs(sz);
 	std::unique_ptr<uint32_t[]> cc_labels(new uint32_t[sxy]);
 
 	std::vector<STORED_LABEL> mapping;
@@ -50,6 +54,7 @@ std::vector<unsigned char> encode_flat(
 		}
 
 		num_components_per_slice[z] = tmp_N;
+		crcs[z] = crackle::lib::crc32c(cc_labels.get(), sxy);
 		N += tmp_N;
 	}
 
@@ -110,7 +115,7 @@ std::vector<unsigned char> encode_flat(
 		);		
 	}
 
-	return binary;
+	return std::make_tuple(binary, crcs);
 }
 
 template <typename STORED_LABEL>

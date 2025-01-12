@@ -1,13 +1,22 @@
 #ifndef __CRACKLE_LIB_HXX__
 #define __CRACKLE_LIB_HXX__
 
+#include <vector>
 #include "crc32c/crc32c.h"
 
 namespace crackle {
 namespace lib {
 
-uint32_t crc32c(uint8_t const *data, uint64_t size) {
+uint32_t crc32c(const std::vector<unsigned char>& data) {
+	return crc32c::Crc32c(data.data(), data.size());
+}
+
+uint32_t crc32c(const uint8_t *data, uint64_t size) {
 	return crc32c::Crc32c(data, size);
+}
+
+uint32_t crc32c(uint32_t *data, uint64_t size) {
+	return crc32c::Crc32c(reinterpret_cast<uint8_t*>(data), size * sizeof(data));
 }
 
 // Code from stackoverflow by Dr. Mark Adler
@@ -72,6 +81,13 @@ inline uint64_t itoc(uint64_t x, std::vector<unsigned char> &buf, uint64_t idx) 
 	buf[idx + 6] = (x >> 48) & 0xFF;
 	buf[idx + 7] = (x >> 56) & 0xFF;
 	return 8;
+}
+
+void itoc_push_back(uint32_t x, std::vector<unsigned char> &buf) {
+	buf.push_back(x & 0xFF);
+	buf.push_back((x >> 8) & 0xFF);
+	buf.push_back((x >> 16) & 0xFF);
+	buf.push_back((x >> 24) & 0xFF);
 }
 
 template <typename T>
