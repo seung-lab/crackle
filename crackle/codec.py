@@ -142,7 +142,7 @@ def components(binary:bytes):
 def component_lengths(binary:bytes):
   return { k:len(v) for k,v in components(binary).items() }
 
-def crack_codes(binary:bytes) -> np.ndarray:
+def grid_index(binary:bytes, ignore_crc_check:bool = False) -> np.ndarray:
   head = CrackleHeader.frombytes(binary)
   
   offset = head.header_bytes
@@ -152,10 +152,11 @@ def crack_codes(binary:bytes) -> np.ndarray:
     z_index = np.frombuffer(z_index_binary, dtype=np.uint32)
   else:
     z_index = np.frombuffer(z_index_binary[:-4], dtype=np.uint32)
-    stored_crc32c = int.from_bytes(z_index_binary[-4:], 'little')
-    computed_crc32c = crc32c(z_index)
-    if stored_crc32c != computed_crc32c:
-      raise FormatError(f"Grid index CRC32C did not match stored version. Stored: {stored_crc32c} Computed: {computed_crc32c}")
+    if not ignore_crc_check:
+      stored_crc32c = int.from_bytes(z_index_binary[-4:], 'little')
+      computed_crc32c = crc32c(z_index_binary[:-4])
+      if stored_crc32c != computed_crc32c:
+        raise FormatError(f"Grid index crc32c did not match stored version. Stored: {stored_crc32c} Computed: {computed_crc32c}")
 
   z_index = np.concatenate([ [0], z_index ])
   z_index = np.cumsum(z_index)
@@ -164,8 +165,12 @@ def crack_codes(binary:bytes) -> np.ndarray:
     + head.num_label_bytes 
     + head.grid_index_bytes
   )
-  z_index = z_index.astype(np.uint64)
-  
+  return z_index.astype(np.uint64, copy=False)
+
+def crack_codes(binary:bytes) -> np.ndarray:
+  head = CrackleHeader.frombytes(binary)
+  z_index = grid_index(binary)
+
   codes = []
   for i in range(head.sz):
     codes.append(

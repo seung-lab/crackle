@@ -147,7 +147,10 @@ std::vector<unsigned char> compress_helper(
 
 	header.num_label_bytes = labels_binary.size();
 
-	std::vector<unsigned char> z_index_binary(sizeof(uint32_t) * (sz + 1));
+	std::vector<unsigned char> z_index_binary;
+	z_index_binary.reserve(sizeof(uint32_t) * (sz + 1));
+	z_index_binary.resize(sizeof(uint32_t) * sz);
+
 	int64_t i = 0, z = 0;
 	uint64_t code_size = 0;
 	for (; z < sz; z++) {
@@ -155,6 +158,7 @@ std::vector<unsigned char> compress_helper(
 		code_size += crack_codes[z].size();
 	}
 	const uint32_t z_index_crc = crackle::lib::crc32c(z_index_binary);
+	z_index_binary.resize(sizeof(uint32_t) * (sz + 1));
 	i += crackle::lib::itoc(z_index_crc, z_index_binary, i);
 
 	const uint32_t labels_binary_crc = crackle::lib::crc32c(labels_binary);
