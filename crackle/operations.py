@@ -586,9 +586,12 @@ def full(shape, fill_value, dtype=None, order='C') -> bytes:
 
   empty_slice_crack_code = b'\x01\x00\x00\x00\x00'
 
+  grid_index = np.full([head.sz], len(empty_slice_crack_code), dtype=np.uint32).tobytes()
+  grid_index += crc32c(grid_index).to_bytes(4, 'little')
+
   return b''.join([
     head.tobytes(),
-    np.full([head.sz], len(empty_slice_crack_code), dtype=np.uint32),
+    grid_index,
     labels_binary,
     empty_slice_crack_code * head.sz,
   ])
