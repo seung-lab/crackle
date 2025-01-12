@@ -467,9 +467,13 @@ def _zsplit_helper(binary:bytes):
     head.sz = len(cracks)
     head.num_label_bytes = len(labels_binary)
 
+    grid_index = zindex.tobytes()
+    if head.format_version > 0:
+      grid_index += crc32c(grid_index).to_bytes(4, 'little')
+
     return b''.join([
       head.tobytes(),
-      zindex.tobytes(),
+      grid_index,
       labels_binary,
       *cracks
     ])
