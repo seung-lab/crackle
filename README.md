@@ -98,6 +98,21 @@ Crackle improves upon Compresso by replacing the bit-packed boundary map with a 
 
 See benchmarks for more information on Crackle's size and compute effiency.
 
+## Installation
+
+```bash
+pip install crackle-codec 
+```
+
+Building from source (requires cmake and a c++ compiler):
+
+```
+git clone https://github.com/seung-lab/crackle.git
+cd crackle
+git submodule update --init --recursive # fetches google/crc32c library
+python setup.py develop
+```
+
 ## Versions
 
 | Format Version | Description                                                    |
