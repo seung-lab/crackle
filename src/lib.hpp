@@ -1,14 +1,20 @@
 #ifndef __CRACKLE_LIB_HXX__
 #define __CRACKLE_LIB_HXX__
 
+#include "crc32c/crc32c.h"
+
 namespace crackle {
 namespace lib {
+
+uint32_t crc32c(uint8_t const *data, uint64_t size) {
+	return crc32c::Crc32c(data, size);
+}
 
 // Code from stackoverflow by Dr. Mark Adler
 // https://stackoverflow.com/questions/10564491/function-to-calculate-a-crc16-checksum#comment83704063_10569892
 // Polynomial 0xe7 is selected as "best" for messages up to
 // 247 bits and gives a guarantee of detecting up to 2 bit flips
-// according to Phil Koopman.
+// according to Phil Koopman. Intended for protecting the crackle header.
 uint8_t crc8(uint8_t const *data, uint64_t size) {
 	// use implicit +1 representation for right shift, LSB first
 	// use explicit +1 representation for left shit, MSB first

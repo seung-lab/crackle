@@ -307,9 +307,8 @@ std::span<const unsigned char> raw_labels(
 	const std::span<const unsigned char> &binary
 ) {
 	crackle::CrackleHeader header(binary);
-	uint64_t hb = crackle::CrackleHeader::header_size;
 	return std::span<const unsigned char>(
-		binary.begin() + hb + sizeof(uint32_t) * header.sz,
+		(binary.begin() + header.header_bytes() + header.grid_index_bytes()),
 		header.num_label_bytes
 	);
 }

@@ -172,6 +172,15 @@ public:
 			return header_size;
 		}
 	}
+	
+	uint64_t grid_index_bytes() const {
+		if (format_version == 0) {
+			return sz * sizeof(uint32_t);
+		}
+		else {
+			return (sz+1) * sizeof(uint32_t); // includes crc32c
+		}		
+	}
 
 	uint64_t voxels() const {
 		return static_cast<uint64_t>(sx) * static_cast<uint64_t>(sy) * static_cast<uint64_t>(sz);

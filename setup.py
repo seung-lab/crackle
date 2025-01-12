@@ -26,8 +26,9 @@ def build_crc32c():
     print("crackle: libcrc32c already built.")
     return
 
-  shutil.rmtree(CRC32C_BUILD_DIR)
-  if not os.path.exists(CRC32C_BUILD_DIR):
+  if os.path.exists(CRC32C_BUILD_DIR):
+    shutil.rmtree(CRC32C_BUILD_DIR)
+  else:
     os.makedirs(CRC32C_BUILD_DIR)
 
   res = subprocess.check_call([
@@ -36,6 +37,7 @@ def build_crc32c():
     f"-DCRC32C_BUILD_BENCHMARKS=0",
     f"-DBUILD_SHARED_LIBS=OFF",
     f"-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+    f"-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0",
     f"-S {CRC32C_DIR}", 
     f"-B {CRC32C_BUILD_DIR}",
     "-DCMAKE_BUILD_TYPE=Release",

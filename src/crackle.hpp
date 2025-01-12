@@ -143,10 +143,13 @@ std::vector<unsigned char> compress_helper(
 
 	header.num_label_bytes = labels_binary.size();
 
-	std::vector<unsigned char> z_index_binary(sizeof(uint32_t) * sz);
-	for (int64_t i = 0, z = 0; z < sz; z++) {
+	std::vector<unsigned char> z_index_binary(sizeof(uint32_t) * (sz + 1));
+	int64_t i = 0, z = 0;
+	for (; z < sz; z++) {
 		i += crackle::lib::itoc(static_cast<uint32_t>(crack_codes[z].size()), z_index_binary, i);
 	}
+	const uint32_t z_index_crc = crackle::lib::crc32c(z_index_binary.data(), sizeof(uint32_t) * sz);
+	i += crackle::lib::itoc(z_index_crc, z_index_binary, i);
 
 	std::vector<unsigned char> final_binary;
 	std::vector<unsigned char> header_binary = header.tobytes();
@@ -211,13 +214,25 @@ std::vector<uint64_t> get_crack_code_offsets(
 	uint64_t offset = header.header_bytes();
 
 	const uint64_t z_width = sizeof(uint32_t);
-	const uint64_t zindex_bytes = z_width * header.sz;
 
-	if (offset + zindex_bytes > binary.size()) {
+	if (offset + header.grid_index_bytes() > binary.size()) {
 		throw std::runtime_error("crackle: get_crack_code_offsets: Unable to read past end of buffer.");
 	}
 
 	const unsigned char* buf = binary.data();
+
+	if (header.format_version > 0) {
+		const uint32_t stored_crc32c = lib::ctoi<uint32_t>(
+			buf, offset + z_width * header.sz
+		);
+		const uint32_t computed_crc32c = lib::crc32c(
+			buf + offset, header.grid_index_bytes() - sizeof(uint32_t)
+		);
+
+		if (stored_crc32c != computed_crc32c) {
+			throw std::runtime_error("crackle: grid index crc32c did not match.");
+		}
+	}
 
 	std::vector<uint64_t> z_index(header.sz + 1);
 	for (uint64_t z = 0; z < header.sz; z++) {
@@ -234,7 +249,7 @@ std::vector<uint64_t> get_crack_code_offsets(
 
 	for (uint64_t i = 0; i < header.sz + 1; i++) {
 		z_index[i] += (
-			offset + zindex_bytes + 
+			offset + header.grid_index_bytes() + 
 			header.num_label_bytes + markov_model_offset
 		);
 	}
@@ -272,10 +287,11 @@ std::vector<std::vector<uint8_t>> decode_markov_model(
 		return std::vector<std::vector<uint8_t>>();
 	}
 
-	uint64_t model_offset = header.header_size + header.num_label_bytes;
-	const uint64_t z_width = sizeof(uint32_t);
-	const uint64_t zindex_bytes = z_width * header.sz;
-	model_offset += zindex_bytes;
+	uint64_t model_offset = (
+		header.header_bytes() 
+		+ header.grid_index_bytes()
+		+ header.num_label_bytes
+	);
 
 	std::vector<unsigned char> stored_model(
 		binary.begin() + model_offset,
@@ -875,9 +891,16 @@ std::vector<unsigned char> reencode_with_markov_order(
 
 	uint64_t code_size = 0;
 	std::vector<unsigned char> z_index_binary(sizeof(uint32_t) * header.sz);
-	for (int64_t i = 0, z = 0; z < header.sz; z++) {
+	int64_t i = 0, z = 0;
+	for (; z < header.sz; z++) {
 		code_size += crack_codes[z].size();
 		i += crackle::lib::itoc(static_cast<uint32_t>(crack_codes[z].size()), z_index_binary, i);
+	}
+
+	if (header.format_version > 0) {
+		const uint32_t z_index_crc = crackle::lib::crc32c(z_index_binary.data(), header.sz * sizeof(uint32_t));
+		z_index_binary.resize(z_index_binary.size() + sizeof(z_index_crc));
+		i += crackle::lib::itoc(z_index_crc, z_index_binary, i);
 	}
 
 	std::span<const unsigned char> labels_binary = crackle::labels::raw_labels(binary);

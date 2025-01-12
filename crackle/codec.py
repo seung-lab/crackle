@@ -6,7 +6,7 @@ import fastremap
 import fastcrackle
 
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
-from .lib import width2dtype, compute_byte_width, compute_dtype
+from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c
 
 def header(binary:bytes, ignore_crc_check:bool = False) -> CrackleHeader:
   """Decode the header from a Crackle bytestream."""
@@ -19,7 +19,7 @@ def labels(binary:bytes) -> np.ndarray:
     return np.zeros((0,), dtype=head.dtype)
 
   hb = head.header_bytes
-  offset = hb + head.sz * 4
+  offset = hb + head.grid_index_bytes
 
   if head.label_format == LabelFormat.FLAT:
     # num labels (u64), N labels
@@ -51,7 +51,7 @@ def num_labels(binary:bytes) -> int:
   if head.voxels() == 0:
     return 0
 
-  offset = hb + head.sz * 4
+  offset = hb + head.grid_index_bytes
   N = 0
   if head.label_format != LabelFormat.FLAT:
     offset += head.stored_data_width
@@ -67,7 +67,7 @@ def contains(binary:bytes, label:int) -> bool:
     return label in labels(binary)
 
   hb = head.header_bytes
-  offset = hb + head.sz * 4
+  offset = hb + head.grid_index_bytes
 
   # bgcolor, num labels (u64), N labels, pins
   if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
@@ -90,7 +90,7 @@ def contains(binary:bytes, label:int) -> bool:
 
 def raw_labels(binary:bytes) -> bytes:
   header = CrackleHeader.frombytes(binary)
-  offset = header.header_bytes + header.sz * 4
+  offset = header.header_bytes + header.grid_index_bytes
   return binary[offset:offset+header.num_label_bytes]
 
 def nbytes(binary:bytes) -> np.ndarray:
@@ -99,12 +99,12 @@ def nbytes(binary:bytes) -> np.ndarray:
   return header.data_width * header.sx * header.sy * header.sz
 
 def components(binary:bytes):
-  header = CrackleHeader.frombytes(binary)
+  head = CrackleHeader.frombytes(binary)
 
-  hl = len(header.tobytes())
-  ll = header.num_label_bytes
-  il = header.sz * header.z_index_width()
-  cl = len(binary) - hl -ll - il
+  hl = head.header_bytes
+  ll = head.num_label_bytes
+  il = head.grid_index_bytes
+  cl = len(binary) - hl - ll - il
 
   return {
     'header': binary[:hl],
@@ -119,7 +119,16 @@ def component_lengths(binary:bytes):
 def crack_codes(binary:bytes) -> np.ndarray:
   header = CrackleHeader.frombytes(binary)
   comps = components(binary)
-  z_index = np.frombuffer(comps["z_index"], dtype=np.uint32)
+
+  if header.format_version == 0:
+    z_index = np.frombuffer(comps["z_index"], dtype=np.uint32)
+  else:
+    z_index = np.frombuffer(comps["z_index"][:-4], dtype=np.uint32)
+    stored_crc32c = int.from_bytes(comps["z_index"][-4:], 'little')
+    computed_crc32c = crc32c(z_index)
+    if stored_crc32c != computed_crc32c:
+      raise FormatError(f"Grid index CRC32C did not match stored version. Stored: {stored_crc32c} Computed: {computed_crc32c}")
+
   z_index = np.concatenate([ [0], z_index ])
   z_index = np.cumsum(z_index)
   z_index += (
@@ -148,7 +157,7 @@ def background_color(binary:bytes) -> int:
   if header.label_format == LabelFormat.FLAT:
     raise FormatError("Background color can only be extracted from pin encoded streams.")
 
-  offset = header.header_bytes + header.sz * 4
+  offset = header.header_bytes + header.grid_index_bytes
   dtype = width2dtype[header.stored_data_width]
   bgcolor = np.frombuffer(binary[offset:offset+header.stored_data_width], dtype=dtype)
   return int(bgcolor[0])

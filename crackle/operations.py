@@ -13,7 +13,7 @@ from .codec import (
   reencode, background_color, 
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
-from .lib import width2dtype, compute_byte_width, compute_dtype
+from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c
 
 def min(binary:bytes) -> int:
   """Returns the minimum label of the crackle binary."""
@@ -22,7 +22,7 @@ def min(binary:bytes) -> int:
   if not head.is_sorted:
     return int(np.min(labels(binary)))
 
-  off = head.HEADER_BYTES + head.sz * 4
+  off = head.header_bytes + head.grid_index_bytes
 
   if head.label_format == LabelFormat.FLAT:
     return int.from_bytes(binary[off+8:off+8+head.stored_data_width], byteorder='little')
@@ -42,7 +42,7 @@ def max(binary:bytes) -> int:
   if not head.is_sorted:
     return int(np.max(labels(binary)))
 
-  loff = head.HEADER_BYTES + head.sz * 4
+  loff = head.header_bytes + head.grid_index_bytes
 
   if head.label_format == LabelFormat.FLAT:
     N = num_labels(binary)
@@ -79,7 +79,7 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
   # flat: num_labels, N labels, remapped labels
   # pins: bgcolor, num labels (u64), N labels, pins
 
-  offset = hb + 4 * head.sz
+  offset = hb + head.grid_index_bytes
   if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
     bgcolor = int.from_bytes(binary[offset:offset+head.stored_data_width], 'little')
 
@@ -405,6 +405,12 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
       crack_codes_lst.append(cc)
       z += 1
 
+  grid_index_binary = zindex.tobytes()
+  if first_head.format_version > 0:
+    computed_crc32c = crc32c(grid_index_binary)
+    grid_index_binary += computed_crc32c.to_bytes(4, 'little')
+    
+  del zindex
   del binaries
 
   crack_binary = b''.join(crack_codes_lst)
@@ -414,7 +420,7 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
 
   return b''.join([ 
     first_head.tobytes(),
-    zindex.tobytes(),
+    grid_index_binary,
     labels_binary,
     crack_binary
   ])
