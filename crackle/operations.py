@@ -397,7 +397,7 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     raise ValueError(f"Unsupported label format: {first_head.label_format}")
 
   crack_codes_lst = []
-  zindex = np.zeros((first_head.sz,), dtype=np.uint32)
+  zindex = np.zeros((sz,), dtype=np.uint32)
   z = 0
   for binary in binaries:
     for cc in crack_codes(binary):

@@ -246,7 +246,7 @@ class CrackleRemoteArray(CrackleArray):
   
   def fetch_z_index_labels_markov_model(self):
     hb = self.header.header_bytes
-    z_offset = self.header.sz * 4
+    z_offset = self.header.grid_index_bytes
     offset = (
       z_offset 
       + self.header.num_label_bytes 
@@ -276,13 +276,13 @@ class CrackleRemoteArray(CrackleArray):
       return b''
 
     hb = self.header.header_bytes
-    off = hb + self.header.sz * 4
+    off = hb + self.header.grid_index_bytes
     off += self.header.num_label_bytes
     return self.cf[off:off+self.header.num_markov_model_bytes]
 
   def fetch_all_labels(self) -> bytes:
     hb = self.header.header_bytes
-    off = hb + self.header.sz * 4
+    off = hb + self.header.grid_index_bytes
     return self.cf[off:off+self.header.num_label_bytes]
 
   def fetch_crack_code(self, z:int) -> bytes:
