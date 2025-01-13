@@ -714,11 +714,6 @@ point_cloud(
 
 	// only used for markov compressed streams
 	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
-
-	if (header.label_format != LabelFormat::FLAT) {
-		std::string err = "crackle: Point cloud is not compatible with pin label format.";
-		throw std::runtime_error(err);
-	}
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
@@ -737,13 +732,18 @@ point_cloud(
 			/*slice_edges=*/vcg.data()
 		);
 
+		uint64_t N = 0;
+		crackle::cc3d::color_connectivity_graph<uint32_t>(
+			vcg, header.sx, header.sy, 1, ccl.get(), N
+		);
+
 		std::vector<LABEL> label_map = decode_label_map<LABEL>(
-			header, binary, NULL, 0, z, z+1
+			header, binary, ccl.get(), N, z, z+1
 		);
 
 		uint64_t label_i = 0;
 
-		auto ccls = crackle::dual_graph::extract_contours(vcg, ccl, header.sx, header.sy);
+		auto ccls = crackle::dual_graph::extract_contours(vcg, ccl, N, header.sx, header.sy);
 		for (auto ccl : ccls) {
 			uint64_t current_label = label_map[label_i];
 			

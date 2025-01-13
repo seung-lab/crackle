@@ -240,13 +240,9 @@ std::vector<std::vector<uint32_t>> merge_contours_via_vcg_coloring(
 	const std::vector<std::vector<uint32_t>>& contours,
 	const std::vector<uint8_t>& vcg,
 	std::unique_ptr<uint32_t[]>& cc_labels,
+	const uint64_t N,
 	const uint64_t sx, const uint64_t sy
 ) {
-	uint64_t N = 0;
-	crackle::cc3d::color_connectivity_graph<uint32_t>(
-		vcg, sx, sy, 1, cc_labels.get(), N
-	);
-
 	std::vector<std::vector<uint32_t>> merged_contours(N);
 	for (uint64_t i = 0; i < contours.size(); i++) {
 		auto& contour = contours[i];
@@ -275,10 +271,11 @@ std::vector<std::vector<uint32_t>>
 extract_contours(
 	std::vector<uint8_t>& vcg,
 	std::unique_ptr<uint32_t[]>& cc_labels,
+	const uint64_t N,
 	const uint64_t sx, const uint64_t sy 
 ) {
 	std::vector<std::vector<uint32_t>> contours = extract_contours_helper(vcg, sx, sy);
-	return merge_contours_via_vcg_coloring(contours, vcg, cc_labels, sx, sy);
+	return merge_contours_via_vcg_coloring(contours, vcg, cc_labels, N, sx, sy);
 }
 
 };
