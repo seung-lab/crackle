@@ -116,10 +116,9 @@ python setup.py develop
 ## Versions
 
 | Format Version | Description                                                    |
-|---------------|----------------|----------------------------------------------------------------|
+|----------------|----------------------------------------------------------------|
 | 0              | Initial release w/ flat, pins, crack codes with finite context modeling. Beta. |
-| 1              | Incr. header to 30 bytes from 24. num_label_bytes u32->u64, adds crc8 to protect header. |
-
+| 1              | Incr. header to 29 bytes from 24. num_label_bytes u32->u64, adds crcs to protect stream components. |
 
 ## Stream Format
 
