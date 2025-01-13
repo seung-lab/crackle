@@ -6,8 +6,11 @@
 # Command Line Interface
 crackle data.npy # creates data.ckl
 crackle -m 5 data.npy # use a 5th order context model
+crackle -p data.npy # use pin encoding for labels
+crackle -p -m 5 data.npy # use pins and markov model
 crackle -d data.ckl # recovers data.npy
 crackle -m 0 data.ckl # change markov model order
+crackle -t data.ckl # check for file corruption
 ```
 
 ```python
