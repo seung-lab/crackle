@@ -8,6 +8,8 @@ import sys
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 CRC32C_DIR = os.path.join("third_party", "crc32c")
+CRC32C_HIGH_SPEED_DIR = os.path.join("third_party", "fastcrc")
+
 CRC32C_INCLUDE_DIR = os.path.join(CRC32C_DIR, "include")
 CRC32C_BUILD_DIR = os.path.join(CRC32C_DIR, "build")
 
@@ -81,7 +83,7 @@ setuptools.setup(
     Pybind11Extension(
         "fastcrackle",
         ["src/fastcrackle.cpp"],
-        include_dirs=[CRC32C_INCLUDE_DIR],
+        include_dirs=[CRC32C_INCLUDE_DIR, CRC32C_HIGH_SPEED_DIR],
         libraries=["crc32c"],
         library_dirs=[CRC32C_BUILD_DIR],
         extra_compile_args=extra_compile_args,

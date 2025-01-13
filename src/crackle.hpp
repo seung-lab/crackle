@@ -15,6 +15,7 @@
 #include "robin_hood.hpp"
 
 #include "cc3d.hpp"
+#include "crc.hpp"
 #include "header.hpp"
 #include "crackcodes.hpp"
 #include "lib.hpp"
@@ -157,11 +158,11 @@ std::vector<unsigned char> compress_helper(
 		i += crackle::lib::itoc(static_cast<uint32_t>(crack_codes[z].size()), z_index_binary, i);
 		code_size += crack_codes[z].size();
 	}
-	const uint32_t z_index_crc = crackle::lib::crc32c(z_index_binary);
+	const uint32_t z_index_crc = crackle::crc::crc32c(z_index_binary);
 	z_index_binary.resize(sizeof(uint32_t) * (sz + 1));
 	i += crackle::lib::itoc(z_index_crc, z_index_binary, i);
 
-	const uint32_t labels_binary_crc = crackle::lib::crc32c(labels_binary);
+	const uint32_t labels_binary_crc = crackle::crc::crc32c(labels_binary);
 
 	std::vector<unsigned char> final_binary;
 	final_binary.reserve(
@@ -250,10 +251,10 @@ std::vector<uint64_t> get_crack_code_offsets(
 	const unsigned char* buf = binary.data();
 
 	if (header.format_version > 0) {
-		const uint32_t stored_crc32c = lib::ctoi<uint32_t>(
+		const uint32_t stored_crc32c = crackle::lib::ctoi<uint32_t>(
 			buf, offset + z_width * header.sz
 		);
-		const uint32_t computed_crc32c = lib::crc32c(
+		const uint32_t computed_crc32c = crackle::crc::crc32c(
 			buf + offset, header.grid_index_bytes() - sizeof(uint32_t)
 		);
 
@@ -545,7 +546,7 @@ LABEL* decompress(
 		);
 
 		if (header.format_version > 0) {
-			const uint32_t computed_crc = crackle::lib::crc32c(cc_labels.get(), sxy);
+			const uint32_t computed_crc = crackle::crc::crc32c(cc_labels.get(), sxy);
 
 			if (crack_code_crcs[z_start + z] != computed_crc) {
 				std::string err = "crackle: crack code crc mismatch on z=";
@@ -958,7 +959,7 @@ std::vector<unsigned char> reencode_with_markov_order(
 	}
 
 	if (header.format_version > 0) {
-		const uint32_t z_index_crc = crackle::lib::crc32c(z_index_binary.data(), header.sz * sizeof(uint32_t));
+		const uint32_t z_index_crc = crackle::crc::crc32c(z_index_binary.data(), header.sz * sizeof(uint32_t));
 		z_index_binary.resize(z_index_binary.size() + sizeof(z_index_crc));
 		i += crackle::lib::itoc(z_index_crc, z_index_binary, i);
 	}

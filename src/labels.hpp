@@ -6,6 +6,7 @@
 
 #include "robin_hood.hpp"
 
+#include "crc.hpp"
 #include "header.hpp"
 #include "lib.hpp"
 #include "pins.hpp"
@@ -54,7 +55,7 @@ std::tuple<
 		}
 
 		num_components_per_slice[z] = tmp_N;
-		crcs[z] = crackle::lib::crc32c(cc_labels.get(), sxy);
+		crcs[z] = crackle::crc::crc32c(cc_labels.get(), sxy);
 		N += tmp_N;
 	}
 

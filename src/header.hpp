@@ -2,6 +2,7 @@
 #define __CRACKLE_HEADER_HXX__
 
 #include "lib.hpp"
+#include "crc.hpp"
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -141,7 +142,7 @@ public:
 		// We use CRC8 using a polynomial that is good up to 241 bits.
 		// CRC8 is used to reduce false positives vs CRC32 since the
 		// crc field can be damaged itself. 
-		const uint8_t computed_crc = crackle::lib::crc8(buf + 5, 28 - 5);
+		const uint8_t computed_crc = crackle::crc::crc8(buf + 5, 28 - 5);
 
 		if (computed_crc != crc) {
 			throw std::runtime_error("crackle: CRC8 check failed. Header may be corrupted. (~4.1% chance of a false positive for a single bit flip).");
@@ -259,7 +260,7 @@ public:
 		// CRC8 is used to reduce false positives vs CRC32 since the
 		// crc field can be damaged itself.
 		uint64_t useful_offset = 5;
-		const uint8_t crc = crackle::lib::crc8(buf.data() + useful_offset, CrackleHeader::header_size - sizeof(uint8_t) - useful_offset);
+		const uint8_t crc = crackle::crc::crc8(buf.data() + useful_offset, CrackleHeader::header_size - sizeof(uint8_t) - useful_offset);
 		i += lib::itoc(crc, buf, i);
 
 		return i - idx;

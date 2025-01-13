@@ -7,6 +7,7 @@
 #include "robin_hood.hpp"
 
 #include "cc3d.hpp"
+#include "crc.hpp"
 #include "lib.hpp"
 #include "pairing_heap.hpp"
 
@@ -394,7 +395,7 @@ compute(
 				cc_labels[sxy * z + i] -= tmp_N;
 			}
 		}
-		crcs[z] = crackle::lib::crc32c(cc_labels.get() + sxy * z, sxy);
+		crcs[z] = crackle::crc::crc32c(cc_labels.get() + sxy * z, sxy);
 		tmp_N += num_components_per_slice[z];
 	}
 
