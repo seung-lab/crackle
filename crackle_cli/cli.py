@@ -60,6 +60,9 @@ def check_binary(src):
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
+	except crackle.FormatError as err:
+		print("crackle:", err)
+		return
 
 	print(f"testing {src}...")
 
@@ -92,6 +95,9 @@ def print_labels(src):
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
+	except crackle.FormatError as err:
+		print("crackle:", err)
+		return
 
 	labels = arr.labels()
 	print("\n".join(( str(l) for l in labels )))
@@ -102,6 +108,10 @@ def print_header(src):
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
 		return
+	except crackle.FormatError as err:
+		print("crackle:", err)
+		return
+
 
 	num_labels = crackle.util.load_num_labels(src)
 
@@ -116,6 +126,9 @@ def decompress_file(src):
 		arr = crackle.util.aload(src)
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
+		return
+	except crackle.FormatError as err:
+		print("crackle:", err)
 		return
 	except crackle.DecodeError:
 		print(f"crackle: {src} could not be decoded.")
