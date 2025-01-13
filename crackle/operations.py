@@ -10,7 +10,7 @@ from .codec import (
   header, raw_labels, decode_flat_labels,
   decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
-  reencode, background_color, crack_crcs,
+  reencode, background_color, crack_crcs, labels_crc,
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c
@@ -71,6 +71,15 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
     in the mapping.
   """
   orig = binary
+  head = CrackleHeader.frombytes(binary)
+
+  if head.format_version > 0:
+    labels_binary = raw_labels(binary)
+    computed_crc = crc32c(labels_binary)
+    stored_crc = labels_crc(binary)
+    if stored_crc != computed_crc:
+      raise FormatError(f"crc mismatch. The labels binary may be corrupt. Stored: {stored_crc} Computed: {computed_crc}")
+
   binary = bytearray(binary)
   
   head = CrackleHeader.frombytes(binary)
@@ -110,6 +119,13 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
     binary[:hb] = head.tobytes()
 
   binary[offset:offset+uniq_bytes] = list(all_labels.view(np.uint8))
+
+  if head.format_version > 0:
+    offset = hb + head.grid_index_bytes
+    computed_crc = crc32c(bytes(binary[offset:offset+head.num_label_bytes]))
+    crcl = head.sz * 4 + 4 
+    binary[-crcl:-crcl+4] = computed_crc.to_bytes(4, 'little')
+
   return bytes(binary)
 
 def astype(binary:bytes, dtype) -> bytes:
