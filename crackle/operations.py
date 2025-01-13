@@ -676,16 +676,26 @@ def operator(binary:bytes, fn) -> bytes:
   ])
 
 def add_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 0:
+    return binary
   return operator(binary, lambda uniq: uniq + scalar)
 
 def subtract_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 0:
+    return binary
   return operator(binary, lambda uniq: uniq - scalar)
 
 def multiply_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 1:
+    return binary
   return operator(binary, lambda uniq: uniq * scalar)
 
 def floordiv_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 1:
+    return binary
   return operator(binary, lambda uniq: uniq // scalar)
 
 def truediv_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 1:
+    return binary
   return operator(binary, lambda uniq: uniq / scalar)
