@@ -24,7 +24,7 @@ class Tuple3(click.ParamType):
 @click.option('-i', "--info", default=False, is_flag=True, help="Print the header for the file.", show_default=True)
 @click.option('-l', "--labels", default=False, is_flag=True, help="Print unique labels contained in the image.", show_default=True)
 @click.option('-t', "--test", default=False, is_flag=True, help="Check for file corruption and report damaged areas.", show_default=True)
-@click.option('--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
+@click.option('-p', '--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
 @click.option('-m', '--markov', default=0, help="If >0, use this order of markov compression for the crack code.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
 @click.argument("source", nargs=-1)
