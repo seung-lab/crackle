@@ -1,13 +1,10 @@
 import os
-import platform
 import setuptools
 import sys
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 CRC32C_DIR = os.path.join("third_party", "fastcrc")    
-
-arch = platform.machine().lower()
 
 extra_compile_args = []
 if sys.platform == 'win32':
@@ -16,10 +13,9 @@ if sys.platform == 'win32':
   ]
 else:
   extra_compile_args += [
-    '-std=c++2a', '-O3',
+    '-std=c++2a', '-O3', 
+    '-msse4.2', '-mpclmul' # for x86 and cross compiling x86
   ]
-  if arch == "x86_64":
-    extra_compile_args += ['-msse4.2', '-mpclmul']
 
 
 setuptools.setup(
