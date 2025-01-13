@@ -10,7 +10,7 @@ from .codec import (
   header, raw_labels, decode_flat_labels,
   decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
-  reencode, background_color, 
+  reencode, background_color, crack_crcs,
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c
@@ -409,6 +409,13 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
   if first_head.format_version > 0:
     computed_crc32c = crc32c(grid_index_binary)
     grid_index_binary += computed_crc32c.to_bytes(4, 'little')
+
+  crcs_binary = b''
+  if first_head.format_version > 0:
+    crcs = []
+    for binary in binaries:
+      crcs.append(crack_crcs(binary))
+    crcs_binary = np.concatenate(crcs).tobytes()
     
   del zindex
   del binaries
@@ -418,11 +425,17 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
 
   first_head.num_label_bytes = len(labels_binary)
 
+  labels_crc = b''
+  if first_head.format_version > 0:
+    labels_crc = crc32c(labels_binary).to_bytes(4, 'little')
+
   return b''.join([ 
     first_head.tobytes(),
     grid_index_binary,
     labels_binary,
-    crack_binary
+    crack_binary,
+    labels_crc,
+    crcs_binary
   ])
 
 def _zsplit_helper(binary:bytes):
@@ -448,8 +461,9 @@ def _zsplit_helper(binary:bytes):
   all_zindex = np.frombuffer(components(binary)["z_index"], dtype=np.uint32)
 
   cracks = crack_codes(binary)
+  all_crack_crcs = crack_crcs(binary)
 
-  def synth(head, zindex, local_label_idx, keys, cracks):
+  def synth(head, zindex, local_label_idx, keys, cracks, sub_crack_crcs):
     local_uniq = fastremap.unique(uniq[keys])
     local_uniq_map = { u: i for i, u in enumerate(local_uniq) }
     remapped_keys = [ local_uniq_map[k] for k in uniq[keys] ]
@@ -468,23 +482,34 @@ def _zsplit_helper(binary:bytes):
     head.num_label_bytes = len(labels_binary)
 
     grid_index = zindex.tobytes()
+    labels_crc = b''
+    crack_crcs_binary = b''
     if head.format_version > 0:
       grid_index += crc32c(grid_index).to_bytes(4, 'little')
+      labels_crc = crc32c(labels_binary).to_bytes(4, 'little')
+      crack_crcs_binary = sub_crack_crcs.tobytes()
 
     return b''.join([
       head.tobytes(),
       grid_index,
       labels_binary,
-      *cracks
+      *cracks,
+      labels_crc,
+      crack_crcs_binary,
     ])
 
   def synth_z_range(z_start:int, z_end:int) -> bytes:
+    tmp_crack_crcs = []
+    if head.format_version > 0:
+      tmp_crack_crcs = all_crack_crcs[z_start:z_end]
+
     return synth(
       head, 
       all_zindex[z_start:z_end], 
       label_idx[z_start:z_end], 
       keys[label_idx_offsets[z_start]:label_idx_offsets[z_end]],
-      cracks[z_start:z_end]
+      cracks[z_start:z_end],
+      tmp_crack_crcs,
     )
 
   return synth_z_range
@@ -593,11 +618,17 @@ def full(shape, fill_value, dtype=None, order='C') -> bytes:
   grid_index = np.full([head.sz], len(empty_slice_crack_code), dtype=np.uint32).tobytes()
   grid_index += crc32c(grid_index).to_bytes(4, 'little')
 
+  labels_crc_binary = crc32c(labels_binary).to_bytes(4, 'little')
+  crack_crc_single = crc32c(np.zeros(shape[:2], dtype=np.uint32))
+  crack_crcs_binary = np.array([crack_crc_single] * shape[2], dtype=np.uint32).tobytes()
+
   return b''.join([
     head.tobytes(),
     grid_index,
     labels_binary,
     empty_slice_crack_code * head.sz,
+    labels_crc_binary,
+    crack_crcs_binary,
   ])
 
 def zeros(shape, dtype=None, order="C"):
@@ -629,11 +660,19 @@ def operator(binary:bytes, fn) -> bytes:
   full_parts = components(binary)
   head.num_label_bytes = len(labels_binary)
 
+  labels_crc_binary = b''
+  crack_crcs_binary = b''
+  if head.format_version > 0:
+    labels_crc_binary = crc32c(labels_binary).to_bytes(4, 'little')
+    crack_crcs_binary = crack_crcs(binary).tobytes()
+
   return b''.join([
     head.tobytes(),
     full_parts["z_index"],
     labels_binary,
     full_parts["crack_codes"],
+    labels_crc_binary,
+    crack_crcs_binary,
   ])
 
 def add_scalar(binary:bytes, scalar:int) -> bytes:
