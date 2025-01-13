@@ -664,7 +664,7 @@ def reencode(binary:bytes, markov_model_order:int):
 
 def check(binary:bytes):
   """Test for file corruption, reporting which sections are damaged."""
-  
+  from .array import CrackleArray
   sections = {
     "header": None,
     "crack_index": None,
@@ -698,7 +698,7 @@ def check(binary:bytes):
     return sections
 
   stored_lcrc = labels_crc(binary)
-  computed_lrc = crc32c(raw_labels(binary)[:-4])
+  computed_lrc = crc32c(raw_labels(binary))
   sections["labels"] = (stored_lcrc == computed_lrc)
 
   arr = CrackleArray(binary)
