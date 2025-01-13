@@ -21,16 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.21.x'
-
-      # Update references
-      - name: Git Submodule Update
-        run: |
-          git submodule update --init --recursive
-
       - name: Build wheels
         uses: joerick/cibuildwheel@v2.22.0
         # to supply options, put them in 'env', like:
