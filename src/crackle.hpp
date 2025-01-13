@@ -186,7 +186,9 @@ std::vector<unsigned char> compress_helper(
 	}
 
 	crackle::lib::itoc_push_back(labels_binary_crc, final_binary);
-	final_binary.insert(final_binary.end(), crack_crcs.begin(), crack_crcs.end());
+	for (uint32_t crack_crc : crack_crcs) {
+		crackle::lib::itoc_push_back(crack_crc, final_binary);
+	}
 
 	return final_binary;
 }
