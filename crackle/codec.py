@@ -662,6 +662,23 @@ def reencode(binary:bytes, markov_model_order:int):
     return binary
   return fastcrackle.reencode_markov(binary, markov_model_order)
 
+def ok(binary:bytes) -> bool:
+  """
+  Runs check for file corruption but only reports 
+  whether the file is ok as a whole.
+  """
+  report = check(binary)
+  if report["header"] == False:
+    return False
+  elif report["crack_index"] == False:
+    return False
+  elif report["labels"] == False:
+    return False
+  elif report["z"] is not None and len(report["z"]) > 0:
+    return False
+
+  return True
+
 def check(binary:bytes):
   """Test for file corruption, reporting which sections are damaged."""
   from .array import CrackleArray
