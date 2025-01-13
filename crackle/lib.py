@@ -1,4 +1,11 @@
 import numpy as np
+import google_crc32c
+
+def crc32c(buffer) -> int:
+  return int.from_bytes(
+    google_crc32c.Checksum(buffer).digest(),
+    'big'
+  )
 
 def compute_byte_width(x) -> int:
   byte_width = 8

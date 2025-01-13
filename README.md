@@ -98,6 +98,21 @@ Crackle improves upon Compresso by replacing the bit-packed boundary map with a 
 
 See benchmarks for more information on Crackle's size and compute effiency.
 
+## Installation
+
+```bash
+pip install crackle-codec 
+```
+
+Building from source (requires cmake and a c++ compiler):
+
+```
+git clone https://github.com/seung-lab/crackle.git
+cd crackle
+git submodule update --init --recursive # fetches google/crc32c library
+python setup.py develop
+```
+
 ## Versions
 
 | Format Version | Description                                                    |
@@ -111,9 +126,33 @@ See benchmarks for more information on Crackle's size and compute effiency.
 | Section   | Bytes                                     | Description                                                                                                     |
 |-----------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
 | Header    | v0: 24, v1: 29                            | Metadata incl. length of fields.                                                                                |
-| Crack Index     | header.sz * sizeof(uint32)             | Number of bytes for the crack codes in each slice.
+| Crack Index     | header.sz * sizeof(uint32), v1: +4            | Number of bytes for the crack codes in each slice + CRC32c(le)
 | Labels       | header.num_label_bytes        | Can be either "flat" labels or "pins". Describes how to color connected components.                                                                                   |
 | Crack Codes    | Variable length.           | Instructions for drawing crack boundaries.             |
+| Labels crc32c    | (v1 only) 4(le)           | v0: n/a, v1: crc32c of the labels binary.             |
+| Labels crc32c    | (v1 only) header.sz * 4(le)           | v0: n/a, v1: crc32c of the uncompressed uint32_t fortran order connected component labeling of each z-slice.             |
+
+### A Note on CRCs
+
+CRCs protect each step of the decoding process. The fixed width header is protected by crc8, which contains information for decoding the crack index. The crack index is in turn protected by a crc32c. This is not overkill because a very large volume or a volume that is randomly accessible in XY as well as Z would need a crc32 vs a crc16.
+
+The crack index is used for decoding the structural information (the connected components for each slice). We store a crc32c for each z-slice. This allows random z access to be validated while balancing against the storage cost of creating too many crc (e.g. vs. once per a grid).
+
+We also store a crc32c for the labels binary independently of the crack codes.
+
+All crcs are stored little endian.
+
+Why not store a single crc for the entire uncompressed image? This would make it difficult to validate as a single crackle file could represent many terabytes of data. It would also make it difficult to edit the labels (remap) independently of the structure. Storing a crc32c per a z-slice also allows for z-stacking independent slices without recalculating crcs.
+
+The downside to this strategy is a small increase in the file size and an increase in false positives for crc32s. This is the price of having the format be more of a random-access array format than a bitstream format. However, as crackle is designed to be two stage compressed, for example, with `lzip`, an LZMA variant with error correction properties, these issues are mitigated when archived.
+
+crc8 (0xe7, initialized with 0xFF) was selected due to its ability to reliably detect [two bit flips](https://users.ece.cmu.edu/~koopman/crc/index.html) in up to 247 bits of message data, the best available for our header length.
+
+crc32c was selected as the polynomial due to the availability of [high performance implementations](https://dougallj.wordpress.com/2022/05/22/faster-crc32-on-the-apple-m1/). This is important to avoid CRC calculation being a significant cost to the codec.
+
+#### Error Detection and (Limited, Human Assisted) Correction
+
+Due to this mutli-crc strategy, it is possible to narrow down corruptions to the section of the binary where they occur. For example, if you are concerned with only z=1-100 and the error occurs at z=200, you're ok. If the error occurs in the labels_binary, but you were planning on applying a full new mapping anyway, you can get away with discarding the extant labeling. Certain bit flips in the labels binary will create out of range keys, which will aid in identifying exactly where the error occured.  Headers can be repaired potentially be human inspection (if they know the dataset).
 
 ### Header
 
@@ -121,7 +160,7 @@ See benchmarks for more information on Crackle's size and compute effiency.
 | Attribute         | Value             | Type    | Description                                     |
 |-------------------|-------------------|---------|-------------------------------------------------|
 | magic             | crkl              | char[4] | File magic number.                              |
-| format_version    | 0                 | u8      | Stream version.                   |
+| format_version    | 0 or 1            | u8      | Stream version.                   |
 | format_field      | bitfield          | u16     | See below.                 |
 | sx, sy, sz        | >= 0              | u32 x 3 | Size of array dimensions.                       |
 | grid_size         | log2(grid_size)   | u8      | Stores log2 of grid dimensions in voxels.          |

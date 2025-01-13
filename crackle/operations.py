@@ -10,10 +10,10 @@ from .codec import (
   header, raw_labels, decode_flat_labels,
   decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
-  reencode, background_color, 
+  reencode, background_color, crack_crcs, labels_crc,
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
-from .lib import width2dtype, compute_byte_width, compute_dtype
+from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c
 
 def min(binary:bytes) -> int:
   """Returns the minimum label of the crackle binary."""
@@ -22,7 +22,7 @@ def min(binary:bytes) -> int:
   if not head.is_sorted:
     return int(np.min(labels(binary)))
 
-  off = head.HEADER_BYTES + head.sz * 4
+  off = head.header_bytes + head.grid_index_bytes
 
   if head.label_format == LabelFormat.FLAT:
     return int.from_bytes(binary[off+8:off+8+head.stored_data_width], byteorder='little')
@@ -42,7 +42,7 @@ def max(binary:bytes) -> int:
   if not head.is_sorted:
     return int(np.max(labels(binary)))
 
-  loff = head.HEADER_BYTES + head.sz * 4
+  loff = head.header_bytes + head.grid_index_bytes
 
   if head.label_format == LabelFormat.FLAT:
     N = num_labels(binary)
@@ -71,6 +71,15 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
     in the mapping.
   """
   orig = binary
+  head = CrackleHeader.frombytes(binary)
+
+  if head.format_version > 0:
+    labels_binary = raw_labels(binary)
+    computed_crc = crc32c(labels_binary)
+    stored_crc = labels_crc(binary)
+    if stored_crc != computed_crc:
+      raise FormatError(f"crc mismatch. The labels binary may be corrupt. Stored: {stored_crc} Computed: {computed_crc}")
+
   binary = bytearray(binary)
   
   head = CrackleHeader.frombytes(binary)
@@ -79,7 +88,7 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
   # flat: num_labels, N labels, remapped labels
   # pins: bgcolor, num labels (u64), N labels, pins
 
-  offset = hb + 4 * head.sz
+  offset = hb + head.grid_index_bytes
   if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
     bgcolor = int.from_bytes(binary[offset:offset+head.stored_data_width], 'little')
 
@@ -110,6 +119,13 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
     binary[:hb] = head.tobytes()
 
   binary[offset:offset+uniq_bytes] = list(all_labels.view(np.uint8))
+
+  if head.format_version > 0:
+    offset = hb + head.grid_index_bytes
+    computed_crc = crc32c(bytes(binary[offset:offset+head.num_label_bytes]))
+    crcl = head.sz * 4 + 4 
+    binary[-crcl:-crcl+4] = computed_crc.to_bytes(4, 'little')
+
   return bytes(binary)
 
 def astype(binary:bytes, dtype) -> bytes:
@@ -397,7 +413,7 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     raise ValueError(f"Unsupported label format: {first_head.label_format}")
 
   crack_codes_lst = []
-  zindex = np.zeros((first_head.sz,), dtype=np.uint32)
+  zindex = np.zeros((sz,), dtype=np.uint32)
   z = 0
   for binary in binaries:
     for cc in crack_codes(binary):
@@ -405,6 +421,19 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
       crack_codes_lst.append(cc)
       z += 1
 
+  grid_index_binary = zindex.tobytes()
+  if first_head.format_version > 0:
+    computed_crc32c = crc32c(grid_index_binary)
+    grid_index_binary += computed_crc32c.to_bytes(4, 'little')
+
+  crcs_binary = b''
+  if first_head.format_version > 0:
+    crcs = []
+    for binary in binaries:
+      crcs.append(crack_crcs(binary))
+    crcs_binary = np.concatenate(crcs).tobytes()
+    
+  del zindex
   del binaries
 
   crack_binary = b''.join(crack_codes_lst)
@@ -412,11 +441,17 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
 
   first_head.num_label_bytes = len(labels_binary)
 
+  labels_crc = b''
+  if first_head.format_version > 0:
+    labels_crc = crc32c(labels_binary).to_bytes(4, 'little')
+
   return b''.join([ 
     first_head.tobytes(),
-    zindex.tobytes(),
+    grid_index_binary,
     labels_binary,
-    crack_binary
+    crack_binary,
+    labels_crc,
+    crcs_binary
   ])
 
 def _zsplit_helper(binary:bytes):
@@ -442,8 +477,9 @@ def _zsplit_helper(binary:bytes):
   all_zindex = np.frombuffer(components(binary)["z_index"], dtype=np.uint32)
 
   cracks = crack_codes(binary)
+  all_crack_crcs = crack_crcs(binary)
 
-  def synth(head, zindex, local_label_idx, keys, cracks):
+  def synth(head, zindex, local_label_idx, keys, cracks, sub_crack_crcs):
     local_uniq = fastremap.unique(uniq[keys])
     local_uniq_map = { u: i for i, u in enumerate(local_uniq) }
     remapped_keys = [ local_uniq_map[k] for k in uniq[keys] ]
@@ -461,20 +497,35 @@ def _zsplit_helper(binary:bytes):
     head.sz = len(cracks)
     head.num_label_bytes = len(labels_binary)
 
+    grid_index = zindex.tobytes()
+    labels_crc = b''
+    crack_crcs_binary = b''
+    if head.format_version > 0:
+      grid_index += crc32c(grid_index).to_bytes(4, 'little')
+      labels_crc = crc32c(labels_binary).to_bytes(4, 'little')
+      crack_crcs_binary = sub_crack_crcs.tobytes()
+
     return b''.join([
       head.tobytes(),
-      zindex.tobytes(),
+      grid_index,
       labels_binary,
-      *cracks
+      *cracks,
+      labels_crc,
+      crack_crcs_binary,
     ])
 
   def synth_z_range(z_start:int, z_end:int) -> bytes:
+    tmp_crack_crcs = []
+    if head.format_version > 0:
+      tmp_crack_crcs = all_crack_crcs[z_start:z_end]
+
     return synth(
       head, 
       all_zindex[z_start:z_end], 
       label_idx[z_start:z_end], 
       keys[label_idx_offsets[z_start]:label_idx_offsets[z_end]],
-      cracks[z_start:z_end]
+      cracks[z_start:z_end],
+      tmp_crack_crcs,
     )
 
   return synth_z_range
@@ -580,11 +631,20 @@ def full(shape, fill_value, dtype=None, order='C') -> bytes:
 
   empty_slice_crack_code = b'\x01\x00\x00\x00\x00'
 
+  grid_index = np.full([head.sz], len(empty_slice_crack_code), dtype=np.uint32).tobytes()
+  grid_index += crc32c(grid_index).to_bytes(4, 'little')
+
+  labels_crc_binary = crc32c(labels_binary).to_bytes(4, 'little')
+  crack_crc_single = crc32c(np.zeros(shape[:2], dtype=np.uint32))
+  crack_crcs_binary = np.array([crack_crc_single] * shape[2], dtype=np.uint32).tobytes()
+
   return b''.join([
     head.tobytes(),
-    np.full([head.sz], len(empty_slice_crack_code), dtype=np.uint32),
+    grid_index,
     labels_binary,
     empty_slice_crack_code * head.sz,
+    labels_crc_binary,
+    crack_crcs_binary,
   ])
 
 def zeros(shape, dtype=None, order="C"):
@@ -616,24 +676,42 @@ def operator(binary:bytes, fn) -> bytes:
   full_parts = components(binary)
   head.num_label_bytes = len(labels_binary)
 
+  labels_crc_binary = b''
+  crack_crcs_binary = b''
+  if head.format_version > 0:
+    labels_crc_binary = crc32c(labels_binary).to_bytes(4, 'little')
+    crack_crcs_binary = crack_crcs(binary).tobytes()
+
   return b''.join([
     head.tobytes(),
     full_parts["z_index"],
     labels_binary,
     full_parts["crack_codes"],
+    labels_crc_binary,
+    crack_crcs_binary,
   ])
 
 def add_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 0:
+    return binary
   return operator(binary, lambda uniq: uniq + scalar)
 
 def subtract_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 0:
+    return binary
   return operator(binary, lambda uniq: uniq - scalar)
 
 def multiply_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 1:
+    return binary
   return operator(binary, lambda uniq: uniq * scalar)
 
 def floordiv_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 1:
+    return binary
   return operator(binary, lambda uniq: uniq // scalar)
 
 def truediv_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 1:
+    return binary
   return operator(binary, lambda uniq: uniq / scalar)

@@ -6,6 +6,7 @@
 
 #include "robin_hood.hpp"
 
+#include "crc.hpp"
 #include "header.hpp"
 #include "lib.hpp"
 #include "pins.hpp"
@@ -14,7 +15,10 @@ namespace crackle {
 namespace labels {
 
 template <typename LABEL, typename STORED_LABEL>
-std::vector<unsigned char> encode_flat(
+std::tuple<
+	std::vector<unsigned char>,
+	std::vector<uint32_t>
+> encode_flat(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz
 ) {
@@ -22,6 +26,7 @@ std::vector<unsigned char> encode_flat(
 	const int64_t voxels = sx * sy * sz;
 
 	std::vector<uint64_t> num_components_per_slice(sz);
+	std::vector<uint32_t> crcs(sz);
 	std::unique_ptr<uint32_t[]> cc_labels(new uint32_t[sxy]);
 
 	std::vector<STORED_LABEL> mapping;
@@ -50,6 +55,7 @@ std::vector<unsigned char> encode_flat(
 		}
 
 		num_components_per_slice[z] = tmp_N;
+		crcs[z] = crackle::crc::crc32c(cc_labels.get(), sxy);
 		N += tmp_N;
 	}
 
@@ -110,7 +116,7 @@ std::vector<unsigned char> encode_flat(
 		);		
 	}
 
-	return binary;
+	return std::make_tuple(binary, crcs);
 }
 
 template <typename STORED_LABEL>
@@ -307,9 +313,8 @@ std::span<const unsigned char> raw_labels(
 	const std::span<const unsigned char> &binary
 ) {
 	crackle::CrackleHeader header(binary);
-	uint64_t hb = crackle::CrackleHeader::header_size;
 	return std::span<const unsigned char>(
-		binary.begin() + hb + sizeof(uint32_t) * header.sz,
+		(binary.begin() + header.header_bytes() + header.grid_index_bytes()),
 		header.num_label_bytes
 	);
 }

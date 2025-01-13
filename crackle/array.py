@@ -17,6 +17,7 @@ from .operations import (
   multiply_scalar, floordiv_scalar,
 )
 from . import codec
+from .lib import crc32c
 
 import numpy as np
 
@@ -245,7 +246,7 @@ class CrackleRemoteArray(CrackleArray):
   
   def fetch_z_index_labels_markov_model(self):
     hb = self.header.header_bytes
-    z_offset = self.header.sz * 4
+    z_offset = self.header.grid_index_bytes
     offset = (
       z_offset 
       + self.header.num_label_bytes 
@@ -264,7 +265,7 @@ class CrackleRemoteArray(CrackleArray):
     z_index += (
       hb
       + self.header.num_label_bytes 
-      + self.header.sz * self.header.z_index_width()
+      + self.header.grid_index_bytes
       + self.header.num_markov_model_bytes
     )
     z_index = z_index.astype(np.uint64, copy=False)
@@ -275,13 +276,13 @@ class CrackleRemoteArray(CrackleArray):
       return b''
 
     hb = self.header.header_bytes
-    off = hb + self.header.sz * 4
+    off = hb + self.header.grid_index_bytes
     off += self.header.num_label_bytes
     return self.cf[off:off+self.header.num_markov_model_bytes]
 
   def fetch_all_labels(self) -> bytes:
     hb = self.header.header_bytes
-    off = hb + self.header.sz * 4
+    off = hb + self.header.grid_index_bytes
     return self.cf[off:off+self.header.num_label_bytes]
 
   def fetch_crack_code(self, z:int) -> bytes:
@@ -294,9 +295,13 @@ class CrackleRemoteArray(CrackleArray):
     if labels_binary is None:
       labels_binary = self.labels_binary
 
+    grid_index = zindex.tobytes()
+    if self.header.format_version > 0:
+      grid_index += crc32c(grid_index).to_bytes(4, 'little')
+
     return b''.join([ 
       self.header_binary,
-      zindex.tobytes(),
+      grid_index,
       labels_binary,
       self.markov_model,
       crackcode

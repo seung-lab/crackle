@@ -7,6 +7,7 @@
 #include "robin_hood.hpp"
 
 #include "cc3d.hpp"
+#include "crc.hpp"
 #include "lib.hpp"
 #include "pairing_heap.hpp"
 
@@ -348,13 +349,16 @@ template <typename LABEL>
 std::tuple<
 	std::unordered_map<uint64_t, std::vector<CandidatePin>>,
 	std::vector<uint64_t>,
-	uint64_t
+	uint64_t,
+	std::vector<uint32_t>
 >
 compute(
 	const LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool optimize
 ) {
+	const uint64_t sxy = sx * sy;
+
 	std::vector<uint64_t> num_components_per_slice(sz);
 	uint64_t N_total = 0;
 
@@ -383,7 +387,19 @@ compute(
 		);
 	}
 
-	return std::make_tuple(all_pins, num_components_per_slice, N_total);
+	std::vector<uint32_t> crcs(sz);
+	uint64_t tmp_N = 0;
+	for (uint64_t z = 0; z < sz; z++) {
+		if (tmp_N > 0) {
+			for (uint64_t i = 0; i < sxy; i++) {
+				cc_labels[sxy * z + i] -= tmp_N;
+			}
+		}
+		crcs[z] = crackle::crc::crc32c(cc_labels.get() + sxy * z, sxy);
+		tmp_N += num_components_per_slice[z];
+	}
+
+	return std::make_tuple(all_pins, num_components_per_slice, N_total, crcs);
 }
 
 };

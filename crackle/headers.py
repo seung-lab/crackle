@@ -130,6 +130,13 @@ class CrackleHeader:
     else:
       return CrackleHeader.HEADER_BYTES_V1
 
+  @property
+  def grid_index_bytes(self):
+    if self.format_version == 0:
+      return 4 * self.sz
+    else:
+      return 4 * (self.sz + 1) # plus crc32c
+
   def tobytes(self) -> bytes:
     fmt_byte = pack_bits([
       (int(np.log2(self.data_width)), 2),

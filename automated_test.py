@@ -17,6 +17,7 @@ DTYPE = [
 def test_compress_decompress_random(dtype, markov_model_order):
   labels = np.random.randint(0,5,size=(4,4,1), dtype=dtype)
   binary = crackle.compress(labels, markov_model_order=markov_model_order)
+
   recovered = crackle.decompress(binary)
   print(labels.T)
   print(recovered.T)
@@ -244,6 +245,8 @@ def test_remap():
   binary = crackle.remap(binary, { i:i+1 for i in range(1000) }, preserve_missing_labels=False)
   labels = crackle.labels(binary)
   assert np.all(labels == np.arange(1,1001))
+
+  crackle.decompress(binary) # validate crcs
 
 def test_remap_sorted():
   labels = np.random.randint(0,7, size=(10,10,10)).astype(np.uint32)
