@@ -50,7 +50,7 @@ CRC_AINLINE __m128i crc_shift(uint32_t crc, size_t nbytes) {
   return clmul_scalar(crc, xnmodp(nbytes * 8 - 33));
 }
 
-CRC_EXPORT uint32_t crc32_impl(uint32_t crc0, const char* buf, size_t len) {
+CRC_EXPORT uint32_t crc32_impl(uint32_t crc0, const unsigned char* buf, size_t len) {
   crc0 = ~crc0;
   for (; len && ((uintptr_t)buf & 7); --len) {
     crc0 = _mm_crc32_u8(crc0, *buf++);
@@ -63,7 +63,7 @@ CRC_EXPORT uint32_t crc32_impl(uint32_t crc0, const char* buf, size_t len) {
   if (len >= 208) {
     size_t blk = (len - 8) / 200;
     size_t klen = blk * 24;
-    const char* buf2 = buf + 0;
+    const unsigned char* buf2 = buf + 0;
     uint32_t crc1 = 0;
     uint32_t crc2 = 0;
     __m128i vc0;
