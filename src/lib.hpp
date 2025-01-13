@@ -16,7 +16,7 @@ uint32_t crc32c(const uint8_t *data, uint64_t size) {
 }
 
 uint32_t crc32c(uint32_t *data, uint64_t size) {
-	return crc32c::Crc32c(reinterpret_cast<uint8_t*>(data), size * sizeof(data));
+	return crc32c::Crc32c(reinterpret_cast<uint8_t*>(data), size * sizeof(uint32_t));
 }
 
 // Code from stackoverflow by Dr. Mark Adler
