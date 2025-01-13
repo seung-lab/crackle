@@ -981,6 +981,18 @@ std::vector<unsigned char> reencode_with_markov_order(
 		final_binary.insert(final_binary.end(), code.begin(), code.end());
 	}
 
+	if (header.format_version == 0) {
+		return final_binary;
+	}
+
+	uint32_t labels_binary_crc = get_labels_crc(header, binary);
+	std::span<const uint32_t> crack_crcs = get_crack_code_crcs(header, binary);
+
+	crackle::lib::itoc_push_back(labels_binary_crc, final_binary);
+	for (uint32_t crack_crc : crack_crcs) {
+		crackle::lib::itoc_push_back(crack_crc, final_binary);
+	}
+
 	return final_binary;
 }
 
