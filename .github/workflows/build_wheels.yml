@@ -29,8 +29,7 @@ jobs:
       # Update references
       - name: Git Submodule Update
         run: |
-          git pull --recurse-submodules
-          git submodule update --remote --recursive
+          git submodule update --init --recursive
 
       - name: Build wheels
         uses: joerick/cibuildwheel@v2.22.0
