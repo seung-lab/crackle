@@ -4,7 +4,7 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 	#include "crc32c_arm.h"
 #else
-	#include "crc32c/crc32c.h"
+	#include "crc32c_x86_64_sse.h"
 #endif
 
 namespace crackle {
@@ -31,34 +31,18 @@ uint8_t crc8(uint8_t const *data, uint64_t size) {
 	return crc;
 }
 
-// Use the hyperfast ARM64 implementation (~100 GB/sec if available)
-#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
-	uint32_t crc32c(const std::vector<unsigned char>& data) {
-		return crc32_impl(0x0000, data.data(), data.size());
-	}
+uint32_t crc32c(const std::vector<unsigned char>& data) {
+	return crc32_impl(0x0000, data.data(), data.size());
+}
 
-	uint32_t crc32c(const uint8_t *data, uint64_t size) {
-		return crc32_impl(0x0000, data, size);
-	}
+uint32_t crc32c(const uint8_t *data, uint64_t size) {
+	return crc32_impl(0x0000, data, size);
+}
 
-	uint32_t crc32c(uint32_t *data, uint64_t size) {
-		return crc32_impl(0x0000, reinterpret_cast<uint8_t*>(data), size * sizeof(uint32_t));
-	}
-#else 
-	// otherwise use Google's competent platform indp. version
-	// that should get ~20 GB/sec performance
-	uint32_t crc32c(const std::vector<unsigned char>& data) {
-		return crc32c::Crc32c(data.data(), data.size());
-	}
+uint32_t crc32c(uint32_t *data, uint64_t size) {
+	return crc32_impl(0x0000, reinterpret_cast<uint8_t*>(data), size * sizeof(uint32_t));
+}
 
-	uint32_t crc32c(const uint8_t *data, uint64_t size) {
-		return crc32c::Crc32c(data, size);
-	}
-
-	uint32_t crc32c(uint32_t *data, uint64_t size) {
-		return crc32c::Crc32c(reinterpret_cast<uint8_t*>(data), size * sizeof(uint32_t));
-	}
-#endif
 
 };
 };
