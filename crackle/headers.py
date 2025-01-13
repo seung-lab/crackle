@@ -83,7 +83,7 @@ class CrackleHeader:
 
     format_version = buffer[4]
     if format_version not in [0,1]:
-      raise FormatError(f"Wrong format version. Got: {format_version} Expected: {CrackleHeader.FORMAT_VERSION}")
+      raise FormatError(f"Wrong format version. Got: {format_version} Expected: <{CrackleHeader.FORMAT_VERSION}")
 
     values = unpack_bits(
       int.from_bytes(buffer[5:7], byteorder='little', signed=False), 

@@ -662,3 +662,51 @@ def reencode(binary:bytes, markov_model_order:int):
     return binary
   return fastcrackle.reencode_markov(binary, markov_model_order)
 
+def check(binary:bytes):
+  """Test for file corruption, reporting which sections are damaged."""
+  
+  sections = {
+    "header": None,
+    "crack_index": None,
+    "labels": None,
+    "z": None,
+  }
+
+  try:
+    head = CrackleHeader.frombytes(binary)
+  except FormatError:
+    sections["header"] = False
+    return sections
+
+  sections["header"] = True
+
+  try:
+    idx = grid_index(binary)
+  except FormatError:
+    sections["crack_index"] = False
+    return sections
+
+  # check to see that the maximum index doesn't
+  # point outside the binary
+  if idx[-1] >= len(binary):
+    sections["crack_index"] = False
+    return sections
+
+  sections["crack_index"] = True
+
+  if head.format_version == 0:
+    return sections
+
+  stored_lcrc = labels_crc(binary)
+  computed_lrc = crc32c(raw_labels(binary)[:-4])
+  sections["labels"] = (stored_lcrc == computed_lrc)
+
+  arr = CrackleArray(binary)
+  sections["z"] = []
+  for z in range(head.sz):
+    try:
+      arr[:,:,z]
+    except (FormatError, RuntimeError):
+      sections["z"].append(z)
+
+  return sections
