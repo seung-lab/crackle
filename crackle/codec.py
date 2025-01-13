@@ -116,7 +116,7 @@ def crack_crcs(binary:bytes) -> Optional[int]:
     return None
 
   crcl = head.sz * 4 
-  return np.frombuffer(binary[-crcl:], 'little')
+  return np.frombuffer(binary[-crcl:], dtype=np.uint32)
 
 def components(binary:bytes):
   head = CrackleHeader.frombytes(binary)
