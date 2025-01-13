@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        arch: [auto64]
+        arch: [auto]
         include:
           - os: ubuntu-latest
             arch: aarch64
@@ -27,6 +27,7 @@ jobs:
         env:
           CIBW_BEFORE_BUILD: pip install numpy pybind11 setuptools wheel pkginfo twine
           CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_ARCHS: auto64
 
       - uses: actions/upload-artifact@v3
         with:
