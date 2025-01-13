@@ -13,7 +13,7 @@ CRC32C_HIGH_SPEED_DIR = os.path.join("third_party", "fastcrc")
 
 CRC32C_INCLUDE_DIR = os.path.join(CRC32C_DIR, "include")
 CRC32C_BUILD_DIR = os.path.join(CRC32C_DIR, "build")
-WINDOWS_CRC32C_BUILD_DIR = os.path.join(CRC32C_BUILD_DIR, "Debug")
+WINDOWS_CRC32C_BUILD_DIR = os.path.join(CRC32C_BUILD_DIR, "Release")
 
 def build_crc32c():
   library_names = [
@@ -55,6 +55,8 @@ def build_crc32c():
     "cmake", 
     f"--build",
     f"{CRC32C_BUILD_DIR}",
+    "--config", 
+    "Release",
   ])
 
   if res != 0:
