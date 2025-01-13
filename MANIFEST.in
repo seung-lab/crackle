@@ -1,7 +1,11 @@
 include LICENSE
 recursive-include src *
+recursive-include third_party *
 include requirements.txt
 exclude cracklepy/*
 exclude *.cpso.gz
+exclude .DS_Store
+exclude src/.DS_Store
+exclude third_party/.DS_Store
 exclude benchmarks/*
 exclude wasm/*
