@@ -528,7 +528,11 @@ LABEL* decompress(
 	const uint64_t sxy = header.sx * header.sy;
 
 	std::unique_ptr<uint32_t[]> cc_labels(new uint32_t[sxy]);
-	std::span<const uint32_t> crack_code_crcs = get_crack_code_crcs(header, binary);
+	std::span<const uint32_t> crack_code_crcs;
+
+	if (header.format_version > 0) {
+		crack_code_crcs = get_crack_code_crcs(header, binary);
+	}
 
 	for (uint64_t z = 0; z < static_cast<uint64_t>(szr); z++) {
 		uint64_t N = 0;
@@ -540,12 +544,18 @@ LABEL* decompress(
 			/*output=*/cc_labels.get()
 		);
 
-		const uint32_t computed_crc = crackle::lib::crc32c(cc_labels.get(), sxy);
+		if (header.format_version > 0) {
+			const uint32_t computed_crc = crackle::lib::crc32c(cc_labels.get(), sxy);
 
-		if (crack_code_crcs[z_start + z] != computed_crc) {
-			std::string err = "crackle: crack code crc mismatch on z=";
-			err += std::to_string(z_start + z);
-			throw std::runtime_error(err);
+			if (crack_code_crcs[z_start + z] != computed_crc) {
+				std::string err = "crackle: crack code crc mismatch on z=";
+				err += std::to_string(z_start + z);
+				err += " computed: ";
+				err += std::to_string(computed_crc);
+				err += " stored: ";
+				err += std::to_string(crack_code_crcs[z_start + z]);
+				throw std::runtime_error(err);
+			}
 		}
 
 		const std::vector<LABEL> label_map = decode_label_map<LABEL>(
