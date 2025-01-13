@@ -130,12 +130,13 @@ def components(binary:bytes):
     crcl = head.sz * 4 + 4 
 
   cl = len(binary) - hl - ll - il - crcl
+  cs = hl + ll + il
 
   return {
     'header': binary[:hl],
     'z_index': binary[hl:hl+il],
     'labels': binary[hl+il:hl+ll+il],
-    'crack_codes': binary[-cl:-crcl],
+    'crack_codes': binary[cs:cs+cl],
     'crcs': binary[-crcl:],
   }
 
