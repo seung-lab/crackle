@@ -559,7 +559,7 @@ LABEL* decompress(
 		}
 
 		const std::vector<LABEL> label_map = decode_label_map<LABEL>(
-			header, binary, cc_labels.get(), N, z, z+1
+			header, binary, cc_labels.get(), N, z_start+z, z_start+z+1
 		);
 
 		if (header.fortran_order) {
