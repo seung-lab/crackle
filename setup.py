@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import os
+import platform
 import setuptools
 import shutil
 import subprocess
@@ -12,6 +13,7 @@ CRC32C_HIGH_SPEED_DIR = os.path.join("third_party", "fastcrc")
 
 CRC32C_INCLUDE_DIR = os.path.join(CRC32C_DIR, "include")
 CRC32C_BUILD_DIR = os.path.join(CRC32C_DIR, "build")
+WINDOWS_CRC32C_BUILD_DIR = os.path.join(CRC32C_BUILD_DIR, "Debug")
 
 def build_crc32c():
   library_names = [
@@ -40,7 +42,6 @@ def build_crc32c():
     f"-DBUILD_SHARED_LIBS=OFF",
     f"-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
     f"-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0",
-    f"-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY={CRC32C_BUILD_DIR}",
     f"-S {CRC32C_DIR}", 
     f"-B {CRC32C_BUILD_DIR}",
     "-DCMAKE_BUILD_TYPE=Release",
@@ -72,6 +73,12 @@ else:
     '-std=c++2a', '-O3'
   ]
 
+operating_system = platform.system().lower()
+is_windows = sys.platform == 'win32' or operating_system == "windows"
+library_dir = CRC32C_BUILD_DIR 
+if is_windows:
+  library_dir = WINDOWS_CRC32C_BUILD_DIR
+
 setuptools.setup(
   setup_requires=['pbr','pybind11','numpy'],
   cmdclass={"build_ext": build_ext},
@@ -86,7 +93,7 @@ setuptools.setup(
         ["src/fastcrackle.cpp"],
         include_dirs=[CRC32C_INCLUDE_DIR, CRC32C_HIGH_SPEED_DIR],
         libraries=["crc32c"],
-        library_dirs=[CRC32C_BUILD_DIR],
+        library_dirs=[library_dir],
         extra_compile_args=extra_compile_args,
         language="c++",
     ),
