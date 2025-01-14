@@ -4,7 +4,7 @@ import sys
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
-CRC32C_DIR = os.path.join("third_party", "fastcrc")    
+CRC32C_DIR = os.path.join("third_party", "crc")    
 
 extra_compile_args = []
 if sys.platform == 'win32':
