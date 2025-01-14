@@ -371,7 +371,7 @@ crack_code_to_symbols(
 	}
 	else {
 		uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
-		std::span<const uint8_t> markov_stream(code.begin() + index_size, code.size() - index_size);
+		std::span<const uint8_t> markov_stream(code.data() + index_size, code.size() - index_size);
 		codepoints = crackle::markov::decode_codepoints(markov_stream, markov_model);
 	}
 

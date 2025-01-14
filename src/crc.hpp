@@ -3,7 +3,7 @@
 
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 	#include "crc32c_arm.h"
-#elif defined(__WASM__)
+#elif defined(__EMSCRIPTEN__)
 	#include "crc32c_portable.h"
 #else
 	#include "crc32c_x86_64_sse.h"
