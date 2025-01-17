@@ -624,6 +624,9 @@ def test_voxel_counts():
   cts_gt = { u:ct for u,ct in zip(uniq, cts) }
   assert vc_cts == cts_gt
 
+  vc_ct = crackle.voxel_counts(binary, label=25024949)
+  assert vc_ct == cts_gt[25024949]
+
   labels = np.zeros([100,101,103])
   binary = crackle.compress(labels)
 
@@ -632,6 +635,9 @@ def test_voxel_counts():
   uniq, cts = np.unique(labels, return_counts=True)
   cts_gt = { u:ct for u,ct in zip(uniq, cts) }
   assert vc_cts == cts_gt
+
+
+
 
 
 
