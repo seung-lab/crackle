@@ -726,4 +726,10 @@ def check(binary:bytes):
     except (FormatError, RuntimeError):
       sections["z"].append(z)
 
-  return sections
+  return section
+
+def voxel_counts(binary:bytes) -> Dict[int,int]:
+  """Count the number of voxels per a labels."""
+  return fastcrackle.voxel_counts(binary, 0, -1)
+
+

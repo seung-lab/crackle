@@ -284,6 +284,29 @@ py::dict point_cloud(
 	return py_ptc;
 }
 
+py::dict voxel_counts(
+	const py::buffer &buffer,
+	const int64_t z_start = 0, 
+	const int64_t z_end = -1
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	auto cts = crackle::voxel_counts(data, info.size, z_start, z_end);
+
+	py::dict pycts;
+	for (const auto& [label, ct] : cts) {
+		pycts[py::int_(label)] = py::int_(ct);
+	}
+
+	return pycts;
+
+}
+
 py::array get_slice_vcg(
 	const py::bytes &buffer, 
 	const int64_t z
@@ -306,6 +329,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	);
 	m.def("compute_pins", &compute_pins, "Compute a pinset.");
 	m.def("point_cloud", &point_cloud, "Extract one or more point clouds without decompressing.");
+	m.def("voxel_counts", &voxel_counts, "Compute the voxel counts for each label in the dataset.");
 	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
