@@ -67,6 +67,9 @@ arr = arr.numpy() # convert to a numpy array
 ptc = crackle.point_cloud(binary) # { label: np.ndarray, ... }
 ptc = crackle.point_cloud(binary, label=777)
 
+# rapid and low memory
+voxel_counts = crackle.voxel_counts(binary)
+
 # building big arrays with low memory
 binary = crackle.zeros([5000,5000,5000], dtype=np.uint64, order='F')
 
