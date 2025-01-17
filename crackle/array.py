@@ -5,7 +5,7 @@ from .codec import (
   compress, decompress, decompress_range, 
   labels, nbytes, contains, 
   header, crack_codes, num_labels,
-  components, point_cloud,
+  components, point_cloud, voxel_counts,
 )
 from .operations import (
   astype,
@@ -63,6 +63,9 @@ class CrackleArray:
 
   def num_labels(self) -> int:
     return num_labels(self.binary)
+
+  def voxel_counts(self) -> dict:
+    return voxel_counts(self.binary)
 
   def min(self) -> int:
     return codec.min(self.binary)
