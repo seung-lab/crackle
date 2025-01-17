@@ -610,6 +610,11 @@ def test_reencode(allow_pins):
   assert np.all(labels == recovered)  
 
 def test_voxel_counts():
+  labels = np.zeros([1,1,1])
+  binary = crackle.compress(labels)
+  vc_cts = crackle.voxel_counts(binary)
+  assert vc_cts[0] == 1
+
   labels = compresso.load("connectomics.npy.cpso.gz")
   binary = crackle.compress(labels)
 
