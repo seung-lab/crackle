@@ -1008,6 +1008,146 @@ auto reencode_with_markov_order(
 	);
 }
 
+template <typename LABEL>
+std::unordered_map<uint64_t, uint64_t>
+voxel_counts(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1
+) {
+
+	if (num_bytes < CrackleHeader::header_size) {
+		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
+		err += std::to_string(num_bytes);
+		throw std::runtime_error(err);
+	}
+
+	const CrackleHeader header(buffer);
+
+	if (header.format_version > CrackleHeader::current_version) {
+		std::string err = "crackle: Invalid format version.";
+		err += std::to_string(header.format_version);
+		throw std::runtime_error(err);
+	}
+
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(header.sz - 1)), static_cast<int64_t>(0));
+	z_end = z_end < 0 ? static_cast<int64_t>(header.sz) : z_end;
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(header.sz)), static_cast<int64_t>(0));
+
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
+	}
+
+	const int64_t szr = z_end - z_start;
+
+	const uint64_t voxels = (
+		static_cast<uint64_t>(header.sx) 
+		* static_cast<uint64_t>(header.sy) 
+		* static_cast<uint64_t>(szr)
+	);
+
+	if (voxels == 0) {
+		return std::unordered_map<uint64_t, uint64_t>();
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
+
+	std::unordered_map<uint64_t, uint64_t> cts;
+
+	std::vector<uint8_t> vcg(header.sx * header.sy);
+	std::unique_ptr<uint32_t[]> ccl(new uint32_t[header.sx * header.sy]());
+
+	const uint64_t sxy = header.sx * header.sy;
+
+	uint32_t z = z_start;
+	for (auto crack_code : crack_codes) {
+		crack_code_to_vcg(
+			/*code=*/crack_code,
+			/*sx=*/header.sx, /*sy=*/header.sy,
+			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+			/*markov_model=*/markov_model,
+			/*slice_edges=*/vcg.data()
+		);
+
+		uint64_t N = 0;
+		crackle::cc3d::color_connectivity_graph<uint32_t>(
+			vcg, header.sx, header.sy, 1, ccl.get(), N
+		);
+
+		std::vector<LABEL> label_map = decode_label_map<LABEL>(
+			header, binary, ccl.get(), N, z, z+1
+		);
+		std::vector<uint64_t> subcounts(N);
+
+		for (uint64_t i = 0; i < sxy; i++) {
+			subcounts[ccl[i]]++;
+		}
+		for (uint64_t i = 0; i < N; i++) {
+				cts[label_map[i]] += subcounts[i];
+		}
+
+		z++;
+	}
+
+	return cts;
+}
+
+auto voxel_counts(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.data_width == 1) {
+		return voxel_counts<uint8_t>(
+			buffer, num_bytes,
+			z_start, z_end
+		);
+	}
+	else if (header.data_width == 2) {
+		return voxel_counts<uint16_t>(
+			buffer, num_bytes,
+			z_start, z_end
+		);
+	}
+	else if (header.data_width == 4) {
+		return voxel_counts<uint32_t>(
+			buffer, num_bytes,
+			z_start, z_end
+		);
+	}
+	else {
+		return voxel_counts<uint64_t>(
+			buffer, num_bytes,
+			z_start, z_end
+		);
+	}
+}
+
+auto voxel_counts(
+	const std::string &buffer,
+	const int64_t z_start = -1, 
+	const int64_t z_end = -1
+) {
+	return voxel_counts(
+		reinterpret_cast<const unsigned char*>(buffer.c_str()),
+		buffer.size(),
+		z_start, z_end
+	);
+}
+
 
 };
 

@@ -609,9 +609,24 @@ def test_reencode(allow_pins):
   recovered = crackle.decompress(markov_binary)
   assert np.all(labels == recovered)  
 
+def test_voxel_counts():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels)
 
+  vc_cts = crackle.voxel_counts(binary)
 
+  uniq, cts = np.unique(labels, return_counts=True)
+  cts_gt = { u:ct for u,ct in zip(uniq, cts) }
+  assert vc_cts == cts_gt
 
+  labels = np.zeros([100,101,103])
+  binary = crackle.compress(labels)
+
+  vc_cts = crackle.voxel_counts(binary)
+
+  uniq, cts = np.unique(labels, return_counts=True)
+  cts_gt = { u:ct for u,ct in zip(uniq, cts) }
+  assert vc_cts == cts_gt
 
 
 
