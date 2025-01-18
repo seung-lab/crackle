@@ -726,7 +726,7 @@ def check(binary:bytes):
     except (FormatError, RuntimeError):
       sections["z"].append(z)
 
-  return section
+  return sections
 
 def voxel_counts(binary:bytes, label:Optional[int] = None) -> Dict[int,int]:
   """
