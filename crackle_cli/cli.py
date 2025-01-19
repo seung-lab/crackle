@@ -26,9 +26,10 @@ class Tuple3(click.ParamType):
 @click.option('-t', "--test", default=False, is_flag=True, help="Check for file corruption and report damaged areas.", show_default=True)
 @click.option('-p', '--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
 @click.option('-m', '--markov', default=0, help="If >0, use this order of markov compression for the crack code.", show_default=True)
+@click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
 @click.argument("source", nargs=-1)
-def main(compress, info, test, labels, allow_pins, markov, source, gzip):
+def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip):
 	"""
 	Compress and decompress crackle (.ckl) files to and from numpy (.npy) files.
 
@@ -50,9 +51,9 @@ def main(compress, info, test, labels, allow_pins, markov, source, gzip):
 			continue
 
 		if compress:
-			compress_file(src, allow_pins, markov, gzip)
+			compress_file(src, allow_pins, markov, gzip, keep)
 		else:
-			decompress_file(src)
+			decompress_file(src, keep)
 
 def check_binary(src):
 	try:
@@ -121,7 +122,7 @@ def print_header(src):
 	print(f"num_labels: {num_labels}")
 	print()
 
-def decompress_file(src):
+def decompress_file(src, keep):
 	try:
 		arr = crackle.util.aload(src)
 	except FileNotFoundError:
@@ -144,15 +145,15 @@ def decompress_file(src):
 
 	try:
 		stat = os.stat(dest)
-		if stat.st_size > 0:
-			os.remove(src)
-		else:
+		if stat.st_size == 0:
 			raise ValueError("File is zero length.")
+		if not keep:
+			os.remove(src)
 	except (FileNotFoundError, ValueError) as err:
 		print(f"crackle: Unable to write {dest}. Aborting.")
 		sys.exit()
 
-def compress_file(src, allow_pins, markov, gzip):
+def compress_file(src, allow_pins, markov, gzip, keep):
 	is_crackle = False
 	try:
 		data = crackle.util.load_numpy(src)
@@ -189,10 +190,10 @@ def compress_file(src, allow_pins, markov, gzip):
 		
 	try:
 		stat = os.stat(dest)
-		if stat.st_size > 0:
-			os.remove(orig_src)
-		else:
+		if stat.st_size == 0:
 			raise ValueError("File is zero length.")
+		if not keep:
+			os.remove(orig_src)
 	except (FileNotFoundError, ValueError) as err:
 		print(f"crackle: Unable to write {dest}. Aborting.")
 		sys.exit()
