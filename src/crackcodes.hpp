@@ -262,6 +262,60 @@ int64_t remove_initial_branch(
 	return pos_x + sxe * pos_y;
 }
 
+// during code creation, if the path loops and passed
+// through a previously marked branch point, a spurious
+// set of b/t is created. Previously, we tried removing
+// these during creation, but this required adding hash
+// access that was slower and higher memory. So let's just
+// strip them afterwards.
+void remove_spurious_branches(
+	std::vector<unsigned char>& code
+) {
+	for (int i = 0; i < code.size(); i++) {
+		printf("%c [%d], ", code[i], i);
+	}
+	printf("\n");
+
+	std::vector<int64_t> branch_stack;
+	branch_stack.push_back(-1);
+
+	std::vector<int64_t> branch_lens(code.size() + 1);
+
+	std::vector<std::pair<int64_t,int64_t>> to_erase;
+
+	int64_t current_branch = -1;
+	printf("cb: %d\n", current_branch);
+	for (int64_t i = 0; i < code.size(); i++) {
+		if (code[i] == 'b') {
+			branch_stack.push_back(i);
+		}
+		else if (code[i] == 't') {
+			printf("bc %d len=%d\n", current_branch, branch_lens[current_branch+1]);
+			if (current_branch >= 0 && branch_lens[current_branch+1] == 0) {
+				to_erase.emplace_back(current_branch, i);
+			}
+
+			branch_stack.pop_back();
+			current_branch = branch_stack.back();
+			printf("cb: %d\n", current_branch);
+		}
+		else {
+			branch_lens[current_branch+1]++;
+		}
+	}
+
+	for (auto pair : to_erase) {
+		printf("%d %d %c %c\n", pair.first, pair.second, code[pair.first], code[pair.second]);
+		code[pair.first] = 's';
+		code[pair.second] = 's';
+	}
+
+	for (unsigned char c : code) {
+		printf("%c, ", c);
+	}
+	printf("\n");
+}
+
 std::vector<uint64_t> read_boc_index(
 	const std::span<const unsigned char>& binary,
 	const uint64_t sx, const uint64_t sy
@@ -378,8 +432,6 @@ create_crack_codes(
 
 	std::vector<int64_t> revisit;
 	revisit.reserve(sx);
-	robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> revisit_index;
-	revisit_index.reserve(sx);
 	std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
 
 	int64_t start_node = 0;
@@ -392,7 +444,7 @@ create_crack_codes(
 
 		std::vector<unsigned char> code;
 		code.reserve(sx >> 2);
-		robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> branch_nodes;
+
 		int64_t branches_taken = 1;
 
 		while (G.adjacency[node] || !revisit.empty()) {
@@ -402,25 +454,15 @@ create_crack_codes(
 				while (!revisit.empty()) {
 					node = revisit.back();
 					revisit.pop_back();
-					if (node > -1) {
-						revisit_index[node].pop_back();
-						revisit_ct[node]--;
-						break;
-					}
-				}
-				if (node > -1) {
-					continue;
-				}
-				else {
+					revisit_ct[node]--;
 					break;
 				}
+				continue;
 			}
 			else if (popcount(G.adjacency[node]) > 1) {
 				code.push_back('b');
 				revisit.push_back(node);
-				revisit_index[node].push_back(revisit.size() - 1);
 				revisit_ct[node]++;
-				branch_nodes[node].push_back(code.size() - 1);
 				branches_taken++;
 			}
 
@@ -432,20 +474,6 @@ create_crack_codes(
 			auto edge = mkedge(node, next_node);
 			G.erase_edge(edge);
 			node = next_node;
-
-			// if we reencounter a node we've already visited,
-			// remove it from revisit and replace the branch. 
-			// with a skip.
-			if (revisit_ct[node]) {
-				int64_t pos = revisit_index[node].back();
-				revisit_index[node].pop_back();
-				revisit[pos] = -1;
-
-				branches_taken--;
-				code[branch_nodes[node].back()] = 's';
-				branch_nodes[node].pop_back();
-				revisit_ct[node]--;
-			}
 		}
 
 		while (branches_taken > 0) {
@@ -456,6 +484,10 @@ create_crack_codes(
 		int64_t adjusted_start_node = remove_initial_branch(
 			start_node, code, sx, sy
 		);
+
+		printf("start: %d\n", adjusted_start_node);
+		remove_spurious_branches(code);
+
 		chains.push_back(
 			std::make_pair(static_cast<uint64_t>(adjusted_start_node), code)
 		);

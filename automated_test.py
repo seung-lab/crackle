@@ -637,6 +637,24 @@ def test_voxel_counts():
   assert vc_cts == cts_gt
 
 
+def test_spurious_branch_elimination():
+  arr = np.array([
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,2,2,0,0,0,0],
+    [0,0,1,1,2,2,0,0,0,0],
+    [0,0,4,4,3,3,0,0,0,0],
+    [0,0,4,4,3,3,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ], dtype=np.uint8).T
+
+  binary = crackle.compress(arr)
+  recovered = crackle.decompress(binary)[:,:,0]
+
+  assert np.all(recovered == arr)
+
 
 
 
