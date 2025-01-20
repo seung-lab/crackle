@@ -557,7 +557,7 @@ codepoints_to_symbols(
 	uint64_t branches_taken = 0;
 	uint64_t node = 0;
 
-	char remap[4] = { 'u', 'r', 'd', 'l' };
+	constexpr char remap[4] = { 'u', 'r', 'd', 'l' };
 
 	uint64_t node_i = 0;
 
@@ -652,7 +652,7 @@ void decode_permissible_crack_code(
 	// four bits: -y+y-x+x true is passable
 	std::fill(edges, edges + sx * sy, 0);
 
-	int64_t sxe = sx + 1;
+	const int64_t sxe = sx + 1;
 
 	const uint64_t pixels = (sx+1) * (sy+1);
 
@@ -732,7 +732,7 @@ void decode_impermissible_crack_code(
 	// four bits: -y+y-x+x true is passable
 	std::fill(edges, edges + sx * sy, 0b1111);
 
-	int64_t sxe = sx + 1;
+	const int64_t sxe = sx + 1;
 
 	const uint64_t pixels = (sx+1) * (sy+1);
 
