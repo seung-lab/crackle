@@ -378,6 +378,8 @@ create_crack_codes(
 
 	std::vector<int64_t> revisit;
 	revisit.reserve(sx);
+	robin_hood::unordered_node_map<int64_t, std::vector<int64_t>> revisit_index;
+	revisit_index.reserve(sx);
 	std::vector<uint8_t> revisit_ct((sx+1)*(sy+1));
 
 	int64_t start_node = 0;
@@ -401,6 +403,7 @@ create_crack_codes(
 					node = revisit.back();
 					revisit.pop_back();
 					if (node > -1) {
+						revisit_index[node].pop_back();
 						revisit_ct[node]--;
 						break;
 					}
@@ -415,6 +418,7 @@ create_crack_codes(
 			else if (popcount(G.adjacency[node]) > 1) {
 				code.push_back('b');
 				revisit.push_back(node);
+				revisit_index[node].push_back(revisit.size() - 1);
 				revisit_ct[node]++;
 				branch_nodes[node].push_back(code.size() - 1);
 				branches_taken++;
@@ -433,13 +437,10 @@ create_crack_codes(
 			// remove it from revisit and replace the branch. 
 			// with a skip.
 			if (revisit_ct[node]) {
-				int64_t pos = revisit.size() - 1;
-				for (; pos >= 0; pos--) {
-					if (revisit[pos] == node) {
-						break;
-					}
-				}
+				int64_t pos = revisit_index[node].back();
+				revisit_index[node].pop_back();
 				revisit[pos] = -1;
+
 				branches_taken--;
 				code[branch_nodes[node].back()] = 's';
 				branch_nodes[node].pop_back();
