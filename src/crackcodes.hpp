@@ -422,7 +422,7 @@ create_crack_codes(
 	int64_t start_node = 0;
 
 	const int64_t lookup_dir[4] = { 1, -1, sx+1, -(sx+1) };
-	const char lookup_symbol[4] = { 'r', 'l', 'd', 'u' };
+	constexpr char lookup_symbol[4] = { 'r', 'l', 'd', 'u' };
 
 	while ((start_node = G.next_cluster(start_node)) != -1) {
 		int64_t node = start_node;
