@@ -46,29 +46,6 @@ struct Graph {
 		return -1;
 	}
 
-	void neighbors(int64_t node, std::vector<int64_t> &nbrs) {
-		nbrs.clear();
-		if (adjacency[node] & 0b0001) {
-			nbrs.push_back(node + 1);
-		}
-		if (adjacency[node] & 0b0010) {
-			nbrs.push_back(node - 1);
-		}
-		if (adjacency[node] & 0b0100) {
-			nbrs.push_back(node + sxe);
-		}
-		if (adjacency[node] & 0b1000) {
-			nbrs.push_back(node - sxe);
-		}
-	}
-
-	std::vector<int64_t> neighbors(int64_t node) {
-		std::vector<int64_t> nbrs;
-		nbrs.reserve(4);
-		neighbors(node, nbrs);
-		return nbrs;
-	}
-
 	void erase_edge(const std::pair<int64_t, int64_t> &edge) {
 		int dir = edge.second - edge.first;
 		// b/c second is always > first,
@@ -391,13 +368,6 @@ std::vector<unsigned char> write_boc_index(
 
 	return binary;
 }
-
-struct pair_hash {
-	size_t operator()(const std::pair<int64_t, int64_t>& p) const {
-		return p.first + 31 * p.second;
-	}
-};
-
 
 template <typename LABEL>
 robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>
