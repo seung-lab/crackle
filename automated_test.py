@@ -655,6 +655,17 @@ def test_spurious_branch_elimination():
 
   assert np.all(recovered == arr)
 
+  arr = np.array([
+    [  0, 139, 139, 139, 139],
+    [  0, 139,   0, 139, 139],
+    [  0, 161,   0,   0, 161],
+    [161, 161, 161, 161, 161],
+  ], dtype=np.uint8).T
+  binary = crackle.compress(arr)
+  recovered = crackle.decompress(binary)[:,:,0]
+
+  assert np.all(recovered == arr)
+
 
 
 
