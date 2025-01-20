@@ -407,7 +407,7 @@ create_crack_codes(
 	bool permissible
 ) {
 	Graph G;
-	bool any_edges = G.init(labels, sx, sy, permissible);
+	const bool any_edges = G.init(labels, sx, sy, permissible);
 
 	std::vector<std::pair<uint64_t, std::vector<unsigned char>>> chains;
 
@@ -421,8 +421,8 @@ create_crack_codes(
 
 	int64_t start_node = 0;
 
-	int64_t lookup_dir[4] = { 1, -1, sx+1, -(sx+1) };
-	char lookup_symbol[4] = { 'r', 'l', 'd', 'u' };
+	const int64_t lookup_dir[4] = { 1, -1, sx+1, -(sx+1) };
+	const char lookup_symbol[4] = { 'r', 'l', 'd', 'u' };
 
 	while ((start_node = G.next_cluster(start_node)) != -1) {
 		int64_t node = start_node;
@@ -451,9 +451,9 @@ create_crack_codes(
 				branches_taken++;
 			}
 
-			int next_neighbor_idx = ctz(G.adjacency[node]);
-			int64_t dir_taken = lookup_dir[next_neighbor_idx];
-			int64_t next_node = node + dir_taken;
+			const int next_neighbor_idx = ctz(G.adjacency[node]);
+			const int64_t dir_taken = lookup_dir[next_neighbor_idx];
+			const int64_t next_node = node + dir_taken;
 			code.push_back(lookup_symbol[next_neighbor_idx]);
 
 			auto edge = mkedge(node, next_node);
@@ -466,7 +466,7 @@ create_crack_codes(
 			branches_taken--;
 		}
 
-		int64_t adjusted_start_node = remove_initial_branch(
+		const int64_t adjusted_start_node = remove_initial_branch(
 			start_node, code, sx, sy
 		);
 
