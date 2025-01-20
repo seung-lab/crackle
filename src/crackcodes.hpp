@@ -271,33 +271,24 @@ int64_t remove_initial_branch(
 void remove_spurious_branches(
 	std::vector<unsigned char>& code
 ) {
-	for (int i = 0; i < code.size(); i++) {
-		printf("%c [%d], ", code[i], i);
-	}
-	printf("\n");
-
 	std::vector<int64_t> branch_stack;
 	branch_stack.push_back(-1);
 
-	std::vector<int64_t> branch_lens(code.size() + 1);
+	std::vector<uint32_t> branch_lens(code.size() + 1);
 
 	std::vector<std::pair<int64_t,int64_t>> to_erase;
 
 	int64_t current_branch = -1;
-	printf("cb: %d\n", current_branch);
 	for (int64_t i = 0; i < code.size(); i++) {
 		if (code[i] == 'b') {
 			branch_stack.push_back(i);
 		}
 		else if (code[i] == 't') {
-			printf("bc %d len=%d\n", current_branch, branch_lens[current_branch+1]);
 			if (current_branch >= 0 && branch_lens[current_branch+1] == 0) {
 				to_erase.emplace_back(current_branch, i);
 			}
-
-			branch_stack.pop_back();
 			current_branch = branch_stack.back();
-			printf("cb: %d\n", current_branch);
+			branch_stack.pop_back();
 		}
 		else {
 			branch_lens[current_branch+1]++;
@@ -305,15 +296,9 @@ void remove_spurious_branches(
 	}
 
 	for (auto pair : to_erase) {
-		printf("%d %d %c %c\n", pair.first, pair.second, code[pair.first], code[pair.second]);
 		code[pair.first] = 's';
 		code[pair.second] = 's';
 	}
-
-	for (unsigned char c : code) {
-		printf("%c, ", c);
-	}
-	printf("\n");
 }
 
 std::vector<uint64_t> read_boc_index(
@@ -485,7 +470,6 @@ create_crack_codes(
 			start_node, code, sx, sy
 		);
 
-		printf("start: %d\n", adjusted_start_node);
 		remove_spurious_branches(code);
 
 		chains.push_back(
