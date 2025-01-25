@@ -225,7 +225,9 @@ def decode_condensed_pins_components(binary:bytes) -> dict:
   num_labels = int.from_bytes(labels_binary[offset:offset+8], 'little')
   offset += 8
   uniq = np.frombuffer(
-    labels_binary[offset:offset+num_labels*head.stored_data_width],
+    labels_binary,
+    offset=offset,
+    count=num_labels,
     dtype=head.stored_dtype
   )
   offset += num_labels * head.stored_data_width  
@@ -357,7 +359,9 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
   num_labels = int.from_bytes(labels_binary[:8], 'little')
   offset = 8
   uniq = np.frombuffer(
-    labels_binary[offset:offset+num_labels*head.stored_data_width],
+    labels_binary,
+    offset=offset,
+    count=num_labels,
     dtype=head.stored_dtype
   )
   idx = np.searchsorted(uniq, label)
@@ -368,13 +372,18 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
   next_offset = offset + head.num_grids() * head.component_width()
   dtype = width2dtype[head.component_width()]
 
-  components_per_grid = np.frombuffer(labels_binary[offset:next_offset], dtype=dtype)
+  components_per_grid = np.frombuffer(
+    labels_binary,
+    offset=offset,
+    count=head.num_grids(), 
+    dtype=dtype
+  )
   components_per_grid = np.cumsum(components_per_grid)
 
   offset = next_offset
 
   dtype = compute_dtype(num_labels)
-  cc_labels = np.frombuffer(labels_binary[offset:], dtype=dtype)
+  cc_labels = np.frombuffer(labels_binary, offset=offset, dtype=dtype)
 
   cc_idxs = np.where(cc_labels == idx)[0]
 
@@ -411,8 +420,10 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   num_labels = int.from_bytes(labels_binary[offset:offset+8], 'little')
   offset += 8
   uniq = np.frombuffer(
-    labels_binary[offset:offset+num_labels*head.stored_data_width],
-    dtype=head.stored_dtype
+    labels_binary,
+    offset=offset,
+    count=num_labels,
+    dtype=head.stored_dtype,
   )
   idx = np.searchsorted(uniq, label)
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
@@ -422,7 +433,9 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   component_dtype = width2dtype[head.component_width()]
   component_bytes = head.num_grids() * head.component_width()
   components_per_grid = np.frombuffer(
-    labels_binary[offset:offset+component_bytes], 
+    labels_binary,
+    offset=offset,
+    count=head.num_grids(),
     dtype=component_dtype
   )
   components_per_grid = np.cumsum(components_per_grid)
@@ -571,7 +584,7 @@ def extract_keys(binary:bytes) -> np.ndarray:
   idx_bytes = head.component_width() * head.sz
   offset = 8 + N * head.stored_data_width + idx_bytes
   key_width = compute_byte_width(N)
-  return np.frombuffer(raw[offset:], dtype=f'u{key_width}')
+  return np.frombuffer(raw, offset=offset, dtype=f'u{key_width}')
 
 def condense_unique(binary:bytes) -> bytes:
   """

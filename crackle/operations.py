@@ -105,7 +105,9 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
   offset += 8
   uniq_bytes = num_labels * head.stored_data_width
   all_labels = np.frombuffer(
-    binary[offset:offset+uniq_bytes],
+    binary,
+    offset=offset,
+    count=num_labels,
     dtype=head.stored_dtype
   )
   fastremap.remap(
