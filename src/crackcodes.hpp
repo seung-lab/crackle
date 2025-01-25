@@ -256,7 +256,7 @@ void remove_spurious_branches(
 	std::vector<std::pair<int64_t,int64_t>> to_erase;
 
 	int64_t current_branch = -1;
-	for (int64_t i = 0; i < code.size(); i++) {
+	for (int64_t i = 0; i < static_cast<int64_t>(code.size()); i++) {
 		if (code[i] == 'b') {
 			branch_stack.push_back(i);
 		}

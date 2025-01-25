@@ -239,7 +239,7 @@ extract_contours_helper(
 std::vector<std::vector<uint32_t>> merge_contours_via_vcg_coloring(
 	const std::vector<std::vector<uint32_t>>& contours,
 	const std::vector<uint8_t>& vcg,
-	std::unique_ptr<uint32_t[]>& cc_labels,
+	std::vector<uint32_t>& cc_labels,
 	const uint64_t N,
 	const uint64_t sx, const uint64_t sy
 ) {
@@ -270,7 +270,7 @@ std::vector<std::vector<uint32_t>> merge_contours_via_vcg_coloring(
 std::vector<std::vector<uint32_t>> 
 extract_contours(
 	std::vector<uint8_t>& vcg,
-	std::unique_ptr<uint32_t[]>& cc_labels,
+	std::vector<uint32_t>& cc_labels,
 	const uint64_t N,
 	const uint64_t sx, const uint64_t sy 
 ) {
