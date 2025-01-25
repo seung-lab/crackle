@@ -20,7 +20,7 @@ import numpy
 labels = np.load("example.npy") # a 2D or 3D dense segmentation
 
 binary = crackle.compress(labels, allow_pins=False, markov_model_order=0)
-labels = crackle.decompress(binary)
+labels = crackle.decompress(binary, parallel=0) # use all cores (default)
 
 # faster extraction of binary images
 binary_image = crackle.decompress(binary, label=1241)
@@ -57,7 +57,7 @@ labels = crackle.load("example.ckl.gz")
 # in a memory efficient manner.
 crackle.save(binary, "example.npy.gz")
 
-arr = crackle.CrackleArray(binary)
+arr = crackle.CrackleArray(binary, parallel=0) # 0 means use all cores (default)
 res = arr[:10,:10,:10] # array slicing (efficient z ranges)
 arr[:,:,30] = 20 # write to a crackle array (whole z slices write faster)
 20 in arr # log(N) check
