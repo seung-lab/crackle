@@ -94,10 +94,17 @@ def contains(binary:bytes, label:int) -> bool:
   else:
     return False
 
-def raw_labels(binary:bytes) -> bytes:
+def raw_labels(binary:bytes) -> np.ndarray:
+  """
+  Return only the labels section of the binary.
+
+  By default a bytes copy is made, but if array=True,
+  the result will be an immutable numpy array indexed
+  that points into the original binary with zero copies.
+  """
   header = CrackleHeader.frombytes(binary)
   offset = header.header_bytes + header.grid_index_bytes
-  return binary[offset:offset+header.num_label_bytes]
+  return np.frombuffer(binary, dtype=np.uint8, offset=offset, count=header.num_label_bytes)
 
 def nbytes(binary:bytes) -> np.ndarray:
   """Compute the size in bytes of the decompressed array."""
@@ -235,7 +242,9 @@ def decode_condensed_pins_components(binary:bytes) -> dict:
   component_dtype = width2dtype[head.component_width()]
   component_bytes = head.num_grids() * head.component_width()
   components_per_grid = np.frombuffer(
-    labels_binary[offset:offset+component_bytes], 
+    labels_binary,
+    offset=offset,
+    count=head.num_grids(), 
     dtype=component_dtype
   )
   offset += component_bytes
@@ -243,11 +252,11 @@ def decode_condensed_pins_components(binary:bytes) -> dict:
   combined_width = labels_binary[offset]
   offset += 1
 
-  num_pins_width = 2 ** (combined_width & 0b11)
-  depth_width = 2 ** ((combined_width >> 2) & 0b11)
-  cc_labels_width = 2 ** ((combined_width >> 4) & 0b11)
+  num_pins_width = int(2 ** (combined_width & 0b11))
+  depth_width = int(2 ** ((combined_width >> 2) & 0b11))
+  cc_labels_width = int(2 ** ((combined_width >> 4) & 0b11))
 
-  pinset = labels_binary[offset:]
+  pinset = np.frombuffer(labels_binary, offset=offset, dtype=np.uint8)
 
   return {
     "bgcolor": bgcolor,
@@ -289,16 +298,18 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
   for label in range(uniq.size):
     n_pins = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
-    index_arr = np.frombuffer(pinset[offset:offset+n_pins*idtype.itemsize], dtype=idtype)
+    
+    index_arr = np.frombuffer(pinset, offset=offset, count=n_pins, dtype=idtype)
     index_arr = np.cumsum(index_arr)
+
     offset += n_pins*idtype.itemsize
-    depth_arr = np.frombuffer(pinset[offset:offset+n_pins*ddtype.itemsize], dtype=ddtype)
+    depth_arr = np.frombuffer(pinset, offset=offset, count=n_pins, dtype=ddtype)
     offset += n_pins * ddtype.itemsize
     pins[uniq[label]] = [ PinTuple(i,d) for i,d in zip(index_arr, depth_arr) ]
 
     num_cc_labels = int.from_bytes(pinset[offset:offset+num_pins_width], 'little')
     offset += num_pins_width
-    cc_labels = np.frombuffer(pinset[offset:offset+num_cc_labels*cc_labels_width], dtype=cdtype)
+    cc_labels = np.frombuffer(pinset, offset=offset, count=num_cc_labels, dtype=cdtype)
     cc_labels = np.cumsum(cc_labels)
     offset += num_cc_labels * cc_labels_width
 
@@ -407,6 +418,15 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
       break
 
   return (int(z_start), int(z_end+1))
+
+# def create_label_search_index(binary:bytes) -> Dict[int,List[int]]:
+#   """
+#   Scan the labels section to build an index of 
+#   label -> grid sections.
+#   """
+#   index = defaultdict(list)
+#   labels_binary = raw_labels(binary)
+
 
 def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   head = header(binary)
