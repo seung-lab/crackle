@@ -157,10 +157,19 @@ def component_lengths(binary:bytes):
   return { k:len(v) for k,v in components(binary).items() }
 
 def grid_index(binary:bytes, ignore_crc_check:bool = False) -> np.ndarray:
+  """
+  The grid index provides the offsets into the binary 
+  for the crack codes for a given grid space.
+  """
   head = CrackleHeader.frombytes(binary)
   
   offset = head.header_bytes
-  z_index_binary = binary[offset:offset + head.grid_index_bytes]
+  z_index_binary = np.frombuffer(
+    binary, 
+    offset=offset, 
+    count=head.grid_index_bytes, 
+    dtype=np.uint8
+  )
 
   if head.format_version == 0:
     z_index = np.frombuffer(z_index_binary, dtype=np.uint32)
@@ -317,8 +326,7 @@ def decode_condensed_pins(binary:bytes) -> np.ndarray:
 
   return pins, single_labels
 
-def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
-  head = header(binary)
+def decode_flat_labels(head:CrackleHeader, binary:bytes):
   if head.label_format != LabelFormat.FLAT:
     raise FormatError("Must be flat labels format.")
 
@@ -326,7 +334,7 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
   num_labels = int.from_bytes(labels_binary[:8], 'little')
   offset = 8
 
-  uniq_bytes = num_labels * np.dtype(stored_dtype).itemsize
+  uniq_bytes = num_labels * np.dtype(head.stored_dtype).itemsize
   uniq = labels(binary)
 
   offset += uniq_bytes

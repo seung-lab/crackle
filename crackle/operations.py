@@ -196,7 +196,7 @@ def _zstack_flat_labels(
     if binary is None:
       continue
     head = CrackleHeader.frombytes(binary)
-    elements = decode_flat_labels(binary, head.stored_dtype, head.dtype, head.sz)
+    elements = decode_flat_labels(head, binary)
     component_index.append(elements["components_per_grid"])
     
     local_uniq = elements["unique"]
@@ -663,7 +663,7 @@ def ones(shape, dtype=None, order="C"):
 
 def operator(binary:bytes, fn) -> bytes:
   head = header(binary)
-  parts = decode_flat_labels(binary, head.stored_dtype, head.dtype, head.sz)
+  parts = decode_flat_labels(head, binary)
   parts["unique"] = fn(parts["unique"])
 
   head.stored_data_width = compute_byte_width(parts["unique"][-1])
