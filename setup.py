@@ -25,6 +25,9 @@ setuptools.setup(
     "remote": [
       "cloud-files",
     ],
+    "search": [
+      "mapbuffer",
+    ],
   },
   ext_modules=[
     Pybind11Extension(

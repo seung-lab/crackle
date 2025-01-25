@@ -427,15 +427,6 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
 
   return (int(z_start), int(z_end+1))
 
-# def create_label_search_index(binary:bytes) -> Dict[int,List[int]]:
-#   """
-#   Scan the labels section to build an index of 
-#   label -> grid sections.
-#   """
-#   index = defaultdict(list)
-#   labels_binary = raw_labels(binary)
-
-
 def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   head = header(binary)
   labels_binary = raw_labels(binary)
