@@ -540,6 +540,7 @@ LABEL* decompress(
 	if (parallel == 0) {
 		parallel = std::thread::hardware_concurrency();
 	}
+	parallel = std::min(parallel, static_cast<size_t>(szr));
 
 	ThreadPool pool(parallel);
 
@@ -695,7 +696,7 @@ point_cloud(
 	int64_t z_start = -1,
 	int64_t z_end = -1,
 	const int64_t label = -1,
-	const size_t parallel = 1
+	size_t parallel = 1
 ) {
 
 	if (num_bytes < CrackleHeader::header_size) {
@@ -743,7 +744,14 @@ point_cloud(
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
+	uint64_t num_labels = crackle::labels::num_labels(binary);
 	std::unordered_map<uint64_t, std::vector<uint16_t>> ptc;
+	ptc.reserve(num_labels / (header.sz / szr));
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, static_cast<size_t>(szr));
 
 	ThreadPool pool(parallel);
 
@@ -1110,13 +1118,14 @@ voxel_counts(
 
 	uint64_t num_labels = crackle::labels::num_labels(binary);
 	std::unordered_map<uint64_t, uint64_t> cts;
-	cts.reserve(num_labels);
+	cts.reserve(num_labels / (header.sz / szr));
 
 	const uint64_t sxy = header.sx * header.sy;
 
 	if (parallel == 0) {
 		parallel = std::thread::hardware_concurrency();
 	}
+	parallel = std::min(parallel, static_cast<size_t>(szr));
 
 	ThreadPool pool(parallel);
 
