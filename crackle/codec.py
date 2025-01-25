@@ -26,8 +26,10 @@ def labels(binary:bytes) -> np.ndarray:
     num_labels = int.from_bytes(binary[offset:offset+8], 'little')
     offset += 8
     return np.frombuffer(
-      binary[offset:offset+num_labels*head.stored_data_width],
-      dtype=head.stored_dtype
+      binary, 
+      dtype=head.stored_dtype,
+      offset=offset,
+      count=num_labels, 
     ).astype(head.dtype, copy=False)
   else:
     # bgcolor, num labels (u64), N labels, pins
@@ -35,8 +37,10 @@ def labels(binary:bytes) -> np.ndarray:
     num_labels = int.from_bytes(binary[offset:offset+8], 'little')
     offset += 8
     labels = np.frombuffer(
-      binary[offset:offset+num_labels*head.stored_data_width],
-      dtype=head.stored_dtype
+      binary, 
+      dtype=head.stored_dtype,
+      offset=offset,
+      count=num_labels,
     )
     bgcolor = background_color(binary)
     labels = np.concatenate(([ bgcolor ], labels))
@@ -79,7 +83,9 @@ def contains(binary:bytes, label:int) -> bool:
   num_labels = int.from_bytes(binary[offset:offset+8], 'little')
   offset += 8
   uniq = np.frombuffer(
-    binary[offset:offset+num_labels*head.stored_data_width],
+    binary,
+    offset=offset,
+    count=num_labels,
     dtype=head.stored_dtype
   )
   idx = np.searchsorted(uniq, label)
