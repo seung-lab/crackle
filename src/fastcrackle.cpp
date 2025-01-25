@@ -263,7 +263,8 @@ py::dict point_cloud(
 	const py::buffer buffer, 
 	const int64_t z_start = 0, 
 	const int64_t z_end = -1,
-	const int64_t label = -1
+	const int64_t label = -1,
+	const size_t parallel = 1
 ) {
 	py::buffer_info info = buffer.request();
 
@@ -272,7 +273,7 @@ py::dict point_cloud(
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
-	auto ptc = crackle::point_cloud(data, info.size, z_start, z_end, label);
+	auto ptc = crackle::point_cloud(data, info.size, z_start, z_end, label, parallel);
 
 	py::dict py_ptc;
 	for (const auto& [key, vec] : ptc) {

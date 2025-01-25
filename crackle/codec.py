@@ -1,5 +1,6 @@
 from typing import List, Optional, Tuple, Sequence, Union, Dict
 from collections import namedtuple
+import multiprocessing as mp
 
 import numpy as np
 import fastremap
@@ -669,7 +670,9 @@ def condense_unique(binary:bytes) -> bytes:
   ])
 
 def point_cloud(
-  binary:bytes, label:Optional[int] = None
+  binary:bytes, 
+  label:Optional[int] = None,
+  parallel:int = 1
 ) -> Union[np.ndarray, Dict[int,np.ndarray]]:
   """
   Extract surface point clouds from the image without fully
@@ -690,7 +693,10 @@ def point_cloud(
   else:
     z_start, z_end = z_range_for_label(binary, label)
 
-  ptc = fastcrackle.point_cloud(binary, z_start, z_end, label)
+  if parallel <= 0:
+    parallel = mp.cpu_count()
+
+  ptc = fastcrackle.point_cloud(binary, z_start, z_end, label, parallel)
   
   if len(ptc) == 0:
     if label:
