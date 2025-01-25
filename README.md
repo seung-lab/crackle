@@ -66,8 +66,7 @@ arr = arr.numpy() # convert to a numpy array
 # low memory extraction of point clouds
 ptc = crackle.point_cloud(binary) # { label: np.ndarray, ... }
 ptc = crackle.point_cloud(binary, label=777)
-# use 4 threads (but also more RAM for scratch space)
-ptc = crackle.point_cloud(binary, parallel=4) 
+ptc = crackle.point_cloud(binary) 
 
 # rapid and low memory
 voxel_counts = crackle.voxel_counts(binary)
