@@ -91,7 +91,7 @@ void ThreadPool::start(size_t threads) {
                         task = std::move(this->tasks.front());
                         this->tasks.pop();
                     }
-
+                    
                     task(i);
                 }
             }

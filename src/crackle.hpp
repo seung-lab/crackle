@@ -805,19 +805,19 @@ auto point_cloud(
 	if (header.data_width == 1) {
 		return point_cloud<uint8_t>(
 			buffer, num_bytes,
-			z_start, z_end, label
+			z_start, z_end, label, parallel
 		);
 	}
 	else if (header.data_width == 2) {
 		return point_cloud<uint16_t>(
 			buffer, num_bytes,
-			z_start, z_end, label
+			z_start, z_end, label, parallel
 		);
 	}
 	else if (header.data_width == 4) {
 		return point_cloud<uint32_t>(
 			buffer, num_bytes,
-			z_start, z_end, label
+			z_start, z_end, label, parallel
 		);
 	}
 	else {
