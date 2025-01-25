@@ -331,6 +331,12 @@ uint64_t decode_num_labels(
 	}
 }
 
+uint64_t num_labels(const std::span<const unsigned char> &binary) {
+	const CrackleHeader header(binary);
+	std::span<const unsigned char> labels_binary = raw_labels(binary);
+	return decode_num_labels(header, labels_binary);
+}
+
 template <typename STORED_LABEL>
 std::vector<STORED_LABEL> decode_uniq(
 	const CrackleHeader &header,

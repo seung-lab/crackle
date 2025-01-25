@@ -22,11 +22,12 @@ from .lib import crc32c
 import numpy as np
 
 class CrackleArray:
-  def __init__(self, binary:bytes):
+  def __init__(self, binary:bytes, parallel:int = 0):
     self.binary = binary
 
     head = header(self.binary)
     self.shape = (head.sx, head.sy, head.sz)
+    self.parallel = parallel
 
   def __len__(self):
     return len(self.binary)
@@ -65,7 +66,7 @@ class CrackleArray:
     return num_labels(self.binary)
 
   def voxel_counts(self) -> dict:
-    return voxel_counts(self.binary)
+    return voxel_counts(self.binary, parallel=self.parallel)
 
   def min(self) -> int:
     return codec.min(self.binary)
@@ -88,11 +89,11 @@ class CrackleArray:
   def numpy(self, *args, **kwargs) -> np.ndarray:
     return self.decompress(*args, **kwargs)
 
-  def decompress(self, label:Optional[int] = None, parallel:int = 0) -> bytes:
-    return decompress(self.binary, label, parallel=parallel)
+  def decompress(self, label:Optional[int] = None) -> bytes:
+    return decompress(self.binary, label, parallel=self.parallel)
 
-  def point_cloud(self, label:Optional[int] = None, parallel:int = 1) -> np.ndarray:
-    return point_cloud(self.binary, label, parallel=parallel)
+  def point_cloud(self, label:Optional[int] = None) -> np.ndarray:
+    return point_cloud(self.binary, label, parallel=self.parallel)
 
   def save(self, filelike):
     import crackle.util
@@ -146,7 +147,11 @@ class CrackleArray:
     while len(slcs) < 3:
        slcs += (slice(None, None, None),)
 
-    img = decompress_range(self.binary, slices[2].start, slices[2].stop, parallel=0)
+    img = decompress_range(
+      self.binary, 
+      slices[2].start, slices[2].stop, 
+      parallel=self.parallel
+    )
     zslc = slice(None, None, slices[2].step)
     if isinstance(slcs[2], (int, np.integer)):
       zslc = 0

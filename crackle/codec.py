@@ -798,7 +798,11 @@ def check(binary:bytes):
 
   return sections
 
-def voxel_counts(binary:bytes, label:Optional[int] = None) -> Dict[int,int]:
+def voxel_counts(
+  binary:bytes, 
+  label:Optional[int] = None,
+  parallel:int = 0,
+) -> Dict[int,int]:
   """
   Count the number of voxels per a label.
 
@@ -813,7 +817,7 @@ def voxel_counts(binary:bytes, label:Optional[int] = None) -> Dict[int,int]:
   else:
     z_start, z_end = z_range_for_label(binary, label)
 
-  vcts = fastcrackle.voxel_counts(binary, z_start, z_end)
+  vcts = fastcrackle.voxel_counts(binary, z_start, z_end, parallel)
 
   if label is not None:
     return vcts[label]

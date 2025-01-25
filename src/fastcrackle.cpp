@@ -290,7 +290,8 @@ py::dict point_cloud(
 py::dict voxel_counts(
 	const py::buffer &buffer,
 	const int64_t z_start = 0, 
-	const int64_t z_end = -1
+	const int64_t z_end = -1,
+	size_t parallel = 1
 ) {
 	py::buffer_info info = buffer.request();
 
@@ -299,7 +300,7 @@ py::dict voxel_counts(
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
-	auto cts = crackle::voxel_counts(data, info.size, z_start, z_end);
+	auto cts = crackle::voxel_counts(data, info.size, z_start, z_end, parallel);
 
 	py::dict pycts;
 	for (const auto& [label, ct] : cts) {

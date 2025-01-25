@@ -1059,7 +1059,8 @@ voxel_counts(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
 	int64_t z_start = -1,
-	int64_t z_end = -1
+	int64_t z_end = -1,
+	size_t parallel = 1
 ) {
 
 	if (num_bytes < CrackleHeader::header_size) {
@@ -1107,42 +1108,64 @@ voxel_counts(
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
+	uint64_t num_labels = crackle::labels::num_labels(binary);
 	std::unordered_map<uint64_t, uint64_t> cts;
-
-	std::vector<uint8_t> vcg(header.sx * header.sy);
-	std::unique_ptr<uint32_t[]> ccl(new uint32_t[header.sx * header.sy]());
+	cts.reserve(num_labels);
 
 	const uint64_t sxy = header.sx * header.sy;
 
-	uint32_t z = z_start;
-	for (auto crack_code : crack_codes) {
-		crack_code_to_vcg(
-			/*code=*/crack_code,
-			/*sx=*/header.sx, /*sy=*/header.sy,
-			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
-			/*markov_model=*/markov_model,
-			/*slice_edges=*/vcg.data()
-		);
-
-		uint64_t N = 0;
-		crackle::cc3d::color_connectivity_graph<uint32_t>(
-			vcg, header.sx, header.sy, 1, ccl.get(), N
-		);
-
-		std::vector<LABEL> label_map = decode_label_map<LABEL>(
-			header, binary, ccl.get(), N, z, z+1
-		);
-		std::vector<uint64_t> subcounts(N);
-
-		for (uint64_t i = 0; i < sxy; i++) {
-			subcounts[ccl[i]]++;
-		}
-		for (uint64_t i = 0; i < N; i++) {
-				cts[label_map[i]] += subcounts[i];
-		}
-
-		z++;
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
 	}
+
+	ThreadPool pool(parallel);
+
+	std::vector<std::vector<uint8_t>> vcgs(parallel);
+	std::vector<std::vector<uint32_t>> ccls(parallel);
+
+	for (size_t t = 0; t < parallel; t++) {
+		vcgs[t].resize(sxy);
+		ccls[t].resize(sxy);
+	}
+
+	std::mutex mtx;
+
+	for (size_t z = z_start, i = 0; i < crack_codes.size(); z++, i++) {
+			pool.enqueue([&,z,i](size_t t){
+				std::vector<uint8_t>& vcg = vcgs[t];
+				std::vector<uint32_t>& ccl = ccls[t];
+				auto& crack_code = crack_codes[i];
+
+				crack_code_to_vcg(
+					/*code=*/crack_code,
+					/*sx=*/header.sx, /*sy=*/header.sy,
+					/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+					/*markov_model=*/markov_model,
+					/*slice_edges=*/vcg.data()
+				);
+
+				uint64_t N = 0;
+				crackle::cc3d::color_connectivity_graph<uint32_t>(
+					vcg, header.sx, header.sy, 1, ccl.data(), N
+				);
+
+				std::vector<LABEL> label_map = decode_label_map<LABEL>(
+					header, binary, ccl.data(), N, z, z+1
+				);
+				std::vector<uint64_t> subcounts(N);
+
+				for (uint64_t i = 0; i < sxy; i++) {
+					subcounts[ccl[i]]++;
+				}
+
+				std::unique_lock<std::mutex> lock(mtx);
+				for (uint64_t i = 0; i < N; i++) {
+						cts[label_map[i]] += subcounts[i];
+				}
+		});
+	}
+
+	pool.join();
 
 	return cts;
 }
@@ -1151,32 +1174,33 @@ auto voxel_counts(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
 	int64_t z_start = -1,
-	int64_t z_end = -1
+	int64_t z_end = -1,
+	size_t parallel = 1
 ) {
 	CrackleHeader header(buffer);
 
 	if (header.data_width == 1) {
 		return voxel_counts<uint8_t>(
 			buffer, num_bytes,
-			z_start, z_end
+			z_start, z_end, parallel
 		);
 	}
 	else if (header.data_width == 2) {
 		return voxel_counts<uint16_t>(
 			buffer, num_bytes,
-			z_start, z_end
+			z_start, z_end, parallel
 		);
 	}
 	else if (header.data_width == 4) {
 		return voxel_counts<uint32_t>(
 			buffer, num_bytes,
-			z_start, z_end
+			z_start, z_end, parallel
 		);
 	}
 	else {
 		return voxel_counts<uint64_t>(
 			buffer, num_bytes,
-			z_start, z_end
+			z_start, z_end, parallel
 		);
 	}
 }
@@ -1184,12 +1208,13 @@ auto voxel_counts(
 auto voxel_counts(
 	const std::string &buffer,
 	const int64_t z_start = -1, 
-	const int64_t z_end = -1
+	const int64_t z_end = -1,
+	size_t parallel = 1
 ) {
 	return voxel_counts(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size(),
-		z_start, z_end
+		z_start, z_end, parallel
 	);
 }
 
