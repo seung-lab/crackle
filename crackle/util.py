@@ -12,7 +12,7 @@ from .headers import CrackleHeader
 
 import numpy as np
 
-def _load(filelike, allow_mmap:bool = False, size:int = -1):
+def _load(filelike, size:int = -1, allow_mmap:bool = False):
   if hasattr(filelike, 'read'):
     binary = filelike.read(size)
   elif (
@@ -48,7 +48,7 @@ def load_num_labels(filelike, **kwargs):
     startpos = filelike.tell()
 
   head = load_header(filelike, ignore_crc_check=kwargs.get("ignore_crc_check", False))
-  readlen = head.header_bytes + head.sz * 4 + 16
+  readlen = head.header_bytes + head.grid_index_bytes + 16
   if hasattr(filelike, "seek"):
     filelike.seek(startpos)
 
