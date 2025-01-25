@@ -314,21 +314,25 @@ def decode_flat_labels(binary:bytes, stored_dtype, dtype, sz:int):
   offset = 8
 
   uniq_bytes = num_labels * np.dtype(stored_dtype).itemsize
-  uniq = np.frombuffer(labels_binary[offset:offset+uniq_bytes], dtype=stored_dtype)
-  uniq = uniq.astype(dtype, copy=False)
+  uniq = labels(binary)
 
   offset += uniq_bytes
   component_dtype = width2dtype[head.component_width()]
-  component_bytes = head.num_grids() * head.component_width()
   components_per_grid = np.frombuffer(
-    labels_binary[offset:offset+component_bytes], 
+    labels_binary,
+    offset=offset,
+    count=head.num_grids(),
     dtype=component_dtype
   )
 
-  offset += component_bytes
+  offset += components_per_grid.nbytes
 
   cc_label_dtype = compute_dtype(num_labels)
-  cc_map = np.frombuffer(labels_binary[offset:], dtype=cc_label_dtype)
+  cc_map = np.frombuffer(
+    labels_binary,
+    offset=offset, 
+    dtype=cc_label_dtype
+  )
   
   return {
     "num_labels": num_labels,
