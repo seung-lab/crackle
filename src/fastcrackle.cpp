@@ -17,7 +17,8 @@ py::array decompress_helper(
 	const crackle::CrackleHeader& head, 
 	const uint8_t* buffer,
 	const uint64_t num_bytes,
-	int64_t z_start, int64_t z_end
+	int64_t z_start, int64_t z_end,
+	size_t parallel
 ) {
 	int64_t voxels = head.sx * head.sy;
 	z_start = std::max(z_start, static_cast<int64_t>(0));
@@ -35,14 +36,15 @@ py::array decompress_helper(
 	crackle::decompress<LABEL>(
 		buffer, num_bytes,
 		reinterpret_cast<LABEL*>(const_cast<void*>(arr.data())),
-		z_start, z_end
+		z_start, z_end, parallel
 	);
 	return arr;
 }
 
 py::array decompress(
 	const py::buffer buffer, 
-	const int64_t z_start = 0, const int64_t z_end = -1
+	const int64_t z_start = 0, const int64_t z_end = -1,
+	const size_t parallel = 1
 ) {
 	py::buffer_info info = buffer.request();
 
@@ -58,22 +60,22 @@ py::array decompress(
 
 	if (head.data_width == 1) {
 		labels = decompress_helper<uint8_t>(
-			head, data, info.size, z_start, z_end
+			head, data, info.size, z_start, z_end, parallel
 		);
 	}
 	else if (head.data_width == 2) {
 		labels = decompress_helper<uint16_t>(
-			head, data, info.size, z_start, z_end
+			head, data, info.size, z_start, z_end, parallel
 		);
 	}
 	else if (head.data_width == 4) {
 		labels = decompress_helper<uint32_t>(
-			head, data, info.size, z_start, z_end
+			head, data, info.size, z_start, z_end, parallel
 		);	
 	}
 	else {
 		labels = decompress_helper<uint64_t>(
-			head, data, info.size, z_start, z_end
+			head, data, info.size, z_start, z_end, parallel
 		);
 	}
 	

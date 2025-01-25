@@ -497,7 +497,11 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
 
   return (int(z_start), int(z_end))
 
-def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
+def decompress_binary_image(
+  binary:bytes, 
+  label:Optional[int],
+  parallel:int,
+) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
   header = CrackleHeader.frombytes(binary)
   order = "F" if header.fortran_order else "C"
@@ -506,20 +510,29 @@ def decompress_binary_image(binary:bytes, label:Optional[int]) -> np.ndarray:
   if z_start == -1 and z_end == -1:
     return image
 
-  cutout = decompress_range(binary, z_start, z_end)
+  cutout = decompress_range(binary, z_start, z_end, parallel)
   image[:,:,z_start:z_end] = (cutout == label)
   return image
 
-def decompress(binary:bytes, label:Optional[int] = None) -> np.ndarray:
+def decompress(
+  binary:bytes, 
+  label:Optional[int] = None,
+  parallel:int = 0
+) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array. 
   If label is provided, decompress into  a binary (bool) image.
   """
   if label is None:
-    return decompress_range(binary, None, None)
-  return decompress_binary_image(binary, label)
+    return decompress_range(binary, None, None, parallel)
+  return decompress_binary_image(binary, label, parallel)
 
-def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -> np.ndarray:
+def decompress_range(
+  binary:bytes, 
+  z_start:Optional[int], 
+  z_end:Optional[int],
+  parallel:int,
+) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array.
 
@@ -539,7 +552,7 @@ def decompress_range(binary:bytes, z_start:Optional[int], z_end:Optional[int]) -
   if (sx * sy * sz == 0):
     labels = np.zeros((0,), dtype=header.dtype)
   else:
-    labels = fastcrackle.decompress(binary, z_start, z_end)
+    labels = fastcrackle.decompress(binary, z_start, z_end, parallel)
 
   order = 'F' if header.fortran_order else 'C'
   labels = labels.reshape((sx,sy,z_end - z_start), order=order)

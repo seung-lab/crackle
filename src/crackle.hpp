@@ -477,7 +477,8 @@ LABEL* decompress(
 	const size_t num_bytes,
 	LABEL* output = NULL,
 	int64_t z_start = -1,
-	int64_t z_end = -1
+	int64_t z_end = -1,
+	size_t parallel = 1
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
@@ -530,55 +531,71 @@ LABEL* decompress(
 
 	const uint64_t sxy = header.sx * header.sy;
 
-	std::unique_ptr<uint32_t[]> cc_labels(new uint32_t[sxy]);
 	std::span<const uint32_t> crack_code_crcs;
 
 	if (header.format_version > 0) {
 		crack_code_crcs = get_crack_code_crcs(header, binary);
 	}
 
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+
+	ThreadPool pool(parallel);
+
+	std::vector<std::vector<uint32_t>> cc_labels_scratch(parallel);
+	for (size_t t = 0; t < parallel; t++) {
+		cc_labels_scratch[t].resize(sxy);
+	}
+
 	for (uint64_t z = 0; z < static_cast<uint64_t>(szr); z++) {
-		uint64_t N = 0;
-		crack_codes_to_cc_labels<uint32_t>(
-			crack_codes[z], header.sx, header.sy,
-			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
-			/*N=*/N,
-			/*markov_model*/markov_model,
-			/*output=*/cc_labels.get()
-		);
+		pool.enqueue([&,z](size_t t) {
+			std::vector<uint32_t>& cc_labels = cc_labels_scratch[t];
 
-		if (header.format_version > 0) {
-			const uint32_t computed_crc = crackle::crc::crc32c(cc_labels.get(), sxy);
+			uint64_t N = 0;
+			crack_codes_to_cc_labels<uint32_t>(
+				crack_codes[z], header.sx, header.sy,
+				/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
+				/*N=*/N,
+				/*markov_model*/markov_model,
+				/*output=*/cc_labels.data()
+			);
 
-			if (crack_code_crcs[z_start + z] != computed_crc) {
-				std::string err = "crackle: crack code crc mismatch on z=";
-				err += std::to_string(z_start + z);
-				err += " computed: ";
-				err += std::to_string(computed_crc);
-				err += " stored: ";
-				err += std::to_string(crack_code_crcs[z_start + z]);
-				throw std::runtime_error(err);
-			}
-		}
+			if (header.format_version > 0) {
+				const uint32_t computed_crc = crackle::crc::crc32c(cc_labels.data(), sxy);
 
-		const std::vector<LABEL> label_map = decode_label_map<LABEL>(
-			header, binary, cc_labels.get(), N, z_start+z, z_start+z+1
-		);
-
-		if (header.fortran_order) {
-			for (uint64_t i = 0; i < sxy; i++) {
-				output[i + z * sxy] = label_map[cc_labels[i]];
-			}
-		}
-		else {
-			uint64_t i = 0;
-			for (uint64_t y = 0; y < header.sy; y++) {
-				for (uint64_t x = 0; x < header.sx; x++, i++) {
-					output[z + szr * (y + header.sy * x)] = label_map[cc_labels[i]];
+				if (crack_code_crcs[z_start + z] != computed_crc) {
+					std::string err = "crackle: crack code crc mismatch on z=";
+					err += std::to_string(z_start + z);
+					err += " computed: ";
+					err += std::to_string(computed_crc);
+					err += " stored: ";
+					err += std::to_string(crack_code_crcs[z_start + z]);
+					throw std::runtime_error(err);
 				}
 			}
-		}
+
+			const std::vector<LABEL> label_map = decode_label_map<LABEL>(
+				header, binary, cc_labels.data(), N, z_start+z, z_start+z+1
+			);
+
+			if (header.fortran_order) {
+				for (uint64_t i = 0; i < sxy; i++) {
+					output[i + z * sxy] = label_map[cc_labels[i]];
+				}
+			}
+			else {
+				uint64_t i = 0;
+				for (uint64_t y = 0; y < header.sy; y++) {
+					for (uint64_t x = 0; x < header.sx; x++, i++) {
+						output[z + szr * (y + header.sy * x)] = label_map[cc_labels[i]];
+					}
+				}
+			}
+		});
 	}
+
+	pool.join();
 
 	return output;
 }
@@ -587,13 +604,15 @@ template <typename LABEL>
 LABEL* decompress(
 	const std::vector<unsigned char>& buffer,
 	LABEL* output = NULL,
-	const int64_t z_start = -1, const int64_t z_end = -1
+	const int64_t z_start = -1, const int64_t z_end = -1,
+	size_t parallel = 1
 ) {
 	return decompress<LABEL>(
 		buffer.data(),
 		buffer.size(),
 		output,
-		z_start, z_end
+		z_start, z_end,
+		parallel
 	);
 }
 
@@ -601,13 +620,15 @@ template <typename LABEL>
 LABEL* decompress(
 	const std::span<const unsigned char>& buffer,
 	LABEL* output = NULL,
-	const int64_t z_start = -1, const int64_t z_end = -1
+	const int64_t z_start = -1, const int64_t z_end = -1,
+	size_t parallel = 1
 ) {
 	return decompress<LABEL>(
 		buffer.data(),
 		buffer.size(),
 		output,
-		z_start, z_end
+		z_start, z_end,
+		parallel
 	);
 }
 
@@ -616,13 +637,15 @@ template <typename LABEL>
 LABEL* decompress(
 	const std::string &buffer,
 	LABEL* output = NULL,
-	const int64_t z_start = -1, const int64_t z_end = -1
+	const int64_t z_start = -1, const int64_t z_end = -1,
+	size_t parallel = 1
 ) {
 	return decompress<LABEL>(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size(),
 		output,
-		z_start, z_end
+		z_start, z_end,
+		parallel
 	);
 }
 

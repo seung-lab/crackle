@@ -85,11 +85,11 @@ class CrackleArray:
   def renumber(self, start:int = 0) -> bytes:
     return CrackleArray(renumber(self.binary, start))
 
-  def numpy(self) -> np.ndarray:
-    return self.decompress()
+  def numpy(self, *args, **kwargs) -> np.ndarray:
+    return self.decompress(*args, **kwargs)
 
-  def decompress(self, label:Optional[int] = None) -> bytes:
-    return decompress(self.binary, label)
+  def decompress(self, label:Optional[int] = None, parallel:int = 0) -> bytes:
+    return decompress(self.binary, label, parallel=parallel)
 
   def point_cloud(self, label:Optional[int] = None, parallel:int = 1) -> np.ndarray:
     return point_cloud(self.binary, label, parallel=parallel)
@@ -146,7 +146,7 @@ class CrackleArray:
     while len(slcs) < 3:
        slcs += (slice(None, None, None),)
 
-    img = decompress_range(self.binary, slices[2].start, slices[2].stop)
+    img = decompress_range(self.binary, slices[2].start, slices[2].stop, parallel=0)
     zslc = slice(None, None, slices[2].step)
     if isinstance(slcs[2], (int, np.integer)):
       zslc = 0
