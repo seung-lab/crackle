@@ -146,10 +146,10 @@ def components(binary:bytes):
   cs = hl + ll + il
 
   return {
-    'header': binary[:hl],
-    'z_index': binary[hl:hl+il],
-    'labels': binary[hl+il:hl+ll+il],
-    'crack_codes': binary[cs:cs+cl],
+    'header': np.frombuffer(binary, count=hl, dtype=np.uint8),
+    'z_index': np.frombuffer(binary, offset=hl, count=il, dtype=np.uint8),
+    'labels': np.frombuffer(binary, offset=hl+il, count=ll, dtype=np.uint8),
+    'crack_codes': np.frombuffer(binary, offset=cs, count=cl, dtype=np.uint8),
     'crcs': binary[-crcl:],
   }
 
