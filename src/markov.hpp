@@ -188,15 +188,17 @@ namespace markov {
 		return std::make_tuple(nodes, codepoints);
 	}
 
-	std::vector<robin_hood::unordered_flat_map<uint8_t,int>> 
+	std::vector<std::vector<uint32_t>> 
 	gather_statistics(
 		const std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> &crack_codes,
 		const uint64_t model_order
 	) {
-		std::vector<robin_hood::unordered_flat_map<uint8_t,int>> stats(
-			pow(4, model_order)
-		);
-
+		const size_t n_rows = pow(4, model_order);
+		std::vector<std::vector<uint32_t>> stats(n_rows);
+		for (uint64_t i = 0; i < n_rows; i++) {
+			stats[i].resize(4);
+		}
+		
 		for (auto slice : crack_codes) {
 			auto [nodes, code] = difference_codepoints(slice);
 			CircularBuf buf(model_order);
@@ -211,11 +213,11 @@ namespace markov {
 	}
 
 	std::vector<std::vector<uint8_t>> stats_to_model(
-		std::vector<robin_hood::unordered_flat_map<uint8_t,int>>& stats
+		std::vector<std::vector<uint32_t>>& stats
 	) {
 		struct {
 			bool operator()(
-				robin_hood::pair<uint8_t,int>& a, robin_hood::pair<uint8_t,int>& b
+				robin_hood::pair<uint8_t,uint32_t>& a, robin_hood::pair<uint8_t,uint32_t>& b
 			) const { 
 				return a.second >= b.second;
 			}
@@ -226,10 +228,10 @@ namespace markov {
 
 		std::vector<std::vector<uint8_t>> model(stats.size());
 		for (uint64_t i = 0; i < model.size(); i++) {
-			std::vector<robin_hood::pair<uint8_t,int>> pair_row;
+			std::vector<robin_hood::pair<uint8_t,uint32_t>> pair_row;
 			pair_row.reserve(4);
-			for (auto& pair : stats[i]) {
-				pair_row.push_back(pair);
+			for (int l = 0; l < 4; l++) {
+				pair_row.emplace_back(l, stats[i][l]);
 			}
 			// most frequent in lowest index
 			std::sort(pair_row.begin(), pair_row.end(), CmpIndex);
