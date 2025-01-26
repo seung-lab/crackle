@@ -118,22 +118,32 @@ std::vector<unsigned char> compress_helper(
 
 	std::vector<unsigned char> stored_model; // only needed for markov
 	std::vector<std::vector<unsigned char>> crack_codes(crack_codepoints.size());
+
+	ThreadPool pool(parallel);
+
 	if (header.markov_model_order > 0) {
 		auto stats = crackle::markov::gather_statistics(crack_codepoints, header.markov_model_order);
 		auto model = crackle::markov::stats_to_model(stats);
 		stored_model = crackle::markov::to_stored_model(model);
 
 		for (uint64_t z = 0; z < crack_codepoints.size(); z++) {
-			crack_codes[z] = crackle::markov::compress(
-				crack_codepoints[z], model, header.markov_model_order,
-				sx, sy
-			);
+			pool.enqueue([&,z](size_t t){
+				crack_codes[z] = crackle::markov::compress(
+					crack_codepoints[z], model, header.markov_model_order,
+					sx, sy
+				);
+			});
 		}
+		// pool.join must be inside to ensure the lifetime of model
+		pool.join(); 
 	}
 	else {
 		for (uint64_t z = 0; z < crack_codepoints.size(); z++) {
-			crack_codes[z] = crackle::crackcodes::pack_codepoints(crack_codepoints[z], sx, sy);
+			pool.enqueue([&,z](size_t t){
+				crack_codes[z] = crackle::crackcodes::pack_codepoints(crack_codepoints[z], sx, sy);
+			});
 		}
+		pool.join();
 	}
 	
 	std::vector<unsigned char> labels_binary;
