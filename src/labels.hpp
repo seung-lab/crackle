@@ -3,6 +3,7 @@
 
 #include <span>
 #include <vector>
+#include <mutex>
 
 #include "robin_hood.hpp"
 
@@ -10,6 +11,7 @@
 #include "header.hpp"
 #include "lib.hpp"
 #include "pins.hpp"
+#include "threadpool.hpp"
 
 namespace crackle {
 namespace labels {
@@ -20,46 +22,68 @@ std::tuple<
 	std::vector<uint32_t>
 > encode_flat(
 	const LABEL* labels,
-	const int64_t sx, const int64_t sy, const int64_t sz
+	const int64_t sx, const int64_t sy, const int64_t sz,
+	const size_t parallel
 ) {
 	const int64_t sxy = sx * sy;
-	const int64_t voxels = sx * sy * sz;
 
 	std::vector<uint64_t> num_components_per_slice(sz);
 	std::vector<uint32_t> crcs(sz);
-	std::unique_ptr<uint32_t[]> cc_labels(new uint32_t[sxy]);
 
-	std::vector<STORED_LABEL> mapping;
-	mapping.reserve(voxels / 50);
+	std::vector<std::vector<uint32_t>> cc_labels_scratch(parallel);
+	std::vector<std::vector<STORED_LABEL>> mapping_scratch(sz);
 
+	for (size_t t = 0; t < parallel; t++) {
+		cc_labels_scratch[t].resize(sxy);
+	}
+
+	ThreadPool pool(parallel);
+
+	std::mutex mtx;
 	uint64_t N = 0;
 
 	for (int64_t z = 0; z < sz; z++) {
-		uint64_t tmp_N = 0;
-		crackle::cc3d::connected_components2d_4<LABEL, uint32_t>(
-			(labels + sxy * z), 
-			sx, sy, 1, 
-			cc_labels.get(),
-			0, tmp_N
-		);
+		pool.enqueue([&,z](size_t t){
+			std::vector<uint32_t>& cc_labels = cc_labels_scratch[t];
+			std::vector<STORED_LABEL>& mapping = mapping_scratch[z];
 
-		mapping.resize(N + tmp_N);
+			uint64_t tmp_N = 0;
+			crackle::cc3d::connected_components2d_4<LABEL, uint32_t>(
+				(labels + sxy * z), 
+				sx, sy, 1, 
+				cc_labels.data(),
+				0, tmp_N
+			);
 
-		uint64_t last = cc_labels[0];
-		mapping[cc_labels[0] + N] = labels[sxy * z];
-		for (int64_t i = 1; i < sxy; i++) {
-			if (cc_labels[i] != last) {
-				mapping[cc_labels[i] + N] = labels[sxy * z + i];
-				last = cc_labels[i];
+			mapping.resize(tmp_N);
+
+			uint64_t last = cc_labels[0];
+			mapping[cc_labels[0]] = labels[sxy * z];
+			for (int64_t i = 1; i < sxy; i++) {
+				if (cc_labels[i] != last) {
+					mapping[cc_labels[i]] = labels[sxy * z + i];
+					last = cc_labels[i];
+				}
 			}
-		}
 
-		num_components_per_slice[z] = tmp_N;
-		crcs[z] = crackle::crc::crc32c(cc_labels.get(), sxy);
-		N += tmp_N;
+			num_components_per_slice[z] = tmp_N;
+			crcs[z] = crackle::crc::crc32c(cc_labels.data(), sxy);
+			
+			std::unique_lock<std::mutex> lock(mtx);
+			N += tmp_N;
+		});
 	}
 
-	cc_labels.reset();
+	pool.join();
+
+	cc_labels_scratch = std::vector<std::vector<uint32_t>>(); // deallocate memory
+
+	std::vector<STORED_LABEL> mapping;
+	mapping.reserve(N);
+	for (int64_t z = 0; z < sz; z++) {
+		mapping.insert(mapping.end(), mapping_scratch[z].begin(), mapping_scratch[z].end());
+	}
+	mapping_scratch = std::vector<std::vector<STORED_LABEL>>(); // deallocate memory
 
 	std::vector<STORED_LABEL> uniq(mapping.begin(), mapping.end());
 	std::sort(uniq.begin(), uniq.end());

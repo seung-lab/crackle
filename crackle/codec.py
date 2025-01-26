@@ -574,6 +574,7 @@ def compress(
   allow_pins:int = 0,
   markov_model_order:int = 0,
   bgcolor:Optional[int] = None,
+  parallel:int = 0,
 ) -> bytes:
   """
   Compress the 3D labels array into a Crackle bytestream.
@@ -598,8 +599,6 @@ def compress(
     
     Pin computation requires appoximately solving a set cover problem and 
     can be very slow on larger images using the slow algorithm.
-
-    
   """
   if np.issubdtype(labels.dtype, np.signedinteger):
     raise TypeError("Signed integer data types are not currently supported.")
@@ -613,7 +612,7 @@ def compress(
   return fastcrackle.compress(
     labels, bool(allow_pins), f_order,
     markov_model_order, optimize_pins,
-    auto_bgcolor, manual_bgcolor
+    auto_bgcolor, manual_bgcolor, parallel
   )
 
 def extract_keys(binary:bytes) -> np.ndarray:

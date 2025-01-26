@@ -39,7 +39,8 @@ std::vector<unsigned char> compress_helper(
 	const uint64_t markov_model_order = 0,
 	const bool optimize_pins = false,
 	const bool auto_bgcolor = true,
-	const bool manual_bgcolor = 0
+	const bool manual_bgcolor = 0,
+	size_t parallel = 1
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -60,6 +61,11 @@ std::vector<unsigned char> compress_helper(
 	if (sz == 1 || !allow_pins || is_signed) {
 		label_format = LabelFormat::FLAT;
 	}
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, static_cast<size_t>(sz));
 
 	CrackleHeader header(
 		/*format_version=*/CrackleHeader::current_version,
@@ -93,7 +99,8 @@ std::vector<unsigned char> compress_helper(
 	std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> 
 		crack_codepoints = crackle::crackcodes::encode_boundaries(
 			labels, sx, sy, sz, 
-			/*permissible=*/(crack_format == CrackFormat::PERMISSIBLE)
+			/*permissible=*/(crack_format == CrackFormat::PERMISSIBLE),
+			/*parallel=*/parallel
 		);
 
 	if (header.markov_model_order > 0) {
@@ -143,7 +150,7 @@ std::vector<unsigned char> compress_helper(
 		crack_crcs = std::move(crack_crcs_tmp);
 	}
 	else {
-		auto [labels_binary_tmp, crack_crcs_tmp] = crackle::labels::encode_flat<LABEL, STORED_LABEL>(labels, sx, sy, sz);
+		auto [labels_binary_tmp, crack_crcs_tmp] = crackle::labels::encode_flat<LABEL, STORED_LABEL>(labels, sx, sy, sz, parallel);
 		labels_binary = std::move(labels_binary_tmp);
 		crack_crcs = std::move(crack_crcs_tmp);
 	}
@@ -206,7 +213,8 @@ std::vector<unsigned char> compress(
 	const uint64_t markov_model_order = 0,
 	const bool optimize_pins = false,
 	const bool auto_bgcolor = true,
-	const int64_t manual_bgcolor = 0
+	const int64_t manual_bgcolor = 0,
+	size_t parallel = 1
 ) {
 	const int64_t voxels = sx * sy * sz;
 	uint8_t stored_data_width = crackle::lib::compute_byte_width(
@@ -216,7 +224,7 @@ std::vector<unsigned char> compress(
 #define CALL_COMPRESS_HELPER(STORED_T) compress_helper<LABEL, STORED_T>(\
 		labels, sx, sy, sz,\
 		allow_pins, fortran_order, markov_model_order,\
-		optimize_pins, auto_bgcolor, manual_bgcolor\
+		optimize_pins, auto_bgcolor, manual_bgcolor, parallel\
 	)
 
 	if (stored_data_width == 1) {

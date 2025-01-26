@@ -90,7 +90,8 @@ py::bytes compress_helper(
 	const uint64_t markov_model_order = 0,
 	const bool optimize_pins = false,
 	const bool auto_bgcolor = true,
-	const int64_t manual_bgcolor = 0
+	const int64_t manual_bgcolor = 0,
+	const size_t parallel = 1
 ) {
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.ndim() < 2
@@ -108,7 +109,8 @@ py::bytes compress_helper(
 		markov_model_order,
 		optimize_pins,
 		auto_bgcolor,
-		manual_bgcolor
+		manual_bgcolor,
+		parallel
 	);
 	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
 }
@@ -120,14 +122,15 @@ py::bytes compress(
 	const uint64_t markov_model_order = 0,
 	const bool optimize_pins = false,
 	const bool auto_bgcolor = true,
-	const int64_t manual_bgcolor = 0
+	const int64_t manual_bgcolor = 0,
+	const size_t parallel = 1
 ) {
 	int width = labels.dtype().itemsize();
 	bool is_signed = labels.dtype().kind() == 'i';
 
 #define CALL_COMPRESS_HELPER(LABELS_T) compress_helper<LABELS_T>(\
 		labels, allow_pins, fortran_order, markov_model_order,\
-		optimize_pins, auto_bgcolor, manual_bgcolor\
+		optimize_pins, auto_bgcolor, manual_bgcolor, parallel\
 	)
 
 	if (is_signed) {
