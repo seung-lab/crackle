@@ -400,18 +400,17 @@ CCL* crack_codes_to_cc_labels(
   const uint64_t sx, const uint64_t sy,
   const bool permissible, uint64_t &N,
   const std::vector<std::vector<uint8_t>>& markov_model,
+  std::vector<uint8_t>& vcg,
   CCL* out = NULL
 ) {
-	std::vector<uint8_t> edges(sx*sy);
-
 	crack_code_to_vcg(
 		crack_codes, sx, sy,
 		permissible, markov_model,
-		edges.data()
+		vcg.data()
 	);
 
 	return crackle::cc3d::color_connectivity_graph<CCL>(
-		edges, sx, sy, 1, out, N
+		vcg, sx, sy, 1, out, N
 	);
 }
 
@@ -544,13 +543,16 @@ LABEL* decompress(
 
 	ThreadPool pool(parallel);
 
+	std::vector<std::vector<uint8_t>> vcg_scratch(parallel);
 	std::vector<std::vector<uint32_t>> cc_labels_scratch(parallel);
 	for (size_t t = 0; t < parallel; t++) {
+		vcg_scratch[t].resize(sxy);
 		cc_labels_scratch[t].resize(sxy);
 	}
 
 	for (uint64_t z = 0; z < static_cast<uint64_t>(szr); z++) {
 		pool.enqueue([&,z](size_t t) {
+			std::vector<uint8_t>& vcg = vcg_scratch[t];
 			std::vector<uint32_t>& cc_labels = cc_labels_scratch[t];
 
 			uint64_t N = 0;
@@ -558,7 +560,8 @@ LABEL* decompress(
 				crack_codes[z], header.sx, header.sy,
 				/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
 				/*N=*/N,
-				/*markov_model*/markov_model,
+				/*markov_model=*/markov_model,
+				/*vcg=*/vcg,
 				/*output=*/cc_labels.data()
 			);
 
