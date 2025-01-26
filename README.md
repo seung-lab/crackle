@@ -88,6 +88,9 @@ binary = crackle.zstack([ part1, part2 ])
 # splits a crackle binary into before, middle (single slice),
 # and after sections without decompressing.
 before, middle, after = crackle.zsplit(binary, z=742)
+
+# splits binary into individual z slices
+sections = crackle.zshatter(binary)
 ```
 
 *This repository is currently Beta. It works and the format is reasonably fixed. There may be some improvements down the line (such as 3d compression of crack codes), but they will be a new format version number.*
