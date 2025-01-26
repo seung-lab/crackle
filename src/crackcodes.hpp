@@ -6,11 +6,13 @@
 #include <stack>
 #include <span>
 #include <cstdint>
+#include <mutex>
 
 #include "robin_hood.hpp"
 #include "lib.hpp"
 #include "cc3d.hpp"
 #include "builtins.hpp"
+#include "threadpool.hpp"
 
 namespace crackle {
 namespace crackcodes {
@@ -498,17 +500,22 @@ std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>>
 encode_boundaries(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
-	const bool permissible
+	const bool permissible,
+	const size_t parallel
 ) {
-	std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> binary_components;
+	std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> binary_components(sz);
 
 	const int64_t sxy = sx * sy;
 
+	ThreadPool pool(parallel);
+
 	for (int64_t z = 0; z < sz; z++) {
-		binary_components.push_back(
-			create_crack_codes(labels + z * sxy, sx, sy, permissible)
-		);
+		pool.enqueue([&,z](size_t t){
+			binary_components[z] = create_crack_codes(labels + z * sxy, sx, sy, permissible);
+		});
 	}
+
+	pool.join();
 
 	return binary_components;
 }
