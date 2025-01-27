@@ -1008,7 +1008,7 @@ std::vector<unsigned char> reencode_with_markov_order(
 		crack_codepoints.push_back(unpacked_codepoints);
 	}
 
-	existing_crack_codes.clear();
+	existing_crack_codes = std::vector<std::span<const unsigned char>>();
 
 	header.markov_model_order = markov_model_order;
 
