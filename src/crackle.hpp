@@ -968,7 +968,8 @@ auto decode_slice_vcg(
 std::vector<unsigned char> reencode_with_markov_order(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
-	const int markov_model_order
+	const int markov_model_order,
+	size_t parallel = 1
 ) { 
 	if (num_bytes < CrackleHeader::header_size) {
 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
@@ -983,6 +984,11 @@ std::vector<unsigned char> reencode_with_markov_order(
 		err += std::to_string(header.format_version);
 		throw std::runtime_error(err);
 	}
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, static_cast<size_t>(header.sz));
 
 	std::span<const unsigned char> binary(buffer, num_bytes);
 
@@ -1008,22 +1014,34 @@ std::vector<unsigned char> reencode_with_markov_order(
 
 	std::vector<unsigned char> stored_model; // only needed for markov
 	std::vector<std::vector<unsigned char>> crack_codes(crack_codepoints.size());
+
+	ThreadPool pool(parallel);
+
 	if (header.markov_model_order > 0) {
-		auto stats = crackle::markov::gather_statistics(crack_codepoints, header.markov_model_order, /*parallel=*/1);
+		auto stats = crackle::markov::gather_statistics(
+			crack_codepoints, header.markov_model_order, parallel
+		);
 		auto model = crackle::markov::stats_to_model(stats);
 		stored_model = crackle::markov::to_stored_model(model);
 
 		for (uint64_t z = 0; z < crack_codepoints.size(); z++) {
-			crack_codes[z] = crackle::markov::compress(
-				crack_codepoints[z], model, header.markov_model_order,
-				header.sx, header.sy
-			);
+			pool.enqueue([&,z](size_t t){
+				crack_codes[z] = crackle::markov::compress(
+					crack_codepoints[z], model, header.markov_model_order,
+					header.sx, header.sy
+				);
+			});
 		}
+		// pool.join must be inside to ensure the lifetime of model
+		pool.join(); 
 	}
 	else {
 		for (uint64_t z = 0; z < crack_codepoints.size(); z++) {
-			crack_codes[z] = crackle::crackcodes::pack_codepoints(crack_codepoints[z], header.sx, header.sy);
+			pool.enqueue([&,z](size_t t){
+				crack_codes[z] = crackle::crackcodes::pack_codepoints(crack_codepoints[z], header.sx, header.sy);
+			});
 		}
+		pool.join();
 	}
 
 	uint64_t code_size = 0;
@@ -1075,12 +1093,13 @@ std::vector<unsigned char> reencode_with_markov_order(
 
 auto reencode_with_markov_order(
 	const std::string &buffer,
-	const int markov_model_order
+	const int markov_model_order,
+	size_t parallel = 1
 ) {
 	return reencode_with_markov_order(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size(),
-		markov_model_order
+		markov_model_order, parallel
 	);
 }
 

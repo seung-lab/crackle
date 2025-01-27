@@ -165,7 +165,8 @@ py::bytes compress(
 }
 
 py::bytes reencode_markov(
-	const py::buffer buffer, const int markov_model_order
+	const py::buffer buffer, const int markov_model_order,
+	size_t parallel = 1
 ) {
 	py::buffer_info info = buffer.request();
 
@@ -174,7 +175,9 @@ py::bytes reencode_markov(
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
-	auto buf = crackle::reencode_with_markov_order(data, info.size, markov_model_order);
+	auto buf = crackle::reencode_with_markov_order(
+		data, info.size, markov_model_order, parallel
+	);
 	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
 }
 

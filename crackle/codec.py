@@ -725,11 +725,11 @@ def point_cloud(
 
   return ptc
 
-def reencode(binary:bytes, markov_model_order:int):
+def reencode(binary:bytes, markov_model_order:int, parallel:int = 0):
   head = header(binary)
   if head.markov_model_order == markov_model_order:
     return binary
-  return fastcrackle.reencode_markov(binary, markov_model_order)
+  return fastcrackle.reencode_markov(binary, markov_model_order, parallel)
 
 def ok(binary:bytes) -> bool:
   """
