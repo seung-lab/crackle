@@ -122,7 +122,9 @@ std::vector<unsigned char> compress_helper(
 	ThreadPool pool(parallel);
 
 	if (header.markov_model_order > 0) {
-		auto stats = crackle::markov::gather_statistics(crack_codepoints, header.markov_model_order);
+		auto stats = crackle::markov::gather_statistics(
+			crack_codepoints, header.markov_model_order, parallel
+		);
 		auto model = crackle::markov::stats_to_model(stats);
 		stored_model = crackle::markov::to_stored_model(model);
 
@@ -1007,7 +1009,7 @@ std::vector<unsigned char> reencode_with_markov_order(
 	std::vector<unsigned char> stored_model; // only needed for markov
 	std::vector<std::vector<unsigned char>> crack_codes(crack_codepoints.size());
 	if (header.markov_model_order > 0) {
-		auto stats = crackle::markov::gather_statistics(crack_codepoints, header.markov_model_order);
+		auto stats = crackle::markov::gather_statistics(crack_codepoints, header.markov_model_order, /*parallel=*/1);
 		auto model = crackle::markov::stats_to_model(stats);
 		stored_model = crackle::markov::to_stored_model(model);
 

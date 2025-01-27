@@ -2,6 +2,8 @@
 #define __MARKOV_HXX__
 
 #include <algorithm>
+#include <atomic>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -188,32 +190,37 @@ namespace markov {
 		return std::make_tuple(nodes, codepoints);
 	}
 
-	std::vector<std::vector<uint32_t>> 
+	std::vector<std::array<std::atomic<uint32_t>, 4>>
 	gather_statistics(
 		const std::vector<robin_hood::unordered_node_map<uint64_t, std::vector<uint8_t>>> &crack_codes,
-		const uint64_t model_order
+		const uint64_t model_order,
+		const size_t parallel
 	) {
 		const size_t n_rows = pow(4, model_order);
-		std::vector<std::vector<uint32_t>> stats(n_rows);
-		for (uint64_t i = 0; i < n_rows; i++) {
-			stats[i].resize(4);
+		std::vector<std::array<std::atomic<uint32_t>, 4>> stats(n_rows);
+
+		ThreadPool pool(parallel);
+
+		for (uint64_t z = 0; z < crack_codes.size(); z++) {
+			pool.enqueue([&,z](size_t t){
+				auto slice = crack_codes[z];
+				auto [nodes, code] = difference_codepoints(slice);
+				CircularBuf buf(model_order);
+				int idx = 0;
+				for (uint64_t i = 0; i < code.size(); i++) {
+					stats[idx][code[i]].fetch_add(1, std::memory_order_relaxed);
+					idx = buf.push_back_and_update(static_cast<uint8_t>(code[i]));
+				}
+			});
 		}
-		
-		for (auto slice : crack_codes) {
-			auto [nodes, code] = difference_codepoints(slice);
-			CircularBuf buf(model_order);
-			int idx = 0;
-			for (uint64_t i = 0; i < code.size(); i++) {
-				stats[idx][code[i]]++;
-				idx = buf.push_back_and_update(static_cast<uint8_t>(code[i]));
-			}
-		}
+
+		pool.join();
 
 		return stats;
 	}
 
 	std::vector<std::vector<uint8_t>> stats_to_model(
-		std::vector<std::vector<uint32_t>>& stats
+		std::vector<std::array<std::atomic<uint32_t>, 4>>& stats
 	) {
 		struct {
 			bool operator()(
