@@ -92,8 +92,17 @@ class CrackleArray:
   def decompress(self, label:Optional[int] = None) -> bytes:
     return decompress(self.binary, label, parallel=self.parallel)
 
-  def point_cloud(self, label:Optional[int] = None) -> np.ndarray:
-    return point_cloud(self.binary, label, parallel=self.parallel)
+  def point_cloud(
+    self, 
+    label:Optional[int] = None,
+    z_start:int = -1,
+    z_end:int = -1,
+  ) -> np.ndarray:
+    return point_cloud(
+      self.binary, label, 
+      z_start=z_start, z_end=z_end, 
+      parallel=self.parallel
+    )
 
   def save(self, filelike):
     import crackle.util

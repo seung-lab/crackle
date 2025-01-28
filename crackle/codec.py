@@ -684,7 +684,9 @@ def condense_unique(binary:bytes) -> bytes:
 def point_cloud(
   binary:bytes, 
   label:Optional[int] = None,
-  parallel:int = 1
+  parallel:int = 0,
+  z_start:int = -1,
+  z_end:int = -1,
 ) -> Union[np.ndarray, Dict[int,np.ndarray]]:
   """
   Extract surface point clouds from the image without fully
@@ -698,12 +700,15 @@ def point_cloud(
   """
   if label is None:
     label = -1
-    z_start = -1
-    z_end = -1
   elif not contains(binary, label):
       raise ValueError(f"Label {label} not contained in image.")
   else:
-    z_start, z_end = z_range_for_label(binary, label)
+    z_start_l, z_end_l = z_range_for_label(binary, label)
+    z_start = max(z_start, z_start_l)
+    if z_end == -1:
+      z_end = z_end_l
+    else:
+      z_end = min(z_end, z_end_l)
 
   if parallel <= 0:
     parallel = mp.cpu_count()
