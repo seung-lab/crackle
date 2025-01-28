@@ -496,6 +496,12 @@ def decompress_binary_image(
   z_start, z_end = z_range_for_label(binary, label)
   header = CrackleHeader.frombytes(binary)
   order = "F" if header.fortran_order else "C"
+
+  if z_start == 0 and z_end == header.sz:
+    return decompress_range(
+      binary, z_start, z_end, parallel, label
+    ).view(bool)
+
   image = np.zeros([header.sx, header.sy, header.sz], dtype=bool, order=order)
 
   if z_start == -1 and z_end == -1:
