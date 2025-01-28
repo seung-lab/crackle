@@ -492,12 +492,16 @@ def decompress_binary_image(
   binary:bytes, 
   label:Optional[int],
   parallel:int,
+  crop:bool = True,
 ) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
   header = CrackleHeader.frombytes(binary)
   order = "F" if header.fortran_order else "C"
 
-  if z_start == 0 and z_end == header.sz:
+  if z_start == -1 and z_end == -1 and crop:
+    return np.zeros([0,0,0], dtype=bool, order=order)
+
+  if z_start == 0 and z_end == header.sz or crop:
     return decompress_range(
       binary, z_start, z_end, parallel, label
     ).view(bool)
@@ -523,7 +527,7 @@ def decompress(
   """
   if label is None:
     return decompress_range(binary, None, None, parallel)
-  return decompress_binary_image(binary, label, parallel)
+  return decompress_binary_image(binary, label, parallel, crop=False)
 
 def decompress_range(
   binary:bytes, 
