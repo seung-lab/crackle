@@ -510,14 +510,15 @@ def decompress_binary_image(
   if z_start == -1 and z_end == -1:
     return image
 
-  cutout = decompress_range(binary, z_start, z_end, parallel)
-  image[:,:,z_start:z_end] = (cutout == label)
+  image[:,:,z_start:z_end] = decompress_range(
+    binary, z_start, z_end, parallel, label
+  )
   return image
 
 def decompress(
   binary:bytes, 
   label:Optional[int] = None,
-  parallel:int = 0
+  parallel:int = 0,
 ) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array. 
@@ -532,6 +533,7 @@ def decompress_range(
   z_start:Optional[int], 
   z_end:Optional[int],
   parallel:int,
+  label:Optional[int] = None,
 ) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array.
@@ -552,7 +554,7 @@ def decompress_range(
   if (sx * sy * sz == 0):
     labels = np.zeros((0,), dtype=header.dtype)
   else:
-    labels = fastcrackle.decompress(binary, z_start, z_end, parallel)
+    labels = fastcrackle.decompress(binary, z_start, z_end, parallel, label)
 
   order = 'F' if header.fortran_order else 'C'
   labels = labels.reshape((sx,sy,z_end - z_start), order=order)
