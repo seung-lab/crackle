@@ -550,6 +550,9 @@ def decompress_range(
   order = 'F' if header.fortran_order else 'C'
   labels = labels.reshape((sx,sy,z_end - z_start), order=order)
 
+  if label is not None:
+    return labels.view(bool)
+
   if header.signed:
     if header.data_width == 1:
       labels = labels.view(np.int8)
