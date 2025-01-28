@@ -4,6 +4,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#include <optional>
 #include <vector>
 
 #include "crackle.hpp"
@@ -18,7 +19,8 @@ py::array decompress_helper(
 	const uint8_t* buffer,
 	const uint64_t num_bytes,
 	int64_t z_start, int64_t z_end,
-	size_t parallel
+	size_t parallel,
+	const std::optional<uint64_t> label = std::nullopt
 ) {
 	int64_t voxels = head.sx * head.sy;
 	z_start = std::max(z_start, static_cast<int64_t>(0));
@@ -32,19 +34,34 @@ py::array decompress_helper(
 
 	voxels *= z_end - z_start;
 
-	py::array arr = py::array_t<LABEL>(voxels);
-	crackle::decompress<LABEL>(
-		buffer, num_bytes,
-		reinterpret_cast<LABEL*>(const_cast<void*>(arr.data())),
-		z_start, z_end, parallel
-	);
+	py::array arr;
+	if (label.has_value()) {
+		arr = py::array_t<uint8_t>(voxels);
+		crackle::decompress<LABEL, uint8_t>(
+			buffer, num_bytes,
+			reinterpret_cast<uint8_t*>(const_cast<void*>(arr.data())),
+			z_start, z_end, 
+			parallel, label
+		);
+	}
+	else {
+		arr = py::array_t<LABEL>(voxels);
+		crackle::decompress<LABEL, LABEL>(
+			buffer, num_bytes,
+			reinterpret_cast<LABEL*>(const_cast<void*>(arr.data())),
+			z_start, z_end, 
+			parallel, label
+		);
+	}
+
 	return arr;
 }
 
 py::array decompress(
 	const py::buffer buffer, 
 	const int64_t z_start = 0, const int64_t z_end = -1,
-	const size_t parallel = 1
+	const size_t parallel = 1,
+	const std::optional<uint64_t> label = std::nullopt
 ) {
 	py::buffer_info info = buffer.request();
 
@@ -60,22 +77,26 @@ py::array decompress(
 
 	if (head.data_width == 1) {
 		labels = decompress_helper<uint8_t>(
-			head, data, info.size, z_start, z_end, parallel
+			head, data, info.size, z_start, z_end, 
+			parallel, label
 		);
 	}
 	else if (head.data_width == 2) {
 		labels = decompress_helper<uint16_t>(
-			head, data, info.size, z_start, z_end, parallel
+			head, data, info.size, z_start, z_end,
+			parallel, label
 		);
 	}
 	else if (head.data_width == 4) {
 		labels = decompress_helper<uint32_t>(
-			head, data, info.size, z_start, z_end, parallel
+			head, data, info.size, z_start, z_end,
+			parallel, label
 		);	
 	}
 	else {
 		labels = decompress_helper<uint64_t>(
-			head, data, info.size, z_start, z_end, parallel
+			head, data, info.size, z_start, z_end,
+			parallel, label
 		);
 	}
 	

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include <span>
@@ -490,14 +491,15 @@ std::vector<LABEL> decode_label_map(
 }
 
 
-template <typename LABEL>
-LABEL* decompress(
+template <typename LABEL, typename OUT>
+OUT* decompress(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
-	LABEL* output = NULL,
+	OUT* output = NULL,
 	int64_t z_start = -1,
 	int64_t z_end = -1,
-	size_t parallel = 1
+	size_t parallel = 1,
+	const std::optional<uint64_t> label = std::nullopt
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
@@ -545,7 +547,7 @@ LABEL* decompress(
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
 	if (output == NULL) {
-		output = new LABEL[voxels]();
+		output = new OUT[voxels]();
 	}
 
 	const uint64_t sxy = header.sx * header.sy;
@@ -603,16 +605,35 @@ LABEL* decompress(
 				header, binary, cc_labels.data(), N, z_start+z, z_start+z+1
 			);
 
-			if (header.fortran_order) {
-				for (uint64_t i = 0; i < sxy; i++) {
-					output[i + z * sxy] = label_map[cc_labels[i]];
+			if (label.has_value()) {
+				const uint64_t label_v = label.value();
+
+				if (header.fortran_order) {
+					for (uint64_t i = 0; i < sxy; i++) {
+						output[i + z * sxy] = (label_map[cc_labels[i]] == label_v);
+					}
+				}
+				else {
+					uint64_t i = 0;
+					for (uint64_t y = 0; y < header.sy; y++) {
+						for (uint64_t x = 0; x < header.sx; x++, i++) {
+							output[z + szr * (y + header.sy * x)] = (label_map[cc_labels[i]] == label_v);
+						}
+					}
 				}
 			}
 			else {
-				uint64_t i = 0;
-				for (uint64_t y = 0; y < header.sy; y++) {
-					for (uint64_t x = 0; x < header.sx; x++, i++) {
-						output[z + szr * (y + header.sy * x)] = label_map[cc_labels[i]];
+				if (header.fortran_order) {
+					for (uint64_t i = 0; i < sxy; i++) {
+						output[i + z * sxy] = label_map[cc_labels[i]];
+					}
+				}
+				else {
+					uint64_t i = 0;
+					for (uint64_t y = 0; y < header.sy; y++) {
+						for (uint64_t x = 0; x < header.sx; x++, i++) {
+							output[z + szr * (y + header.sy * x)] = label_map[cc_labels[i]];
+						}
 					}
 				}
 			}
@@ -624,52 +645,58 @@ LABEL* decompress(
 	return output;
 }
 
-template <typename LABEL>
+template <typename LABEL, typename OUT>
 LABEL* decompress(
 	const std::vector<unsigned char>& buffer,
 	LABEL* output = NULL,
 	const int64_t z_start = -1, const int64_t z_end = -1,
-	size_t parallel = 1
+	size_t parallel = 1,
+	const std::optional<uint64_t> label = std::nullopt
 ) {
-	return decompress<LABEL>(
+	return decompress<LABEL, OUT>(
 		buffer.data(),
 		buffer.size(),
 		output,
 		z_start, z_end,
-		parallel
+		parallel,
+		label
 	);
 }
 
-template <typename LABEL>
+template <typename LABEL, typename OUT>
 LABEL* decompress(
 	const std::span<const unsigned char>& buffer,
 	LABEL* output = NULL,
 	const int64_t z_start = -1, const int64_t z_end = -1,
-	size_t parallel = 1
+	size_t parallel = 1, 	
+	const std::optional<uint64_t> label = std::nullopt
 ) {
-	return decompress<LABEL>(
+	return decompress<LABEL, OUT>(
 		buffer.data(),
 		buffer.size(),
 		output,
 		z_start, z_end,
-		parallel
+		parallel,
+		label
 	);
 }
 
 
-template <typename LABEL>
+template <typename LABEL, typename OUT>
 LABEL* decompress(
 	const std::string &buffer,
 	LABEL* output = NULL,
 	const int64_t z_start = -1, const int64_t z_end = -1,
-	size_t parallel = 1
+	size_t parallel = 1,
+	const std::optional<uint64_t> label = std::nullopt
 ) {
-	return decompress<LABEL>(
+	return decompress<LABEL, OUT>(
 		reinterpret_cast<const unsigned char*>(buffer.c_str()),
 		buffer.size(),
 		output,
 		z_start, z_end,
-		parallel
+		parallel,
+		label
 	);
 }
 
@@ -677,7 +704,9 @@ void decompress(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
 	unsigned char* output, const int64_t out_num_bytes,
-	const int64_t z_start = -1, const int64_t z_end = -1
+	const int64_t z_start = -1, const int64_t z_end = -1,
+	size_t parallel = 1,
+	const std::optional<uint64_t> label = std::nullopt
 ) {
 	CrackleHeader header(buffer);
 
@@ -686,28 +715,59 @@ void decompress(
 	}
 
 	if (header.data_width == 1) {
-		decompress<uint8_t>(
+		decompress<uint8_t, uint8_t>(
 			buffer, num_bytes, reinterpret_cast<uint8_t*>(output), 
-			z_start, z_end
+			z_start, z_end,
+			parallel, label
 		);
 	}
 	else if (header.data_width == 2) {
-		decompress<uint16_t>(
-			buffer, num_bytes, reinterpret_cast<uint16_t*>(output), 
-			z_start, z_end
-		);
+		if (label.has_value()) {
+			decompress<uint16_t, uint8_t>(
+				buffer, num_bytes, reinterpret_cast<uint8_t*>(output), 
+				z_start, z_end,
+				parallel, label
+			);
+		}
+		else {
+			decompress<uint16_t, uint16_t>(
+				buffer, num_bytes, reinterpret_cast<uint16_t*>(output), 
+				z_start, z_end,
+				parallel, label
+			);
+		}
 	}
 	else if (header.data_width == 4) {
-		decompress<uint32_t>(
-			buffer, num_bytes, reinterpret_cast<uint32_t*>(output), 
-			z_start, z_end
-		);
+		if (label.has_value()) {
+			decompress<uint32_t, uint8_t>(
+				buffer, num_bytes, reinterpret_cast<uint8_t*>(output), 
+				z_start, z_end,
+				parallel, label
+			);
+		}
+		else {
+			decompress<uint32_t, uint32_t>(
+				buffer, num_bytes, reinterpret_cast<uint32_t*>(output), 
+				z_start, z_end,
+				parallel, label
+			);
+		}
 	}
 	else {
-		decompress<uint64_t>(
-			buffer, num_bytes, reinterpret_cast<uint64_t*>(output), 
-			z_start, z_end
-		);
+		if (label.has_value()) {
+			decompress<uint32_t, uint8_t>(
+				buffer, num_bytes, reinterpret_cast<uint8_t*>(output), 
+				z_start, z_end,
+				parallel, label
+			);
+		}
+		else {
+			decompress<uint32_t, uint32_t>(
+				buffer, num_bytes, reinterpret_cast<uint32_t*>(output), 
+				z_start, z_end,
+				parallel, label
+			);
+		}
 	}
 }
 
