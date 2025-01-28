@@ -606,7 +606,7 @@ OUT* decompress(
 			);
 
 			if (label.has_value()) {
-				const uint64_t label_v = label.value();
+				const uint64_t label_v = *label;
 
 				if (header.fortran_order) {
 					for (uint64_t i = 0; i < sxy; i++) {
