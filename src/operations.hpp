@@ -201,14 +201,14 @@ auto point_cloud(
 }
 
 auto point_cloud(
-	const std::string &buffer,
+	const std::span<const unsigned char>& buffer,
 	const int64_t z_start = -1, 
 	const int64_t z_end = -1,
 	const int64_t label = -1,
 	size_t parallel = 1
 ) {
 	return point_cloud(
-		reinterpret_cast<const unsigned char*>(buffer.c_str()),
+		buffer.data(),
 		buffer.size(),
 		z_start, z_end, label, parallel
 	);
@@ -368,13 +368,13 @@ auto voxel_counts(
 }
 
 auto voxel_counts(
-	const std::string &buffer,
+	const std::span<const unsigned char>& buffer,
 	const int64_t z_start = -1, 
 	const int64_t z_end = -1,
 	size_t parallel = 1
 ) {
 	return voxel_counts(
-		reinterpret_cast<const unsigned char*>(buffer.c_str()),
+		buffer.data(),
 		buffer.size(),
 		z_start, z_end, parallel
 	);
