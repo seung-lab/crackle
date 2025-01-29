@@ -428,15 +428,6 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
 
   return (int(z_start), int(z_end+1))
 
-# def create_label_search_index(binary:bytes) -> Dict[int,List[int]]:
-#   """
-#   Scan the labels section to build an index of 
-#   label -> grid sections.
-#   """
-#   index = defaultdict(list)
-#   labels_binary = raw_labels(binary)
-
-
 def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   head = header(binary)
   labels_binary = raw_labels(binary)
@@ -501,23 +492,34 @@ def decompress_binary_image(
   binary:bytes, 
   label:Optional[int],
   parallel:int,
+  crop:bool = True,
 ) -> np.ndarray:
   z_start, z_end = z_range_for_label(binary, label)
   header = CrackleHeader.frombytes(binary)
   order = "F" if header.fortran_order else "C"
+
+  if z_start == -1 and z_end == -1 and crop:
+    return np.zeros([0,0,0], dtype=bool, order=order)
+
+  if z_start == 0 and z_end == header.sz or crop:
+    return decompress_range(
+      binary, z_start, z_end, parallel, label
+    ).view(bool)
+
   image = np.zeros([header.sx, header.sy, header.sz], dtype=bool, order=order)
 
   if z_start == -1 and z_end == -1:
     return image
 
-  cutout = decompress_range(binary, z_start, z_end, parallel)
-  image[:,:,z_start:z_end] = (cutout == label)
+  image[:,:,z_start:z_end] = decompress_range(
+    binary, z_start, z_end, parallel, label
+  )
   return image
 
 def decompress(
   binary:bytes, 
   label:Optional[int] = None,
-  parallel:int = 0
+  parallel:int = 0,
 ) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array. 
@@ -525,13 +527,14 @@ def decompress(
   """
   if label is None:
     return decompress_range(binary, None, None, parallel)
-  return decompress_binary_image(binary, label, parallel)
+  return decompress_binary_image(binary, label, parallel, crop=False)
 
 def decompress_range(
   binary:bytes, 
   z_start:Optional[int], 
   z_end:Optional[int],
   parallel:int,
+  label:Optional[int] = None,
 ) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array.
@@ -552,10 +555,13 @@ def decompress_range(
   if (sx * sy * sz == 0):
     labels = np.zeros((0,), dtype=header.dtype)
   else:
-    labels = fastcrackle.decompress(binary, z_start, z_end, parallel)
+    labels = fastcrackle.decompress(binary, z_start, z_end, parallel, label)
 
   order = 'F' if header.fortran_order else 'C'
   labels = labels.reshape((sx,sy,z_end - z_start), order=order)
+
+  if label is not None:
+    return labels.view(bool)
 
   if header.signed:
     if header.data_width == 1:
@@ -684,7 +690,9 @@ def condense_unique(binary:bytes) -> bytes:
 def point_cloud(
   binary:bytes, 
   label:Optional[int] = None,
-  parallel:int = 1
+  parallel:int = 0,
+  z_start:int = -1,
+  z_end:int = -1,
 ) -> Union[np.ndarray, Dict[int,np.ndarray]]:
   """
   Extract surface point clouds from the image without fully
@@ -698,12 +706,15 @@ def point_cloud(
   """
   if label is None:
     label = -1
-    z_start = -1
-    z_end = -1
   elif not contains(binary, label):
       raise ValueError(f"Label {label} not contained in image.")
   else:
-    z_start, z_end = z_range_for_label(binary, label)
+    z_start_l, z_end_l = z_range_for_label(binary, label)
+    z_start = max(z_start, z_start_l)
+    if z_end == -1:
+      z_end = z_end_l
+    else:
+      z_end = min(z_end, z_end_l)
 
   if parallel <= 0:
     parallel = mp.cpu_count()
