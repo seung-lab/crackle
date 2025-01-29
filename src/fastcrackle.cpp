@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "crackle.hpp"
+#include "operations.hpp"
 #include "cc3d.hpp"
 #include "pins.hpp"
 
@@ -281,7 +282,7 @@ py::dict point_cloud(
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
-	auto ptc = crackle::point_cloud(data, info.size, z_start, z_end, label, parallel);
+	auto ptc = crackle::operations::point_cloud(data, info.size, z_start, z_end, label, parallel);
 
 	py::dict py_ptc;
 	for (const auto& [key, vec] : ptc) {
@@ -306,7 +307,7 @@ py::dict voxel_counts(
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
-	auto cts = crackle::voxel_counts(data, info.size, z_start, z_end, parallel);
+	auto cts = crackle::operations::voxel_counts(data, info.size, z_start, z_end, parallel);
 
 	py::dict pycts;
 	for (const auto& [label, ct] : cts) {
@@ -314,7 +315,6 @@ py::dict voxel_counts(
 	}
 
 	return pycts;
-
 }
 
 py::array get_slice_vcg(
