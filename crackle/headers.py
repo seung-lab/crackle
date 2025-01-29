@@ -218,6 +218,10 @@ class CrackleHeader:
   def z_index_width(self) -> int:
     return 4
 
+  @property
+  def nbytes(self) -> int:
+    return self.voxels() * self.data_width
+
   def voxels(self) -> int:
     return self.sx * self.sy * self.sz
 

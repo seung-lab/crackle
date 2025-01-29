@@ -64,6 +64,10 @@ def aload(filelike, allow_mmap=False) -> CrackleArray:
   """Load a CrackleArray from a file."""
   return CrackleArray(_load(filelike, allow_mmap=allow_mmap))
 
+def bload(filelike, allow_mmap=False) -> bytes:
+  """Load the binary file."""
+  return _load(filelike, allow_mmap=allow_mmap)
+
 def load(filelike, label:Optional[int] = None) -> np.ndarray:
   """Load an image from a file-like object or file path."""
   return decompress(_load(filelike), label=label)

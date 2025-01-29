@@ -1,12 +1,14 @@
 from typing import List, Optional, Tuple, Sequence, Union, Dict
 from collections import namedtuple, defaultdict
+import multiprocessing as mp
+import warnings
 
 import numpy as np
 import fastremap
 import fastcrackle
 
 from .codec import (
-  compress, decompress, labels, 
+  compress, decompress, decompress_range, labels, 
   header, raw_labels, decode_flat_labels,
   decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
@@ -717,3 +719,52 @@ def truediv_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 1:
     return binary
   return operator(binary, lambda uniq: uniq / scalar)
+
+def recompress(
+  binary:bytes, 
+  memory_target:int = int(4e9), 
+  allow_pins:bool = False,
+) -> bytes:
+  """
+  After e.g. remapping a volume, you might want to recompress it
+  to eliminate false boundaries. This function performs the recompression
+  cycle relatively efficiently in memory.
+
+  You can also use this function to toggle between pin and flat label
+  encoding. However, you must have sufficient memory for at least 3-4 
+  uncompressed sections (ideally more) at once for this to be "profitable".
+  """
+  head = header(binary)
+  # approximate RAM needed to encode/decode a full z-section
+  # section + CCL + VCG
+  section_bytes = head.sx * head.sy * (head.data_width + 4 + 1)
+
+  min_memory_request = 2 * len(binary) + section_bytes
+
+  if min_memory_request >= memory_target:
+    warnings.warn(
+      f"Memory required is potentially more than the memory target specified. "
+      f"Sometimes recompression will result in substantial additional savings "
+      f"so this isn't a hard error. Recompression will require storing approximately"
+      f"thirce the same binary size in RAM plus additional memory per a parallel section.\n"
+      f"memory target: {memory_target} bytes\n"
+      f"requested: {min_memory_request} bytes"
+    )
+
+  parallel = __builtins__["max"](memory_target - len(binary), 0) // section_bytes
+  parallel = __builtins__["max"](parallel, 1)
+  parallel = __builtins__["min"](parallel, mp.cpu_count())
+
+  bgcolor = min(binary)
+
+  binaries = []
+  for z in range(0, head.sz, parallel):
+    z_end = __builtins__["min"](z+parallel, head.sz)
+    labels = decompress_range(binary, z_start=z, z_end=z_end, parallel=parallel)
+    binaries.append(
+      compress(labels, allow_pins=allow_pins, bgcolor=bgcolor)
+    )
+
+  return zstack(binaries)
+
+
