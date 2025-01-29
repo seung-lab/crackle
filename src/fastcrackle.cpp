@@ -293,7 +293,7 @@ py::dict point_cloud(
 	const py::buffer buffer, 
 	const int64_t z_start = 0, 
 	const int64_t z_end = -1,
-	const int64_t label = -1,
+	const std::optional<uint64_t> label = std::nullopt,
 	const size_t parallel = 1
 ) {
 	py::buffer_info info = buffer.request();

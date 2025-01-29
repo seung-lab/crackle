@@ -36,7 +36,7 @@ point_cloud(
 	const size_t num_bytes,
 	int64_t z_start = -1,
 	int64_t z_end = -1,
-	const int64_t label = -1,
+	const std::optional<uint64_t> label = std::nullopt,
 	size_t parallel = 1
 ) {
 
@@ -138,7 +138,7 @@ point_cloud(
 				for (auto ptc_ccl : ptc_ccls) {
 					uint64_t current_label = label_map[label_i];
 					
-					if (label > 0 && current_label != static_cast<uint64_t>(label)) {
+					if (label.has_value() && current_label != *label) {
 						label_i++;
 						continue;
 					}
@@ -169,7 +169,7 @@ auto point_cloud(
 	const size_t num_bytes,
 	int64_t z_start = -1,
 	int64_t z_end = -1,
-	const int64_t label = -1,
+	const std::optional<uint64_t> label = std::nullopt,
 	size_t parallel = 1
 ) {
 	CrackleHeader header(buffer);
@@ -204,7 +204,7 @@ auto point_cloud(
 	const std::span<const unsigned char>& buffer,
 	const int64_t z_start = -1, 
 	const int64_t z_end = -1,
-	const int64_t label = -1,
+	const std::optional<uint64_t> label = std::nullopt,
 	size_t parallel = 1
 ) {
 	return point_cloud(
