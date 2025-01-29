@@ -755,7 +755,7 @@ def recompress(
   parallel = __builtins__["max"](parallel, 1)
   parallel = __builtins__["min"](parallel, mp.cpu_count())
 
-  bgcolor = min(binary)
+  bgcolor = min(binary) # TODO: could be properly calculated from cc keys
 
   binaries = []
   for z in range(0, head.sz, parallel):
