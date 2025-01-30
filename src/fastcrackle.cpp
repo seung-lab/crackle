@@ -350,12 +350,15 @@ py::array get_slice_vcg(
 	return array;
 }
 
+// in place operation
 void remap(
 	py::buffer &buffer,
 	const py::dict& pymapping,
 	const bool preserve_missing_labels = false,
 	size_t parallel = 0
 ) {
+	// TODO: tbh the most expensive part of this operation... if we use the python dict
+	// directly, this would probably be a lot faster.
 	robin_hood::unordered_flat_map<uint64_t,uint64_t> mapping;
 	mapping.reserve(pymapping.size());
 	for (auto& item : pymapping) {
