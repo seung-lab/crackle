@@ -995,7 +995,8 @@ void remap(
 	unsigned char* buffer,
 	const uint64_t num_bytes,
 	const MAPTYPE& mapping,
-	const bool preserve_missing_labels = false
+	const bool preserve_missing_labels = false,
+	size_t parallel = 0
 ) {
 
 	std::span<unsigned char> binary(buffer, num_bytes);
@@ -1044,16 +1045,34 @@ void remap(
 		}
 	}
 	else {
-		for (uint64_t i = 0; i < unique.size(); i++) {
-			const uint64_t uniq = static_cast<uint64_t>(unique[i]);
-			auto it = mapping.find(uniq);
-			if (it != mapping.end()) {
-				unique[i] = it->second;
-			}
-			else if (preserve_missing_labels == false) {
-				throw std::runtime_error("Label was missing.");
-			}
+		if (parallel == 0) {
+			parallel = std::thread::hardware_concurrency();
 		}
+
+		const uint64_t step = 1e5;
+
+		parallel = std::min(parallel, static_cast<size_t>(unique.size() / step));
+		parallel = std::max(parallel, static_cast<size_t>(1));
+
+		ThreadPool pool(parallel);
+
+		for (uint64_t i = 0; i < unique.size(); i += step) {
+			pool.enqueue([&,i](size_t t) {
+				const uint64_t limit = std::min(i + step, static_cast<uint64_t>(unique.size()));
+				for (uint64_t j = i; j < limit; j++) {
+					const uint64_t uniq = static_cast<uint64_t>(unique[j]);
+					auto it = mapping.find(uniq);
+					if (it != mapping.end()) {
+						unique[j] = it->second;
+					}
+					else if (preserve_missing_labels == false) {
+						throw std::runtime_error("Label was missing.");
+					}
+				}
+			});
+		}
+
+		pool.join();
 	}
 
 	if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {

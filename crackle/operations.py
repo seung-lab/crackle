@@ -65,6 +65,7 @@ def remap(
   mapping:dict, 
   preserve_missing_labels:bool = False,
   in_place:bool = False,
+  parallel:int = 0,
 ) -> bytes:
   """
   Remap the labels in a crackle bystream without decompressing.
@@ -81,7 +82,7 @@ def remap(
   """
   if not in_place:
     binary = bytearray(binary)
-  fastcrackle.remap(binary, mapping, preserve_missing_labels)
+  fastcrackle.remap(binary, mapping, preserve_missing_labels, parallel)
   return binary
 
 def astype(binary:bytes, dtype) -> bytes:

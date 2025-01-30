@@ -353,7 +353,8 @@ py::array get_slice_vcg(
 void remap(
 	py::buffer &buffer,
 	const py::dict& pymapping,
-	const bool preserve_missing_labels = false
+	const bool preserve_missing_labels = false,
+	size_t parallel = 0
 ) {
 	robin_hood::unordered_flat_map<uint64_t,uint64_t> mapping;
 	mapping.reserve(pymapping.size());
@@ -378,16 +379,16 @@ void remap(
 	crackle::CrackleHeader header(data);
 
 	if (header.stored_data_width == 1) {
-		crackle::remap<uint8_t>(data, info.size, mapping, preserve_missing_labels);
+		crackle::remap<uint8_t>(data, info.size, mapping, preserve_missing_labels, parallel);
 	}
 	else if (header.stored_data_width == 2) {
-		crackle::remap<uint16_t>(data, info.size, mapping, preserve_missing_labels);
+		crackle::remap<uint16_t>(data, info.size, mapping, preserve_missing_labels, parallel);
 	}
 	else if (header.stored_data_width == 4) {
-		crackle::remap<uint32_t>(data, info.size, mapping, preserve_missing_labels);
+		crackle::remap<uint32_t>(data, info.size, mapping, preserve_missing_labels, parallel);
 	}
 	else {
-		crackle::remap<uint64_t>(data, info.size, mapping, preserve_missing_labels);
+		crackle::remap<uint64_t>(data, info.size, mapping, preserve_missing_labels, parallel);
 	}
 }
 
