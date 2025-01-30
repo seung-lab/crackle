@@ -343,6 +343,16 @@ uint32_t get_labels_crc(
 	return crackle::lib::ctoi<uint32_t>(binary.data(), binary.size() - offset);
 }
 
+uint32_t reset_labels_crc(std::span<unsigned char> &binary) {
+	crackle::CrackleHeader header(binary);
+	std::span<const unsigned char> labels_binary = crackle::labels::raw_labels(binary);
+	const uint32_t labels_binary_crc = crackle::crc::crc32c(labels_binary);
+
+	uint64_t offset = (header.sz + 1) * sizeof(uint32_t);
+	crackle::lib::itoc(labels_binary_crc, binary, binary.size() - offset);
+	return labels_binary_crc;
+}
+
 std::span<const uint32_t> get_crack_code_crcs(
 	const CrackleHeader &header,
 	const std::span<const unsigned char> &binary
@@ -976,6 +986,72 @@ auto reencode_with_markov_order(
 		buffer.size(),
 		markov_model_order, parallel
 	);
+}
+
+template <typename STORED_LABEL>
+void remap(
+	unsigned char* buffer,
+	const uint64_t num_bytes,
+	const std::unordered_map<uint64_t,uint64_t>& mapping,
+	const bool preserve_missing_labels = false
+) {
+
+	std::span<unsigned char> binary(buffer, num_bytes);
+
+	crackle::CrackleHeader header(binary);
+
+	std::span<const unsigned char> labels_binary = crackle::labels::raw_labels(binary);
+
+	if (header.format_version > 0) {
+		uint32_t crc_computed = crackle::crc::crc32c(labels_binary);
+		uint32_t crc_stored = get_labels_crc(header, binary);
+		
+		if (crc_computed != crc_stored) {
+			throw std::runtime_error("crackle::remap: crc mismatch on labels binary.");
+		}
+	}
+
+	std::span<const STORED_LABEL> unique_span = crackle::labels::decode_uniq<STORED_LABEL>(
+		header, labels_binary
+	);
+
+	STORED_LABEL* unique = const_cast<STORED_LABEL*>(unique_span.data());
+
+	for (uint64_t i = 0; i < unique_span.size(); i++) {
+		const uint64_t uniq = static_cast<uint64_t>(unique[i]);
+		auto it = mapping.find(uniq);
+		if (it != mapping.end()) {
+			unique[i] = it->second;
+		}
+		else if (preserve_missing_labels == false) {
+			throw std::runtime_error("Label was missing.");
+		}
+	}
+
+	if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
+		STORED_LABEL bgcolor = crackle::labels::background_color(binary);
+		auto it = mapping.find(bgcolor);
+		if (it != mapping.end()) {
+			bgcolor = it->second;
+			unsigned char* lbl_binary = const_cast<unsigned char*>(labels_binary.data());
+			std::span<unsigned char> lbl_binary_span(lbl_binary, sizeof(STORED_LABEL));
+			crackle::lib::itocd(bgcolor, lbl_binary_span, 0, sizeof(STORED_LABEL));
+		}
+	}
+
+	header.is_sorted = true;
+	for (uint64_t i = 1; i < unique_span.size(); i++) {
+		if (unique[i] != unique[i-1]) {
+			header.is_sorted = false;
+			break;
+		}
+	}
+
+	header.tochars(binary);
+
+	if (header.format_version > 0) {
+		reset_labels_crc(binary);
+	}
 }
 
 };

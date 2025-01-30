@@ -16,6 +16,17 @@
 namespace crackle {
 namespace labels {
 
+// For pin encodings only, extract the background color.
+uint64_t background_color(std::span<unsigned char> binary) {
+	crackle::CrackleHeader header(binary);
+
+	if (header.label_format == LabelFormat::FLAT) {
+		throw std::runtime_error("Background color can only be extracted from pin encoded streams.");
+	}
+	uint64_t offset = header.header_bytes() + header.grid_index_bytes();
+	return crackle::lib::ctoid(binary, offset, header.stored_data_width);
+}
+
 template <typename LABEL, typename STORED_LABEL>
 std::tuple<
 	std::vector<unsigned char>,
