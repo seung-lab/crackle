@@ -2,12 +2,13 @@
 #define __CRACKLE_LIB_HXX__
 
 #include <vector>
+#include <span>
 
 namespace crackle {
 namespace lib {
 
 // d is for dynamic
-inline uint64_t itocd(uint64_t x, std::vector<unsigned char> &buf, uint64_t idx, int byte_width) { 
+inline uint64_t itocd(uint64_t x, std::span<unsigned char> buf, uint64_t idx, int byte_width) { 
 	for (int i = 0; i < byte_width; i++) {
 		buf[idx + i] = static_cast<unsigned char>(
 			(x >> (8*i)) & 0xFF
@@ -18,18 +19,18 @@ inline uint64_t itocd(uint64_t x, std::vector<unsigned char> &buf, uint64_t idx,
 
 // little endian serialization of integers to chars
 // returns bytes written
-inline uint64_t itoc(uint8_t x, std::vector<unsigned char> &buf, uint64_t idx) {
+inline uint64_t itoc(uint8_t x, std::span<unsigned char> buf, uint64_t idx) {
 	buf[idx] = x;
 	return 1;
 }
 
-inline uint64_t itoc(uint16_t x, std::vector<unsigned char> &buf, uint64_t idx) {
+inline uint64_t itoc(uint16_t x, std::span<unsigned char> buf, uint64_t idx) {
 	buf[idx + 0] = x & 0xFF;
 	buf[idx + 1] = (x >> 8) & 0xFF;
 	return 2;
 }
 
-inline uint64_t itoc(uint32_t x, std::vector<unsigned char> &buf, uint64_t idx) {
+inline uint64_t itoc(uint32_t x, std::span<unsigned char> buf, uint64_t idx) {
 	buf[idx + 0] = x & 0xFF;
 	buf[idx + 1] = (x >> 8) & 0xFF;
 	buf[idx + 2] = (x >> 16) & 0xFF;
@@ -37,7 +38,7 @@ inline uint64_t itoc(uint32_t x, std::vector<unsigned char> &buf, uint64_t idx) 
 	return 4;
 }
 
-inline uint64_t itoc(uint64_t x, std::vector<unsigned char> &buf, uint64_t idx) {
+inline uint64_t itoc(uint64_t x, std::span<unsigned char> buf, uint64_t idx) {
 	buf[idx + 0] = x & 0xFF;
 	buf[idx + 1] = (x >> 8) & 0xFF;
 	buf[idx + 2] = (x >> 16) & 0xFF;

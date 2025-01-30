@@ -60,7 +60,12 @@ def max(binary:bytes) -> int:
       return bgcolor
     return arrmin
 
-def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> bytes:
+def remap(
+  binary:bytes, 
+  mapping:dict, 
+  preserve_missing_labels:bool = False,
+  in_place:bool = False,
+) -> bytes:
   """
   Remap the labels in a crackle bystream without decompressing.
   
@@ -71,66 +76,13 @@ def remap(binary:bytes, mapping:dict, preserve_missing_labels:bool = False) -> b
     a corresponding mapping key, it will raise a KeyError. If
     True, just leave it be and encode all the labels that are 
     in the mapping.
+  in_place: modify the bytestream in place. note: this will
+    even modify "immutable" bytes objects.
   """
-  orig = binary
-  head = CrackleHeader.frombytes(binary)
-
-  if head.format_version > 0:
-    labels_binary = raw_labels(binary)
-    computed_crc = crc32c(labels_binary)
-    stored_crc = labels_crc(binary)
-    if stored_crc != computed_crc:
-      raise FormatError(f"crc mismatch. The labels binary may be corrupt. Stored: {stored_crc} Computed: {computed_crc}")
-
-  binary = bytearray(binary)
-  
-  head = CrackleHeader.frombytes(binary)
-  hb = head.header_bytes
-
-  # flat: num_labels, N labels, remapped labels
-  # pins: bgcolor, num labels (u64), N labels, pins
-
-  offset = hb + head.grid_index_bytes
-  if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
-    bgcolor = int.from_bytes(binary[offset:offset+head.stored_data_width], 'little')
-
-    try:
-      binary[offset:offset+head.stored_data_width] = \
-        mapping[bgcolor].to_bytes(head.stored_data_width, 'little')
-    except KeyError:
-      if not preserve_missing_labels:
-        raise
-
-    offset += head.stored_data_width
-
-  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
-  offset += 8
-  uniq_bytes = num_labels * head.stored_data_width
-  all_labels = np.frombuffer(
-    binary,
-    offset=offset,
-    count=num_labels,
-    dtype=head.stored_dtype
-  )
-  fastremap.remap(
-    all_labels, mapping, 
-    preserve_missing_labels=preserve_missing_labels, 
-    in_place=True
-  )
-  is_sorted = np.all(all_labels[:-1] <= all_labels[1:])
-  if is_sorted != head.is_sorted:
-    head.is_sorted = is_sorted
-    binary[:hb] = head.tobytes()
-
-  binary[offset:offset+uniq_bytes] = list(all_labels.view(np.uint8))
-
-  if head.format_version > 0:
-    offset = hb + head.grid_index_bytes
-    computed_crc = crc32c(bytes(binary[offset:offset+head.num_label_bytes]))
-    crcl = head.sz * 4 + 4 
-    binary[-crcl:-crcl+4] = computed_crc.to_bytes(4, 'little')
-
-  return bytes(binary)
+  if not in_place:
+    binary = bytearray(binary)
+  fastcrackle.remap(binary, mapping, preserve_missing_labels)
+  return binary
 
 def astype(binary:bytes, dtype) -> bytes:
   """

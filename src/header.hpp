@@ -203,7 +203,7 @@ public:
 		return ngrids;
 	}
 
-	size_t tochars(std::vector<unsigned char> &buf, size_t idx = 0) const {
+	size_t tochars(std::span<unsigned char> buf, size_t idx = 0) const {
 		if ((idx + header_bytes()) > buf.size()) {
 			throw std::runtime_error("crackle: Unable to write past end of buffer.");
 		}

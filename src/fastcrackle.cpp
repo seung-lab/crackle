@@ -6,6 +6,7 @@
 
 #include <optional>
 #include <vector>
+#include <unordered_map>
 
 #include "crackle.hpp"
 #include "operations.hpp"
@@ -348,11 +349,45 @@ py::array get_slice_vcg(
 	return array;
 }
 
+void remap(
+	py::buffer &buffer,
+	const std::unordered_map<uint64_t,uint64_t>& mapping,
+	const bool preserve_missing_labels = false
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+
+	if (static_cast<uint64_t>(info.size) < crackle::CrackleHeader::header_size) {
+		throw std::runtime_error("binary too small");
+	}
+
+	crackle::CrackleHeader header(data);
+
+	if (header.stored_data_width == 1) {
+		crackle::remap<uint8_t>(data, info.size, mapping, preserve_missing_labels);
+	}
+	else if (header.stored_data_width == 2) {
+		crackle::remap<uint16_t>(data, info.size, mapping, preserve_missing_labels);
+	}
+	else if (header.stored_data_width == 4) {
+		crackle::remap<uint32_t>(data, info.size, mapping, preserve_missing_labels);
+	}
+	else {
+		crackle::remap<uint64_t>(data, info.size, mapping, preserve_missing_labels);
+	}
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
 	m.def("compress", &compress, "Compress a numpy array into a binary crackle file returned as bytes.");
 	m.def("reencode_markov", &reencode_markov, "Change the markov order of an existing crackle binary.");
+	m.def("remap", &remap, "Remap a buffer's unique labels in place.");
 	m.def(
 		"connected_components", 
 		&connected_components,

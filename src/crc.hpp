@@ -7,6 +7,9 @@
 	#include "crc32c_x86_64_sse.h"
 #endif
 
+#include <vector>
+#include <span>
+
 namespace crackle {
 namespace crc {
 
@@ -32,6 +35,14 @@ uint8_t crc8(uint8_t const *data, uint64_t size) {
 }
 
 uint32_t crc32c(const std::vector<unsigned char>& data) {
+	return crc32_impl(0x0000, data.data(), data.size());
+}
+
+uint32_t crc32c(const std::span<unsigned char>& data) {
+	return crc32_impl(0x0000, data.data(), data.size());
+}
+
+uint32_t crc32c(const std::span<const unsigned char>& data) {
 	return crc32_impl(0x0000, data.data(), data.size());
 }
 
