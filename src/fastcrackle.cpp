@@ -12,6 +12,7 @@
 #include "operations.hpp"
 #include "cc3d.hpp"
 #include "pins.hpp"
+#include "robin_hood.hpp"
 
 namespace py = pybind11;
 
@@ -351,9 +352,17 @@ py::array get_slice_vcg(
 
 void remap(
 	py::buffer &buffer,
-	const std::unordered_map<uint64_t,uint64_t>& mapping,
+	const py::dict& pymapping,
 	const bool preserve_missing_labels = false
 ) {
+	robin_hood::unordered_flat_map<uint64_t,uint64_t> mapping;
+	mapping.reserve(pymapping.size());
+	for (auto& item : pymapping) {
+		uint64_t key = static_cast<uint64_t>(item.first.cast<py::int_>());
+		uint64_t val = static_cast<uint64_t>(item.second.cast<py::int_>());
+		mapping[key] = val;
+	}
+
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {

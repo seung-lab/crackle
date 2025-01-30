@@ -988,11 +988,13 @@ auto reencode_with_markov_order(
 	);
 }
 
-template <typename STORED_LABEL>
+// MAPTYPE b/c maybe someone will want to use the C++ interface and use 
+// std::unordered_map or a wrapper around py::dict directly to avoid copies.
+template <typename STORED_LABEL, typename MAPTYPE = robin_hood::unordered_flat_map<uint64_t,uint64_t>>
 void remap(
 	unsigned char* buffer,
 	const uint64_t num_bytes,
-	const std::unordered_map<uint64_t,uint64_t>& mapping,
+	const MAPTYPE& mapping,
 	const bool preserve_missing_labels = false
 ) {
 
@@ -1015,16 +1017,40 @@ void remap(
 		header, labels_binary
 	);
 
-	STORED_LABEL* unique = const_cast<STORED_LABEL*>(unique_span.data());
+	const uint64_t target_size = unique_span.size() + (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH);
 
-	for (uint64_t i = 0; i < unique_span.size(); i++) {
-		const uint64_t uniq = static_cast<uint64_t>(unique[i]);
-		auto it = mapping.find(uniq);
-		if (it != mapping.end()) {
-			unique[i] = it->second;
+	if (!preserve_missing_labels && mapping.size() < target_size) {
+		throw std::runtime_error("mapping must be at least as large as unique labels when preserve_missing_labels is false.");
+	}
+
+	STORED_LABEL* unique_ptr = const_cast<STORED_LABEL*>(unique_span.data());
+	std::span<STORED_LABEL> unique(unique_ptr, unique_span.size());
+
+	if (header.is_sorted && preserve_missing_labels && mapping.size() < target_size / 10) {
+		std::vector<typename std::span<STORED_LABEL>::iterator> iters;
+		iters.reserve(mapping.size());
+
+		for (auto& [k,v] : mapping) {
+    	auto it = std::lower_bound(unique.begin(), unique.end(), k);
+	    if (it != unique.end() && *it == k) {
+	    	iters.push_back(it);
+			}
 		}
-		else if (preserve_missing_labels == false) {
-			throw std::runtime_error("Label was missing.");
+		for (auto& it : iters) {
+			auto itm = mapping.find(*it);
+			*it = itm->second;
+		}
+	}
+	else {
+		for (uint64_t i = 0; i < unique.size(); i++) {
+			const uint64_t uniq = static_cast<uint64_t>(unique[i]);
+			auto it = mapping.find(uniq);
+			if (it != mapping.end()) {
+				unique[i] = it->second;
+			}
+			else if (preserve_missing_labels == false) {
+				throw std::runtime_error("Label was missing.");
+			}
 		}
 	}
 
@@ -1040,8 +1066,8 @@ void remap(
 	}
 
 	header.is_sorted = true;
-	for (uint64_t i = 1; i < unique_span.size(); i++) {
-		if (unique[i] != unique[i-1]) {
+	for (uint64_t i = 1; i < unique.size(); i++) {
+		if (unique[i] < unique[i-1]) {
 			header.is_sorted = false;
 			break;
 		}
