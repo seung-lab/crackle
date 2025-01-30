@@ -362,23 +362,21 @@ uint64_t num_labels(const std::span<const unsigned char> &binary) {
 }
 
 template <typename STORED_LABEL>
-std::vector<STORED_LABEL> decode_uniq(
+std::span<const STORED_LABEL> decode_uniq(
 	const CrackleHeader &header,
 	const std::span<const unsigned char> &labels_binary
 ) {
 	const uint64_t num_labels = decode_num_labels(header, labels_binary);
-	std::vector<STORED_LABEL> uniq(num_labels);
 
 	uint64_t idx = header.label_format == LabelFormat::FLAT
 		? 8 // num labels
 		: header.stored_data_width + 8; // bgcolor + numlabels for pins
 
-	const unsigned char* buf = labels_binary.data();
-	for (uint64_t i = 0; i < num_labels; i++, idx += sizeof(STORED_LABEL)) {
-		uniq[i] = crackle::lib::ctoi<STORED_LABEL>(buf, idx);
-	}
-
-	return uniq;
+    const unsigned char* buf = labels_binary.data();
+	return std::span<const STORED_LABEL>(
+		 reinterpret_cast<const STORED_LABEL*>(buf + idx),
+		num_labels
+	);
 }
 
 std::tuple<
@@ -420,7 +418,7 @@ std::vector<LABEL> decode_flat(
 	const unsigned char* buf = labels_binary.data();
 
 	const uint64_t num_labels = decode_num_labels(header, labels_binary);
-	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
+	std::span<const STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
 
 	const int cc_label_width = crackle::lib::compute_byte_width(num_labels);
 
@@ -479,7 +477,7 @@ std::vector<LABEL> decode_condensed_pins(
 			labels_binary.data(), 0
 		)
 	);
-	std::vector<STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
+	std::span<const STORED_LABEL> uniq = decode_uniq<STORED_LABEL>(header, labels_binary);
 
 	// bgcolor, num labels (u64), N labels, fmt depth num_pins, 
 	// [num_pins][idx_1][depth_1]...[idx_n][depth_n][num_cc][cc_1][cc_2]...[cc_n]
