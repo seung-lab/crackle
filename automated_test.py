@@ -248,6 +248,17 @@ def test_remap():
 
   crackle.decompress(binary) # validate crcs
 
+  binary = crackle.remap(binary, { i:i+1 for i in range(1002) }, preserve_missing_labels=True)
+  labels = crackle.labels(binary)
+  assert np.all(labels == np.arange(2,1002))
+
+  ans = np.arange(2,1002)
+  ans[:48] += 1
+
+  binary = crackle.remap(binary, { i:i+1 for i in range(50) }, preserve_missing_labels=True)
+  labels = crackle.labels(binary)
+  assert np.all(labels == ans)
+
 def test_remap_sorted():
   labels = np.random.randint(0,7, size=(10,10,10)).astype(np.uint32)
   binary = crackle.compress(labels)
