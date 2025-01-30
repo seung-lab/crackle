@@ -259,6 +259,18 @@ def test_remap():
   labels = crackle.labels(binary)
   assert np.all(labels == ans)
 
+def test_big_remap():
+  import time
+  labels = np.arange(0,10000000).reshape((100,100,1000)).astype(np.uint32)
+  binary = crackle.compress(labels)
+  mapping = { i:i+1 for i in range(10000000) }
+  s = time.time()
+  crackle.remap(binary, mapping, preserve_missing_labels=False, in_place=True, parallel=0)  
+  print(f"{time.time() - s:.3f}")
+
+  labels = crackle.labels(binary)
+  assert np.all(labels == np.arange(1,10000001))
+
 def test_remap_sorted():
   labels = np.random.randint(0,7, size=(10,10,10)).astype(np.uint32)
   binary = crackle.compress(labels)
