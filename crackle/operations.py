@@ -144,7 +144,7 @@ def _zstack_flat_labels(
   }
 
   first_head = CrackleHeader.frombytes(binaries[0])
-  first_head.stored_data_width = compute_byte_width(uniq.max())
+  first_head.stored_data_width = compute_byte_width(uniq[-1])
   key_width = compute_byte_width(len(uniq))
 
   for binary in binaries:
@@ -361,6 +361,8 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
   for binary in binaries:
     uniq.extend(labels(binary))
   uniq = fastremap.unique(uniq)
+
+  first_head.stored_data_width = compute_byte_width(uniq[-1])
 
   if first_head.label_format == LabelFormat.FLAT:
     labels_binary = _zstack_flat_labels(uniq, binaries)
