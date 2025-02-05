@@ -181,7 +181,8 @@ def _zstack_pins(
   ]
 
   first_head = CrackleHeader.frombytes(binaries[0])
-
+  first_head.stored_data_width = compute_byte_width(uniq[-1])
+  
   component_index = []
 
   # fmt: 
@@ -313,6 +314,7 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
 
   first_head = None
   sz = 0
+  data_width = 1
 
   for binary in images:
     if binary is None:
@@ -326,6 +328,8 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     head = header(binary)
     if first_head is None:
       first_head = head 
+
+    data_width = __builtins__["max"](data_width, head.data_width)
 
     if first_head.fortran_order:
       binary = asfortranarray(binary)
@@ -344,8 +348,6 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
       raise ValueError("Grid sizes must match.")
     if head.crack_format != first_head.crack_format:
       raise ValueError("All crack formats must match.")
-    if head.data_width != first_head.data_width:
-      raise ValueError("All binaries must be the same data width.")
     if head.signed != first_head.signed:
       raise ValueError("All binaries must have the same sign.")
 
@@ -356,6 +358,7 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
     return binaries[0]
 
   first_head.sz = sz
+  first_head.data_width = data_width
 
   uniq = []
   for binary in binaries:
