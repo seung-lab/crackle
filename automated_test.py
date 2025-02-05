@@ -355,6 +355,31 @@ def test_zstack_real_data(allow_pins):
 
   assert np.all(labels == recovered)
 
+@pytest.mark.parametrize('allow_pins', [False,True])  
+def test_zstack_heterogenous_data(allow_pins):
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binaries = []
+
+  empties = np.zeros([512,512,10], dtype=np.uint8, order="F")
+  binaries.append(
+    crackle.compress(empties, allow_pins=allow_pins)
+  )
+
+  for z in range(0, 512 // 64):
+    slab = labels[:,:,z*64:(z+1)*64]
+    binary = crackle.compress(slab, allow_pins=allow_pins)
+    binaries.append(binary)
+
+  binary = crackle.zstack(binaries)
+  recovered = crackle.decompress(binary)
+
+  ans = np.zeros([512,512,522], dtype=labels.dtype, order="F")
+  ans[:,:,10:] = labels
+
+  assert np.all(ans == recovered)
+
+
+
 def test_zsplit():
   labels = np.ones([256,256,7], dtype=np.uint32)
   binary = crackle.compress(labels)
