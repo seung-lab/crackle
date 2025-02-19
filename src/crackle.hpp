@@ -1048,6 +1048,8 @@ void remap(
 			}
 		}
 		for (auto& it : iters) {
+			const STORED_LABEL original_val = *it;
+
 			auto itm = mapping.find(*it);
 			*it = itm->second;
 
@@ -1056,6 +1058,10 @@ void remap(
 			}
 			if (it != unique.end() - 1) {
 				header.is_sorted = header.is_sorted && *(it+1) >= *it;
+			}
+
+			for (auto walk = it + 1; walk != unique.end() && *walk == original_val; walk++) {
+				*walk = itm->second;
 			}
 		}
 	}
