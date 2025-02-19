@@ -1032,7 +1032,10 @@ void remap(
 	STORED_LABEL* unique_ptr = const_cast<STORED_LABEL*>(unique_span.data());
 	std::span<STORED_LABEL> unique(unique_ptr, unique_span.size());
 
-	const uint64_t target_factor = static_cast<uint64_t>(ceil(log2(target_size)));
+	const uint64_t target_factor = std::max(
+		static_cast<uint64_t>(ceil(log2(target_size))),
+		static_cast<uint64_t>(1),
+	);
 
 	if (header.is_sorted && preserve_missing_labels && mapping.size() < target_size / target_factor) {
 		std::vector<typename std::span<STORED_LABEL>::iterator> iters;
