@@ -1047,6 +1047,13 @@ void remap(
 		for (auto& it : iters) {
 			auto itm = mapping.find(*it);
 			*it = itm->second;
+
+			if (it != unique.begin()) {
+				header.is_sorted = header.is_sorted && *(it-1) <= *it;
+			}
+			if (it != unique.end() - 1) {
+				header.is_sorted = header.is_sorted && *(it+1) >= *it;
+			}
 		}
 	}
 	else {
@@ -1078,6 +1085,14 @@ void remap(
 		}
 
 		pool.join();
+
+		header.is_sorted = true;
+		for (uint64_t i = 1; i < unique.size(); i++) {
+			if (unique[i] < unique[i-1]) {
+				header.is_sorted = false;
+				break;
+			}
+		}
 	}
 
 	if (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH) {
@@ -1088,14 +1103,6 @@ void remap(
 			unsigned char* lbl_binary = const_cast<unsigned char*>(labels_binary.data());
 			std::span<unsigned char> lbl_binary_span(lbl_binary, sizeof(STORED_LABEL));
 			crackle::lib::itocd(bgcolor, lbl_binary_span, 0, sizeof(STORED_LABEL));
-		}
-	}
-
-	header.is_sorted = true;
-	for (uint64_t i = 1; i < unique.size(); i++) {
-		if (unique[i] < unique[i-1]) {
-			header.is_sorted = false;
-			break;
 		}
 	}
 
