@@ -273,9 +273,12 @@ def test_big_remap():
 
 def test_remap_sorted():
   labels = np.random.randint(0,7, size=(10,10,10)).astype(np.uint32)
+
+  # in order
+
   binary = crackle.compress(labels)
 
-  remap = {0:10, 1:20, 2:30, 3:40, 4:55, 5:60, 6:70}
+  remap = {0:10, 1:20, 2:30, 3:30, 4:55, 5:60, 6:70}
 
   binary = crackle.remap(binary, remap, preserve_missing_labels=True)
   new_labels = list(remap.values())
@@ -291,6 +294,29 @@ def test_remap_sorted():
 
   head = crackle.header(binary)
   assert head.is_sorted 
+
+  # with duplicate
+
+  remap = {10:11, 20:21, 30:31, 55:56, 60:61, 70:71}
+
+  binary = crackle.remap(binary, remap, preserve_missing_labels=True)
+  new_labels = list(remap.values())
+  new_labels.sort()
+  remapped_binary_labels = list(crackle.labels(binary))
+  print(remapped_binary_labels)
+  assert len(remapped_binary_labels) == len(new_labels) + 1
+  remapped_binary_labels = np.unique(remapped_binary_labels)
+
+  assert np.all(remapped_binary_labels == new_labels)
+  assert len(remapped_binary_labels) == len(new_labels)
+
+  for label in new_labels:
+    assert crackle.contains(binary, label)
+
+  head = crackle.header(binary)
+  assert head.is_sorted 
+
+  # out of order
 
   binary = crackle.compress(labels)
 
@@ -310,8 +336,6 @@ def test_remap_sorted():
 
   head = crackle.header(binary)
   assert not head.is_sorted 
-
-
 
 
 @pytest.mark.parametrize("allow_pins", [False, True])
