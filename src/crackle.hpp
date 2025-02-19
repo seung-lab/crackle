@@ -1020,8 +1020,13 @@ void remap(
 
 	const uint64_t target_size = unique_span.size() + (header.label_format == LabelFormat::PINS_VARIABLE_WIDTH);
 
-	if (!preserve_missing_labels && mapping.size() < target_size) {
-		throw std::runtime_error("mapping must be at least as large as unique labels when preserve_missing_labels is false.");
+	// this used to be mapping must be >= target_size, but it fails when 
+	// dealing with a crackle file that has already been remapped and so has
+	// duplicate entries in the unique table, so we have to be more conservative.
+	// an alternative would be to perform a unique operation, but consider that
+	// some files have 20GB of unique labels.
+	if (!preserve_missing_labels && mapping.size() == 0 && target_size > 0) {
+		throw std::runtime_error("mapping must be at least size 1.");
 	}
 
 	STORED_LABEL* unique_ptr = const_cast<STORED_LABEL*>(unique_span.data());
