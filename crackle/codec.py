@@ -178,7 +178,7 @@ def grid_index(binary:bytes, ignore_crc_check:bool = False) -> np.ndarray:
     z_index = np.frombuffer(z_index_binary[:-4], dtype=np.uint32)
     if not ignore_crc_check:
       stored_crc32c = int.from_bytes(z_index_binary[-4:], 'little')
-      computed_crc32c = crc32c(z_index_binary[:-4])
+      computed_crc32c = crc32c(bytes(z_index_binary[:-4]))
       if stored_crc32c != computed_crc32c:
         raise FormatError(f"Grid index crc32c did not match stored version. Stored: {stored_crc32c} Computed: {computed_crc32c}")
 
