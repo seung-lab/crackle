@@ -733,6 +733,20 @@ def test_voxel_counts():
   cts_gt = { u:ct for u,ct in zip(uniq, cts) }
   assert vc_cts == cts_gt
 
+def test_centroids():
+  import scipy.ndimage
+
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels)
+
+  centroids = crackle.centroids(binary)
+
+  for i, (lbl, val) in enumerate(centroids.items()):
+    res = scipy.ndimage.center_of_mass(labels == lbl)
+    assert np.all(np.isclose(res, val))
+
+    if i > 20:
+      break
 
 def test_spurious_branch_elimination():
   arr = np.array([

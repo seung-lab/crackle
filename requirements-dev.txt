@@ -3,3 +3,4 @@ compresso
 pytest
 networkx
 tqdm
+scipy
