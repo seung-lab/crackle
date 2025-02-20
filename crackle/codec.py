@@ -834,5 +834,31 @@ def voxel_counts(
 
   return vcts
 
+def centroids(
+  binary:bytes, 
+  label:Optional[int] = None,
+  parallel:int = 0,
+) -> Dict[int,int]:
+  """
+  Calculate the centroid for each label.
+
+  If "label" is provided, compute only that label which
+  may save some computaton.
+  """
+  if label is None:
+    z_start = 0
+    z_end = -1
+  elif not contains(binary, label):
+      raise ValueError(f"Label {label} not contained in image.")
+  else:
+    z_start, z_end = z_range_for_label(binary, label)
+
+  centroid_data = fastcrackle.centroids(binary, z_start, z_end, parallel)
+
+  if label is not None:
+    return centroid_data[label]
+
+  return centroid_data
+
 
 

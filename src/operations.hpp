@@ -2,6 +2,7 @@
 #define __CRACKLE_OPERATIONS_HPP__
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -379,6 +380,197 @@ auto voxel_counts(
 		z_start, z_end, parallel
 	);
 }
+
+template <typename LABEL>
+std::unordered_map<uint64_t, std::array<double, 3>>
+centroids(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	if (num_bytes < CrackleHeader::header_size) {
+		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
+		err += std::to_string(num_bytes);
+		throw std::runtime_error(err);
+	}
+
+	const CrackleHeader header(buffer);
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+	const uint64_t sz = header.sz;
+	const uint64_t sxy = header.sx * header.sy;
+
+	if (header.format_version > CrackleHeader::current_version) {
+		std::string err = "crackle: Invalid format version.";
+		err += std::to_string(header.format_version);
+		throw std::runtime_error(err);
+	}
+
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(sz - 1)), static_cast<int64_t>(0));
+	z_end = z_end < 0 ? static_cast<int64_t>(sz) : z_end;
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(sz)), static_cast<int64_t>(0));
+
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
+	}
+
+	const int64_t szr = z_end - z_start;
+
+	const uint64_t voxels = (
+		static_cast<uint64_t>(sx) 
+		* static_cast<uint64_t>(sy) 
+		* static_cast<uint64_t>(szr)
+	);
+
+	if (voxels == 0) {
+		return std::unordered_map<uint64_t, std::array<double,3>>();
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
+
+	uint64_t num_labels = crackle::labels::num_labels(binary);
+	std::unordered_map<uint64_t, std::array<uint64_t, 4>> cts; // label: x,y,z,N
+	cts.reserve(num_labels / (header.sz / szr));
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, static_cast<size_t>(szr));
+
+	ThreadPool pool(parallel);
+
+	std::vector<std::vector<uint8_t>> vcgs(parallel);
+	std::vector<std::vector<uint32_t>> ccls(parallel);
+
+	for (size_t t = 0; t < parallel; t++) {
+		vcgs[t].resize(sxy);
+		ccls[t].resize(sxy);
+	}
+
+	std::mutex mtx;
+
+	for (size_t z = z_start, i = 0; i < crack_codes.size(); z++, i++) {
+			pool.enqueue([&,z,i](size_t t){
+				std::vector<uint8_t>& vcg = vcgs[t];
+				std::vector<uint32_t>& ccl = ccls[t];
+				auto& crack_code = crack_codes[i];
+
+				crack_code_to_vcg(
+					/*code=*/crack_code,
+					/*sx=*/sx, /*sy=*/sy,
+					/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+					/*markov_model=*/markov_model,
+					/*slice_edges=*/vcg.data()
+				);
+
+				uint64_t N = 0;
+				crackle::cc3d::color_connectivity_graph<uint32_t>(
+					vcg, sx, sy, 1, ccl.data(), N
+				);
+
+				std::vector<LABEL> label_map = decode_label_map<LABEL>(
+					header, binary, ccl.data(), N, z, z+1
+				);
+				std::vector<std::array<uint64_t, 4>> subcounts(N);
+
+				for (uint64_t y = 0; y < header.sy; y++) {
+					for (uint64_t x = 0; x < header.sx; x++) {
+						uint32_t ccl_label = ccl[x + sx * y];
+
+						subcounts[ccl_label][0] += x;
+						subcounts[ccl_label][1] += y;
+						subcounts[ccl_label][2] += z;
+						subcounts[ccl_label][3]++;
+					}
+				}
+
+				std::unique_lock<std::mutex> lock(mtx);
+				for (uint64_t i = 0; i < N; i++) {
+					auto& arr = cts[label_map[i]];
+					arr[0] += subcounts[i][0];
+					arr[1] += subcounts[i][1];
+					arr[2] += subcounts[i][2];
+					arr[3] += subcounts[i][3];
+				}
+		});
+	}
+
+	pool.join();
+
+	std::unordered_map<uint64_t, std::array<double, 3>> ctsf;
+	ctsf.reserve(cts.size());
+
+	for (auto& [label, ctarr] : cts) {
+		ctsf[label] = {
+			static_cast<double>(ctarr[0]) / static_cast<double>(ctarr[3]),
+			static_cast<double>(ctarr[1]) / static_cast<double>(ctarr[3]),
+			static_cast<double>(ctarr[2]) / static_cast<double>(ctarr[3]),
+		};
+	}
+
+	return ctsf;
+}
+
+auto centroids(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.data_width == 1) {
+		return centroids<uint8_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else if (header.data_width == 2) {
+		return centroids<uint16_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else if (header.data_width == 4) {
+		return centroids<uint32_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else {
+		return centroids<uint64_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+}
+
+auto centroids(
+	const std::span<const unsigned char>& buffer,
+	const int64_t z_start = -1, 
+	const int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	return centroids(
+		buffer.data(),
+		buffer.size(),
+		z_start, z_end, parallel
+	);
+}
+
 
 };
 };

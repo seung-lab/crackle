@@ -340,6 +340,34 @@ py::dict voxel_counts(
 	return pycts;
 }
 
+py::dict centroids(
+	const py::buffer &buffer,
+	const int64_t z_start = 0, 
+	const int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	auto centroid_data = crackle::operations::centroids(data, info.size, z_start, z_end, parallel);
+
+	py::dict pycentroids;
+	for (const auto& [label, xyz] : centroid_data) {
+    	py::array_t<double> np_xyz({3}, {sizeof(double)});
+    	auto buf = np_xyz.mutable_unchecked<1>();
+        buf(0) = xyz[0];
+        buf(1) = xyz[1];
+        buf(2) = xyz[2];
+		pycentroids[py::int_(label)] = np_xyz;
+	}
+
+	return pycentroids;
+}
+
 py::array get_slice_vcg(
 	const py::bytes &buffer, 
 	const int64_t z
@@ -409,6 +437,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("compute_pins", &compute_pins, "Compute a pinset.");
 	m.def("point_cloud", &point_cloud, "Extract one or more point clouds without decompressing.");
 	m.def("voxel_counts", &voxel_counts, "Compute the voxel counts for each label in the dataset.");
+	m.def("centroids", &centroids, "Compute the centroid for each label in the dataset.");
 	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
