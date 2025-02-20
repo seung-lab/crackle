@@ -704,17 +704,16 @@ def point_cloud(
   If label is provided, return the surface point cloud as
   a numpy array.
   """
-  if label is None:
-    label = -1
-  elif not contains(binary, label):
+  if label is not None:
+    if not contains(binary, label):
       raise ValueError(f"Label {label} not contained in image.")
-  else:
-    z_start_l, z_end_l = z_range_for_label(binary, label)
-    z_start = max(z_start, z_start_l)
-    if z_end == -1:
-      z_end = z_end_l
     else:
-      z_end = min(z_end, z_end_l)
+      z_start_l, z_end_l = z_range_for_label(binary, label)
+      z_start = max(z_start, z_start_l)
+      if z_end == -1:
+        z_end = z_end_l
+      else:
+        z_end = min(z_end, z_end_l)
 
   if parallel <= 0:
     parallel = mp.cpu_count()
@@ -731,7 +730,7 @@ def point_cloud(
     arr = np.asarray(pts, dtype=np.uint16, order="C")
     ptc[lbl] = arr.reshape([ len(pts) // 3, 3 ], order="C")
 
-  if label > -1:
+  if label is not None:
     return ptc[label]
 
   return ptc
