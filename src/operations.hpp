@@ -37,7 +37,7 @@ point_cloud(
 	const size_t num_bytes,
 	int64_t z_start = -1,
 	int64_t z_end = -1,
-	const std::optional<uint64_t> label = std::nullopt,
+	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
 	size_t parallel = 1
 ) {
 
@@ -77,6 +77,12 @@ point_cloud(
 
 	if (voxels == 0) {
 		return std::unordered_map<uint64_t, std::vector<uint16_t>>();
+	}
+
+	const bool selective = labels.has_value();
+	robin_hood::unordered_flat_set<uint64_t> labels_set;
+	if (selective) {
+		labels_set.insert(labels->begin(), labels->end());
 	}
 
 	std::span<const unsigned char> binary(buffer, num_bytes);
@@ -139,7 +145,7 @@ point_cloud(
 				for (auto ptc_ccl : ptc_ccls) {
 					uint64_t current_label = label_map[label_i];
 					
-					if (label.has_value() && current_label != *label) {
+					if (selective && !labels_set.contains(current_label)) {
 						label_i++;
 						continue;
 					}
@@ -170,7 +176,7 @@ auto point_cloud(
 	const size_t num_bytes,
 	int64_t z_start = -1,
 	int64_t z_end = -1,
-	const std::optional<uint64_t> label = std::nullopt,
+	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
 	size_t parallel = 1
 ) {
 	CrackleHeader header(buffer);
@@ -178,25 +184,25 @@ auto point_cloud(
 	if (header.data_width == 1) {
 		return point_cloud<uint8_t>(
 			buffer, num_bytes,
-			z_start, z_end, label, parallel
+			z_start, z_end, labels, parallel
 		);
 	}
 	else if (header.data_width == 2) {
 		return point_cloud<uint16_t>(
 			buffer, num_bytes,
-			z_start, z_end, label, parallel
+			z_start, z_end, labels, parallel
 		);
 	}
 	else if (header.data_width == 4) {
 		return point_cloud<uint32_t>(
 			buffer, num_bytes,
-			z_start, z_end, label, parallel
+			z_start, z_end, labels, parallel
 		);
 	}
 	else {
 		return point_cloud<uint64_t>(
 			buffer, num_bytes,
-			z_start, z_end, label, parallel
+			z_start, z_end, labels, parallel
 		);
 	}
 }
@@ -205,13 +211,13 @@ auto point_cloud(
 	const std::span<const unsigned char>& buffer,
 	const int64_t z_start = -1, 
 	const int64_t z_end = -1,
-	const std::optional<uint64_t> label = std::nullopt,
+	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
 	size_t parallel = 1
 ) {
 	return point_cloud(
 		buffer.data(),
 		buffer.size(),
-		z_start, z_end, label, parallel
+		z_start, z_end, labels, parallel
 	);
 }
 

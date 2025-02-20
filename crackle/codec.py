@@ -689,7 +689,7 @@ def condense_unique(binary:bytes) -> bytes:
 
 def point_cloud(
   binary:bytes, 
-  label:Optional[int] = None,
+  label:Optional[Union[int,List[int]]] = None,
   parallel:int = 0,
   z_start:int = -1,
   z_end:int = -1,
@@ -702,18 +702,31 @@ def point_cloud(
   a dict of numpy arrays with the labels as the key.
 
   If label is provided, return the surface point cloud as
-  a numpy array.
+  a numpy array. label can be an int or a list of ints.
   """
-  if label is not None:
-    if not contains(binary, label):
-      raise ValueError(f"Label {label} not contained in image.")
-    else:
-      z_start_l, z_end_l = z_range_for_label(binary, label)
-      z_start = max(z_start, z_start_l)
-      if z_end == -1:
-        z_end = z_end_l
+  scalar_input = False
+  if isinstance(label, int):
+    scalar_input = True
+    label = [ label ]
+
+  if isinstance(label, (list,tuple)):
+    z_starts = []
+    z_ends = []
+    for lbl in label:
+      if not contains(binary, lbl):
+        raise ValueError(f"Label {lbl} not contained in image.")
       else:
-        z_end = min(z_end, z_end_l)
+        z_start_l, z_end_l = z_range_for_label(binary, lbl)
+        z_starts.append(z_start_l)
+        z_ends.append(z_end_l)
+
+    if z_start == -1:
+      z_start = 0
+    if z_end == -1:
+      z_end = header(binary).sz
+
+    z_start = max(z_start, min(z_starts))
+    z_end = min(z_end, max(z_ends))
 
   if parallel <= 0:
     parallel = mp.cpu_count()
@@ -730,8 +743,8 @@ def point_cloud(
     arr = np.asarray(pts, dtype=np.uint16, order="C")
     ptc[lbl] = arr.reshape([ len(pts) // 3, 3 ], order="C")
 
-  if label is not None:
-    return ptc[label]
+  if scalar_input:
+    return ptc[label[0]]
 
   return ptc
 
