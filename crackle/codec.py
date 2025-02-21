@@ -713,24 +713,35 @@ def point_cloud(
     scalar_input = True
     label = [ label ]
 
+  head = header(binary)
+
+  opt_z_start = z_start == -1
+  opt_z_end = z_end == -1
+
   if isinstance(label, (list,tuple)):
-    z_starts = []
-    z_ends = []
+    if z_start == -1:
+      z_start = head.sz
+    if z_end == -1:
+      z_end = -1
+
     for lbl in label:
       if not contains(binary, lbl):
         raise ValueError(f"Label {lbl} not contained in image.")
-      else:
+      elif (opt_z_start or opt_z_end):
         z_start_l, z_end_l = z_range_for_label(binary, lbl)
-        z_starts.append(z_start_l)
-        z_ends.append(z_end_l)
+        
+        if opt_z_start:
+          z_start = min(z_start, z_start_l)
+        if opt_z_end:
+          z_end = max(z_end, z_end_l)
 
-    if z_start == -1:
-      z_start = 0
-    if z_end == -1:
-      z_end = header(binary).sz
+        if z_start == 0 and z_end == head.sz:
+          break
 
-    z_start = max(z_start, min(z_starts))
-    z_end = min(z_end, max(z_ends))
+  if z_start == -1:
+    z_start = 0
+  if z_end == -1:
+    z_end = head.sz
 
   if parallel <= 0:
     parallel = mp.cpu_count()
