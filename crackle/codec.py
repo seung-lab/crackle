@@ -89,7 +89,11 @@ def contains(binary:bytes, label:int) -> bool:
     count=num_labels,
     dtype=head.stored_dtype
   )
-  label = np.asarray(label, dtype=uniq.dtype)
+  try:
+    label = np.asarray(label, dtype=uniq.dtype)
+  except OverflowError:
+    return False # it can't possibly be contained in the array
+
   idx = np.searchsorted(uniq, label)
   if 0 <= idx < uniq.size:
     return uniq[idx] == label
@@ -385,8 +389,12 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
     count=num_labels,
     dtype=head.stored_dtype
   )
-  label = np.asarray(label, dtype=uniq.dtype)
-  idx = np.searchsorted(uniq, label)
+  try:
+    label = np.asarray(label, dtype=uniq.dtype)
+    idx = np.searchsorted(uniq, label)
+  except OverflowError:
+    idx = -1
+    
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
 
@@ -447,8 +455,12 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     count=num_labels,
     dtype=head.stored_dtype,
   )
-  label = np.asarray(label, dtype=uniq.dtype)
-  idx = np.searchsorted(uniq, label)
+  try:
+    label = np.asarray(label, dtype=uniq.dtype)
+    idx = np.searchsorted(uniq, label)
+  except OverflowError:
+    idx = -1
+
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
 
@@ -463,8 +475,8 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   )
   components_per_grid = np.cumsum(components_per_grid)
   all_pins, all_single_labels = decode_condensed_pins(binary)
-  label_pins = all_pins[label]
-  single_labels = all_single_labels[label]
+  label_pins = all_pins[int(label)]
+  single_labels = all_single_labels[int(label)]
 
   z_start = head.sz - 1
   z_end = 0
