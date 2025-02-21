@@ -27,7 +27,7 @@ else:
     ]
   else:
     extra_compile_args += [
-      "-march=armv8-a+simd"  # Enable NEON for aarch64
+      "-march=armv8-a+crc+simd"  # Enable NEON for aarch64
     ]
 
 
