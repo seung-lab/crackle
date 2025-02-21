@@ -403,11 +403,11 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
   components_per_grid = np.cumsum(components_per_grid)
 
   offset = next_offset
-
+ 
   dtype = compute_dtype(num_labels)
   cc_labels = np.frombuffer(labels_binary, offset=offset, dtype=dtype)
 
-  cc_idxs = np.where(cc_labels == idx)[0]
+  cc_idxs = fastcrackle.index_range(cc_labels, idx)
 
   if cc_idxs.size == 0:
     return (-1, -1)

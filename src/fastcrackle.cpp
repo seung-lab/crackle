@@ -423,12 +423,66 @@ void remap(
 	}
 }
 
+template <typename T>
+py::array _index_range_helper(T* arr, ssize_t N, const T value) {
+	std::vector<ssize_t> all_indices;
+
+	ssize_t i = 0;
+	for (; i < N; i++) {
+		if (arr[i] == value) {
+			all_indices.push_back(i);
+			break;
+		}
+	}
+
+	for (ssize_t j = N - 1; j > i; j--) {
+		if (arr[j] == value) {
+			all_indices.push_back(j);
+			break;
+		}			
+	}
+
+	ssize_t size = all_indices.size();
+
+	py::array_t<uint64_t> result(size);
+	auto buf = result.template mutable_unchecked<1>();
+	for (ssize_t i = 0; i < size; i++) {
+		buf(i) = all_indices[i];
+	}
+	return result;
+}
+
+py::array index_range(
+	const py::buffer &buffer,
+	const uint64_t value
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	if (info.itemsize == 1) {
+		return _index_range_helper<uint8_t>(reinterpret_cast<uint8_t*>(info.ptr), info.size, value);
+	}
+	else if (info.itemsize == 2) {
+		return _index_range_helper<uint16_t>(reinterpret_cast<uint16_t*>(info.ptr), info.size, value);
+	}
+	else if (info.itemsize == 4) {
+		return _index_range_helper<uint32_t>(reinterpret_cast<uint32_t*>(info.ptr), info.size, value);
+	}
+	else {
+		return _index_range_helper<uint64_t>(reinterpret_cast<uint64_t*>(info.ptr), info.size, value);
+	}
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
 	m.def("compress", &compress, "Compress a numpy array into a binary crackle file returned as bytes.");
 	m.def("reencode_markov", &reencode_markov, "Change the markov order of an existing crackle binary.");
 	m.def("remap", &remap, "Remap a buffer's unique labels in place.");
+	m.def("index_range", &index_range, "Find the min and max indices of an array where the value matches.");
 	m.def(
 		"connected_components", 
 		&connected_components,
