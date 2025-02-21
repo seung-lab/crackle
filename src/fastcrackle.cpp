@@ -424,10 +424,10 @@ void remap(
 }
 
 template <typename T>
-py::array _index_range_helper(T* arr, ssize_t N, const T value) {
-	std::vector<ssize_t> all_indices;
+py::array _index_range_helper(T* arr, int64_t N, const T value) {
+	std::vector<int64_t> all_indices;
 
-	ssize_t i = 0;
+	int64_t i = 0;
 	for (; i < N; i++) {
 		if (arr[i] == value) {
 			all_indices.push_back(i);
@@ -435,18 +435,18 @@ py::array _index_range_helper(T* arr, ssize_t N, const T value) {
 		}
 	}
 
-	for (ssize_t j = N - 1; j > i; j--) {
+	for (int64_t j = N - 1; j > i; j--) {
 		if (arr[j] == value) {
 			all_indices.push_back(j);
 			break;
 		}			
 	}
 
-	ssize_t size = all_indices.size();
+	int64_t size = all_indices.size();
 
 	py::array_t<uint64_t> result(size);
 	auto buf = result.template mutable_unchecked<1>();
-	for (ssize_t i = 0; i < size; i++) {
+	for (int64_t i = 0; i < size; i++) {
 		buf(i) = all_indices[i];
 	}
 	return result;
