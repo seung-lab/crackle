@@ -385,6 +385,7 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
     count=num_labels,
     dtype=head.stored_dtype
   )
+  label = np.asarray(label, dtype=uniq.dtype)
   idx = np.searchsorted(uniq, label)
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
@@ -446,6 +447,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     count=num_labels,
     dtype=head.stored_dtype,
   )
+  label = np.asarray(label, dtype=uniq.dtype)
   idx = np.searchsorted(uniq, label)
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
@@ -480,6 +482,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     return (int(z_start), int(z_end))
 
   for lbl in  [ single_labels[0], single_labels[-1] ]:
+    lbl = np.asarray(lbl, dtype=components_per_grid.dtype)
     z = np.searchsorted(components_per_grid, lbl) - 1
     z_start = min(z_start, z)
     z_end = max(z_end, z)
