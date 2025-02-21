@@ -25,6 +25,10 @@ else:
     extra_compile_args += [
       '-msse4.2', '-mpclmul' # for x86 and cross compiling x86
     ]
+  else:
+    extra_compile_args += [
+      "-march=armv8-a+simd"  # Enable NEON for aarch64
+    ]
 
 
 setuptools.setup(
