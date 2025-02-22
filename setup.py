@@ -1,6 +1,7 @@
 import os
 import setuptools
 import sys
+import platform
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
@@ -13,9 +14,21 @@ if sys.platform == 'win32':
   ]
 else:
   extra_compile_args += [
-    '-std=c++2a', '-O3', 
-    '-msse4.2', '-mpclmul' # for x86 and cross compiling x86
+    '-std=c++2a', '-O3',
   ]
+  # Apple Silicon arm64 machines cross compile for x86_64, 
+  # but we want to not include these flags for aarch64
+  if (
+    platform.machine().upper() in ('X86_64', 'AMD64') 
+    or platform.system().upper() == "DARWIN"
+  ):
+    extra_compile_args += [
+      '-msse4.2', '-mpclmul' # for x86 and cross compiling x86
+    ]
+  else:
+    extra_compile_args += [
+      "-march=armv8-a+crc+simd"  # Enable NEON for aarch64
+    ]
 
 
 setuptools.setup(

@@ -6,7 +6,7 @@ on:
       - '*'
 
 env:
-  CIBW_SKIP: pp* *-manylinux_i686 *-musllinux*
+  CIBW_SKIP: pp* *-manylinux_i686 *-musllinux* cp36* cp37* cp38*
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -21,13 +21,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Set up QEMU
+        if:  ${{ matrix.arch == 'aarch64' }}
+        uses: docker/setup-qemu-action@v2
+
       - name: Build wheels
         uses: joerick/cibuildwheel@v2.22.0
         # to supply options, put them in 'env', like:
         env:
           CIBW_BEFORE_BUILD: pip install numpy pybind11 setuptools wheel pkginfo twine
           CIBW_ARCHS_MACOS: "x86_64 arm64"
-          CIBW_ARCHS: auto64
+          CIBW_ARCHS: ${{ matrix.arch == 'aarch64' && 'aarch64' || 'auto64' }}
 
       - name: Upload built wheels
         uses: actions/upload-artifact@v4

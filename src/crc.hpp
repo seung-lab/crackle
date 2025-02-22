@@ -1,10 +1,12 @@
 #ifndef __CRACKLE_CRC32C_HXX__
 #define __CRACKLE_CRC32C_HXX__
 
-#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+#if (defined(__arm64__) || defined(_M_ARM64))
 	#include "crc32c_arm.h"
-#else
+#elif defined(__x86_64__) || defined(_M_X64)
 	#include "crc32c_x86_64_sse.h"
+#else
+	#include "crc32c_portable.h"
 #endif
 
 #include <vector>

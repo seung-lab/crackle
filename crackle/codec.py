@@ -89,6 +89,11 @@ def contains(binary:bytes, label:int) -> bool:
     count=num_labels,
     dtype=head.stored_dtype
   )
+  try:
+    label = np.asarray(label, dtype=uniq.dtype)
+  except OverflowError:
+    return False # it can't possibly be contained in the array
+
   idx = np.searchsorted(uniq, label)
   if 0 <= idx < uniq.size:
     return uniq[idx] == label
@@ -384,7 +389,12 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
     count=num_labels,
     dtype=head.stored_dtype
   )
-  idx = np.searchsorted(uniq, label)
+  try:
+    label = np.asarray(label, dtype=uniq.dtype)
+    idx = np.searchsorted(uniq, label)
+  except OverflowError:
+    idx = -1
+    
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
 
@@ -401,11 +411,11 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
   components_per_grid = np.cumsum(components_per_grid)
 
   offset = next_offset
-
+ 
   dtype = compute_dtype(num_labels)
   cc_labels = np.frombuffer(labels_binary, offset=offset, dtype=dtype)
 
-  cc_idxs = np.where(cc_labels == idx)[0]
+  cc_idxs = fastcrackle.index_range(cc_labels, idx)
 
   if cc_idxs.size == 0:
     return (-1, -1)
@@ -445,7 +455,12 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     count=num_labels,
     dtype=head.stored_dtype,
   )
-  idx = np.searchsorted(uniq, label)
+  try:
+    label = np.asarray(label, dtype=uniq.dtype)
+    idx = np.searchsorted(uniq, label)
+  except OverflowError:
+    idx = -1
+
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
 
@@ -460,8 +475,8 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
   )
   components_per_grid = np.cumsum(components_per_grid)
   all_pins, all_single_labels = decode_condensed_pins(binary)
-  label_pins = all_pins[label]
-  single_labels = all_single_labels[label]
+  label_pins = all_pins[int(label)]
+  single_labels = all_single_labels[int(label)]
 
   z_start = head.sz - 1
   z_end = 0
@@ -479,6 +494,7 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     return (int(z_start), int(z_end))
 
   for lbl in  [ single_labels[0], single_labels[-1] ]:
+    lbl = np.asarray(lbl, dtype=components_per_grid.dtype)
     z = np.searchsorted(components_per_grid, lbl) - 1
     z_start = min(z_start, z)
     z_end = max(z_end, z)
@@ -689,7 +705,7 @@ def condense_unique(binary:bytes) -> bytes:
 
 def point_cloud(
   binary:bytes, 
-  label:Optional[int] = None,
+  label:Optional[Union[int,List[int]]] = None,
   parallel:int = 0,
   z_start:int = -1,
   z_end:int = -1,
@@ -702,19 +718,42 @@ def point_cloud(
   a dict of numpy arrays with the labels as the key.
 
   If label is provided, return the surface point cloud as
-  a numpy array.
+  a numpy array. label can be an int or a list of ints.
   """
-  if label is None:
-    label = -1
-  elif not contains(binary, label):
-      raise ValueError(f"Label {label} not contained in image.")
-  else:
-    z_start_l, z_end_l = z_range_for_label(binary, label)
-    z_start = max(z_start, z_start_l)
+  scalar_input = False
+  if isinstance(label, int):
+    scalar_input = True
+    label = [ label ]
+
+  head = header(binary)
+
+  opt_z_start = z_start == -1
+  opt_z_end = z_end == -1
+
+  if isinstance(label, (list,tuple)):
+    if z_start == -1:
+      z_start = head.sz
     if z_end == -1:
-      z_end = z_end_l
-    else:
-      z_end = min(z_end, z_end_l)
+      z_end = -1
+
+    for lbl in label:
+      if not contains(binary, lbl):
+        raise ValueError(f"Label {lbl} not contained in image.")
+      elif (opt_z_start or opt_z_end):
+        z_start_l, z_end_l = z_range_for_label(binary, lbl)
+        
+        if opt_z_start:
+          z_start = min(z_start, z_start_l)
+        if opt_z_end:
+          z_end = max(z_end, z_end_l)
+
+        if z_start == 0 and z_end == head.sz:
+          break
+
+  if z_start == -1:
+    z_start = 0
+  if z_end == -1:
+    z_end = head.sz
 
   if parallel <= 0:
     parallel = mp.cpu_count()
@@ -731,8 +770,8 @@ def point_cloud(
     arr = np.asarray(pts, dtype=np.uint16, order="C")
     ptc[lbl] = arr.reshape([ len(pts) // 3, 3 ], order="C")
 
-  if label > -1:
-    return ptc[label]
+  if scalar_input:
+    return ptc[label[0]]
 
   return ptc
 

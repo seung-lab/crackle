@@ -295,7 +295,7 @@ py::dict point_cloud(
 	const py::buffer buffer, 
 	const int64_t z_start = 0, 
 	const int64_t z_end = -1,
-	const std::optional<uint64_t> label = std::nullopt,
+	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
 	const size_t parallel = 1
 ) {
 	py::buffer_info info = buffer.request();
@@ -305,7 +305,7 @@ py::dict point_cloud(
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
-	auto ptc = crackle::operations::point_cloud(data, info.size, z_start, z_end, label, parallel);
+	auto ptc = crackle::operations::point_cloud(data, info.size, z_start, z_end, labels, parallel);
 
 	py::dict py_ptc;
 	for (const auto& [key, vec] : ptc) {
@@ -423,12 +423,66 @@ void remap(
 	}
 }
 
+template <typename T>
+py::array _index_range_helper(T* arr, int64_t N, const T value) {
+	std::vector<int64_t> all_indices;
+
+	int64_t i = 0;
+	for (; i < N; i++) {
+		if (arr[i] == value) {
+			all_indices.push_back(i);
+			break;
+		}
+	}
+
+	for (int64_t j = N - 1; j > i; j--) {
+		if (arr[j] == value) {
+			all_indices.push_back(j);
+			break;
+		}			
+	}
+
+	int64_t size = all_indices.size();
+
+	py::array_t<uint64_t> result(size);
+	auto buf = result.template mutable_unchecked<1>();
+	for (int64_t i = 0; i < size; i++) {
+		buf(i) = all_indices[i];
+	}
+	return result;
+}
+
+py::array index_range(
+	const py::buffer &buffer,
+	const uint64_t value
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	if (info.itemsize == 1) {
+		return _index_range_helper<uint8_t>(reinterpret_cast<uint8_t*>(info.ptr), info.size, value);
+	}
+	else if (info.itemsize == 2) {
+		return _index_range_helper<uint16_t>(reinterpret_cast<uint16_t*>(info.ptr), info.size, value);
+	}
+	else if (info.itemsize == 4) {
+		return _index_range_helper<uint32_t>(reinterpret_cast<uint32_t*>(info.ptr), info.size, value);
+	}
+	else {
+		return _index_range_helper<uint64_t>(reinterpret_cast<uint64_t*>(info.ptr), info.size, value);
+	}
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
 	m.def("compress", &compress, "Compress a numpy array into a binary crackle file returned as bytes.");
 	m.def("reencode_markov", &reencode_markov, "Change the markov order of an existing crackle binary.");
 	m.def("remap", &remap, "Remap a buffer's unique labels in place.");
+	m.def("index_range", &index_range, "Find the min and max indices of an array where the value matches.");
 	m.def(
 		"connected_components", 
 		&connected_components,
