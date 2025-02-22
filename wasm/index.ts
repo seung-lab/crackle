@@ -56,7 +56,7 @@ function readHeader(buffer: Uint8Array)
     throw new Error("crackle: didn't match magic numbers");
   }
   const format = buffer[4];
-  if (format > 0) {
+  if (format > 1) {
     throw new Error("crackle: didn't match format version");
   }
 
