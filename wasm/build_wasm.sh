@@ -6,6 +6,8 @@ compile_options=(
      -DNDEBUG
      --no-entry
      # -fno-exceptions
+     -Isrc
+     -Ithird_party/fastcrc
      -fno-rtti
      -s FILESYSTEM=0
      -s ALLOW_MEMORY_GROWTH=1 
@@ -17,7 +19,7 @@ compile_options=(
      -s STANDALONE_WASM=1
      # -s ASSERTIONS=1 
      # -s SAFE_HEAP=1
-     -std=c++17
+     -std=c++2a
      -o libcrackle.wasm
 )
 em++ ${compile_options[@]}
