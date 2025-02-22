@@ -1,12 +1,12 @@
 #ifndef __CRACKLE_CRC32C_HXX__
 #define __CRACKLE_CRC32C_HXX__
 
-#if (defined(__arm64__) || defined(_M_ARM64) || defined(__aarch64__))
+#if (defined(__arm64__) || defined(_M_ARM64))
 	#include "crc32c_arm.h"
 #elif defined(__x86_64__) || defined(_M_X64)
 	#include "crc32c_x86_64_sse.h"
 #else
-    #error "Unsupported architecture" // TODO: provide portable version
+	#include "crc32c_portable.h"
 #endif
 
 #include <vector>
