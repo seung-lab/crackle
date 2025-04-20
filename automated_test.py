@@ -209,6 +209,11 @@ def test_labels():
   assert np.all(uniq == uniq2)
 
 def test_num_labels():
+  labels = np.zeros([0,0,0], dtype=np.uint32)
+  binary = crackle.compress(labels, allow_pins=False)
+  num_labels_2 = crackle.num_labels(binary)
+  assert num_labels_2 == 0
+
   labels = np.random.randint(0,100, size=(100,100,10), dtype=np.uint32)
   binary = crackle.compress(labels, allow_pins=False)
   num_labels_1 = np.unique(labels).size  
