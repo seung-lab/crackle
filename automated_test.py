@@ -227,6 +227,16 @@ def test_num_labels():
   num_labels_2 = crackle.num_labels(binary)
   assert num_labels_1 == num_labels_2
 
+@pytest.mark.parametrize('sx', [0,17,31])
+@pytest.mark.parametrize('sy', [0,11,49])
+@pytest.mark.parametrize('sz', [0,17,31])
+@pytest.mark.parametrize('dtype', DTYPE)
+def test_nbytes(sx,sy,sz,dtype):
+  labels = np.random.randint(0,255, size=[sx,sy,sz], dtype=dtype)
+  binary = crackle.compress(labels)
+  nbytes = crackle.nbytes(binary)
+  assert nbytes == (sx*sy*sz*np.dtype(dtype).itemsize)
+
 def test_contains():
   labels = np.random.randint(0,4, size=(100,100,10), dtype=np.uint32)
   binary = crackle.compress(labels)
