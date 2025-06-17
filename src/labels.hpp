@@ -34,6 +34,7 @@ std::tuple<
 > encode_flat(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
+	const int64_t grid_size,
 	const size_t parallel
 ) {
 	const int64_t sxy = sx * sy;
@@ -63,7 +64,8 @@ std::tuple<
 				(labels + sxy * z), 
 				sx, sy, 1, 
 				cc_labels.data(),
-				0, tmp_N
+				0, tmp_N,
+				grid_size, grid_size
 			);
 
 			mapping.resize(tmp_N);

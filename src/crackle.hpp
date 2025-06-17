@@ -41,7 +41,8 @@ std::vector<unsigned char> compress_helper(
 	const bool optimize_pins = false,
 	const bool auto_bgcolor = true,
 	const bool manual_bgcolor = 0,
-	size_t parallel = 1
+	size_t parallel = 1,
+	int64_t grid_size = 2147483648
 ) {
 	const int64_t voxels = sx * sy * sz;
 
@@ -68,6 +69,8 @@ std::vector<unsigned char> compress_helper(
 	}
 	parallel = std::min(parallel, static_cast<size_t>(sz));
 
+	grid_size = pow(2, std::floor(log2(grid_size)));
+
 	CrackleHeader header(
 		/*format_version=*/CrackleHeader::current_version,
 		/*label_format=*/label_format,
@@ -79,12 +82,8 @@ std::vector<unsigned char> compress_helper(
 		/*sy=*/sy,
 		/*sz=*/sz,
 		
-		// grid size is not yet supported, but will be
-		// used for within-slice random access.
-		// very large value so that way when we start 
-		// using random access decoders, old formats
-		// will be backwards compatible (each slice is 1 grid).
-		/*grid_size*/2147483648,
+		// grid size must be a power of 2
+		/*grid_size*/grid_size,
 		
 		/*num_label_bytes=*/0,
 		/*fortran_order*/fortran_order,
@@ -163,7 +162,11 @@ std::vector<unsigned char> compress_helper(
 		crack_crcs = std::move(crack_crcs_tmp);
 	}
 	else {
-		auto [labels_binary_tmp, crack_crcs_tmp] = crackle::labels::encode_flat<LABEL, STORED_LABEL>(labels, sx, sy, sz, parallel);
+		auto [labels_binary_tmp, crack_crcs_tmp] = crackle::labels::encode_flat<LABEL, STORED_LABEL>(
+			labels, sx, sy, sz, 
+			header.grid_size,
+			parallel
+		);
 		labels_binary = std::move(labels_binary_tmp);
 		crack_crcs = std::move(crack_crcs_tmp);
 	}

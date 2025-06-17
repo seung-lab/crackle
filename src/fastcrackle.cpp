@@ -205,7 +205,10 @@ py::bytes reencode_markov(
 	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
 }
 
-py::tuple connected_components(const py::array &labels) {
+py::tuple connected_components(
+	const py::array &labels,
+	int gx, int gy
+) {
 	int width = labels.dtype().itemsize();
 
 	const uint64_t sx = labels.shape()[0];
@@ -222,7 +225,7 @@ py::tuple connected_components(const py::array &labels) {
 			sx, sy, sz, 
 			num_components_per_slice,
 			reinterpret_cast<uint32_t*>(const_cast<void*>(cc_labels.data())), 
-			N 
+			N, gx, gy
 		);
 	}
 	else if (width == 2) {
@@ -231,7 +234,7 @@ py::tuple connected_components(const py::array &labels) {
 			sx, sy, sz, 
 			num_components_per_slice,
 			reinterpret_cast<uint32_t*>(const_cast<void*>(cc_labels.data())), 
-			N 
+			N, gx, gy
 		);
 	}
 	else if (width == 4) {
@@ -240,7 +243,7 @@ py::tuple connected_components(const py::array &labels) {
 			sx, sy, sz, 
 			num_components_per_slice,
 			reinterpret_cast<uint32_t*>(const_cast<void*>(cc_labels.data())), 
-			N 
+			N, gx, gy
 		);
 	}
 	else {
@@ -249,7 +252,7 @@ py::tuple connected_components(const py::array &labels) {
 			sx, sy, sz, 
 			num_components_per_slice,
 			reinterpret_cast<uint32_t*>(const_cast<void*>(cc_labels.data())), 
-			N 
+			N, gx, gy
 		);
 	}
 

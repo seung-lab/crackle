@@ -4,6 +4,7 @@
  * Author: William Silversmith
  * Affiliation: Seung Lab, Princeton University
  * Date: August 2018 - June 2019, 2021, Dec. 2022
+ *        Dec. 2024, June 2025
  *
  * ----
  * LICENSE
@@ -243,11 +244,18 @@ OUT* connected_components2d_4(
     const LABEL* in_labels, 
     const int64_t sx, const int64_t sy, const int64_t sz,
     OUT *out_labels = NULL, 
-    const uint64_t start_label = 0, uint64_t &N = _dummy_N
+    const uint64_t start_label = 0, uint64_t &N = _dummy_N,
+    int64_t gx = -1, int64_t gy = -1
   ) {
 
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
+
+  gx = gx > 0 ? gx : sx;
+  gy = gy > 0 ? gy : sy;
+
+  const int64_t nx = (sx + (gx/2)) / gx;
+  const int64_t ny = (sy + (gy/2)) / gy;
 
   uint64_t max_labels = estimate_provisional_label_count<LABEL>(in_labels, sx, voxels) + 1;
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
@@ -275,24 +283,28 @@ OUT* connected_components2d_4(
 
   LABEL cur = 0;
   for (int64_t z = 0; z < sz; z++) {
-    for (int64_t y = 0; y < sy; y++) {
-      for (int64_t x = 0; x < sx; x++) {
-        loc = x + sx * y + sxy * z;
-        cur = in_labels[loc];
+    for (int64_t gy_i = 0; gy_i < ny; gy_i++) {
+      for (int64_t gx_i = 0; gx_i < nx; gx_i++) {
+        for (int64_t y = 0; y < gy; y++) {
+          for (int64_t x = 0; x < gx; x++) {
+            loc = x + gx * gx_i + sx * (y + gy_i * gy) + sxy * z;
+            cur = in_labels[loc];
 
-        if (x > 0 && cur == in_labels[loc + B]) {
-          out_labels[loc] = out_labels[loc + B];
-          if (y > 0 && cur == in_labels[loc + C] && cur != in_labels[loc + D]) {
-            equivalences.unify(out_labels[loc], out_labels[loc + C]);
+            if (x > 0 && cur == in_labels[loc + B]) {
+              out_labels[loc] = out_labels[loc + B];
+              if (y > 0 && cur == in_labels[loc + C] && cur != in_labels[loc + D]) {
+                equivalences.unify(out_labels[loc], out_labels[loc + C]);
+              }
+            }
+            else if (y > 0 && cur == in_labels[loc + C]) {
+              out_labels[loc] = out_labels[loc + C];
+            }
+            else {
+              next_label++;
+              out_labels[loc] = next_label;
+              equivalences.add(out_labels[loc]);
+            }
           }
-        }
-        else if (y > 0 && cur == in_labels[loc + C]) {
-          out_labels[loc] = out_labels[loc + C];
-        }
-        else {
-          next_label++;
-          out_labels[loc] = next_label;
-          equivalences.add(out_labels[loc]);
         }
       }
     }
@@ -307,7 +319,8 @@ OUT* connected_components(
   const int64_t sx, const int64_t sy, const int64_t sz,
   std::vector<uint64_t> &num_components_per_slice,
   OUT* out_labels = NULL,
-  uint64_t &N = _dummy_N
+  uint64_t &N = _dummy_N,
+  const int64_t gx = -1, const int64_t gy = -1
 ) {
 
   const int64_t sxy = sx * sy;
@@ -323,7 +336,8 @@ OUT* connected_components(
       (in_labels + sxy * z), 
       sx, sy, 1, 
       (out_labels + sxy * z),
-       N, tmp_N
+       N, tmp_N,
+       gx, gy
     );
     num_components_per_slice[z] = tmp_N;
     N += tmp_N;
