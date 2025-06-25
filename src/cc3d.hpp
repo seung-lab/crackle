@@ -146,16 +146,24 @@ OUT* relabel(
 }
 
 uint64_t estimate_provisional_label_count_vcg(
-  const std::vector<uint8_t>& vcg, const int64_t sx
+  const std::vector<uint8_t>& vcg, 
+  const int64_t sx, const int64_t sy, const int64_t sz,
+  const int64_t gx
 ) {
   uint64_t count = 0; // number of transitions between labels
   int64_t voxels = static_cast<int64_t>(vcg.size());
 
-  for (int64_t loc = 0; loc < voxels; loc += sx) {
+  for (int64_t loc = 0; loc < voxels; loc += gx) {
     count += 1;
-    for (int64_t x = 1; x < sx; x++) {
+    for (int64_t x = 1; x < gx; x++) {
       count += ((vcg[loc+x] & 0b0010) == 0);
     }
+  }
+
+  // if gx overhangs sx, then need to add some corrections
+  if (sx % gx != 0) {
+    count += sy * sz;
+    count = std::min(count, static_cast<uint64_t>(voxels));
   }
 
   return count;
@@ -166,13 +174,23 @@ OUT* color_connectivity_graph(
   const std::vector<uint8_t> &vcg, // voxel connectivity graph
   const int64_t sx, const int64_t sy, const int64_t sz,
   OUT* out_labels = NULL,
-  uint64_t &N = _dummy_N
+  uint64_t &N = _dummy_N,
+  int64_t gx = -1, int64_t gy = -1
 ) {
 
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = estimate_provisional_label_count_vcg(vcg, sx) + 1;
+  gx = gx > 0 ? gx : sx;
+  gy = gy > 0 ? gy : sy;
+
+  gx = std::min(gx, sx);
+  gy = std::min(gy, sy);
+
+  const int64_t nx = (sx + gx - 1) / gx;
+  const int64_t ny = (sy + gy - 1) / gy;
+
+  uint64_t max_labels = 1 + estimate_provisional_label_count_vcg(vcg, sx, sy, sz, gx);
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   if (out_labels == NULL) {
@@ -181,39 +199,53 @@ OUT* color_connectivity_graph(
 
   DisjointSet<OUT> equivalences(max_labels);
 
+  const int64_t B = -1;
+  const int64_t C = -sx;
+
   OUT new_label = 0;
   for (int64_t z = 0; z < sz; z++) {
-    new_label++;
-    equivalences.add(new_label);
 
-    for (int64_t x = 0; x < sx; x++) {
-      if (x > 0 && (vcg[x + sxy * z] & 0b0010) == 0) {
+    for (int64_t gy_i = 0, sy_left = sy; gy_i < ny; gy_i++, sy_left -= gy) {
+      int64_t tail_y = std::min(gy, sy_left);
+
+      for (int64_t gx_i = 0, sx_left = sx; gx_i < nx; gx_i++, sx_left -= gx) {
+        int64_t tail_x = std::min(gx, sx_left);
+
         new_label++;
         equivalences.add(new_label);
-      }
-      out_labels[x + sxy * z] = new_label;
-    }
 
-    const int64_t B = -1;
-    const int64_t C = -sx;
-
-    for (int64_t y = 1; y < sy; y++) {
-      for (int64_t x = 0; x < sx; x++) {
-        int64_t loc = x + sx * y + sxy * z;
-
-        if (x > 0 && (vcg[loc] & 0b0010)) {
-          out_labels[loc] = out_labels[loc+B];
-          if (y > 0 && (vcg[loc + C] & 0b0010) == 0 && (vcg[loc] & 0b1000)) {
-            equivalences.unify(out_labels[loc], out_labels[loc+C]);
+        for (int64_t x = 0; x < tail_x; x++) {
+          int64_t loc = x + gx_i * gx + sx * gy_i * gx + sxy * z;
+          if (x > 0 && (vcg[loc] & 0b0010) == 0) {
+            new_label++;
+            equivalences.add(new_label);
           }
-        }
-        else if (y > 0 && vcg[loc] & 0b1000) {
-          out_labels[loc] = out_labels[loc+C];
-        }
-        else {
-          new_label++;
           out_labels[loc] = new_label;
-          equivalences.add(new_label);
+        }
+      }
+
+      for (int64_t y = 1; y < tail_y; y++) {
+        for (int64_t gx_i = 0, sx_left = sx; gx_i < nx; gx_i++, sx_left -= gx) {
+          int64_t tail_x = std::min(gx, sx_left);
+
+          for (int64_t x = 0; x < tail_x; x++) {
+            int64_t loc = x + gx_i * gx + sx * (y + gy_i * gy) + sxy * z;
+
+            if (x > 0 && (vcg[loc] & 0b0010)) {
+              out_labels[loc] = out_labels[loc+B];
+              if (y > 0 && (vcg[loc + C] & 0b0010) == 0 && (vcg[loc] & 0b1000)) {
+                equivalences.unify(out_labels[loc], out_labels[loc+C]);
+              }
+            }
+            else if (y > 0 && vcg[loc] & 0b1000) {
+              out_labels[loc] = out_labels[loc+C];
+            }
+            else {
+              new_label++;
+              out_labels[loc] = new_label;
+              equivalences.add(new_label);
+            }
+          }
         }
       }
     }
@@ -225,15 +257,24 @@ OUT* color_connectivity_graph(
 
 template <typename LABEL>
 uint64_t estimate_provisional_label_count(
-  const LABEL* in_labels, const int64_t sx, const int64_t voxels
+  const LABEL* in_labels, 
+  const int64_t sx, const int64_t sy, const int64_t sz, 
+  const int64_t gx
 ) {
   uint64_t count = 0; // number of transitions between labels
+  const int64_t voxels = sx * sy * sz;
 
-  for (int64_t loc = 0; loc < voxels; loc += sx) {
+  for (int64_t loc = 0; loc < voxels; loc += gx) {
     count += 1;
-    for (int64_t x = 1; x < sx; x++) {
+    for (int64_t x = 1; x < gx; x++) {
       count += (in_labels[loc + x] != in_labels[loc + x - 1]);
     }
+  }
+
+  // if gx overhangs sx, then need to add some corrections
+  if (sx % gx != 0) {
+    count += sy * sz;
+    count = std::min(count, static_cast<uint64_t>(voxels));
   }
 
   return count;
@@ -260,10 +301,8 @@ OUT* connected_components2d_4(
   const int64_t nx = (sx + gx - 1) / gx;
   const int64_t ny = (sy + gy - 1) / gy;
 
-  uint64_t max_labels = estimate_provisional_label_count<LABEL>(in_labels, gx, voxels) + 1;
-  max_labels += (sx % gz == 0) ? 0 : sy * sz; // if gx overhangs sx, then need to add some corrections
+  uint64_t max_labels = 1 + estimate_provisional_label_count<LABEL>(in_labels, sx, sy, sz, gx);  
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
-  max_labels = std::min(max_labels, voxels);
 
   DisjointSet<OUT> equivalences(max_labels);
 
