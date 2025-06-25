@@ -825,7 +825,34 @@ def test_spurious_branch_elimination():
 
   assert np.all(recovered == arr)
 
+def test_connected_component_grid():
+  import fastcrackle
+  labels = np.ones([20,20,3], dtype=np.uint32, order="F")
 
+  cc_labels, cc_per_slice, N = fastcrackle.connected_components(labels, 20, 20);
+  assert N == 3
+  assert cc_per_slice == [1,1,1]
+  
+  cc_labels, cc_per_slice, N = fastcrackle.connected_components(labels, 10, 10);
+  assert N == 3 * 4
+  assert cc_per_slice == [4,4,4]
+
+  cc_labels, cc_per_slice, N = fastcrackle.connected_components(labels, 15, 15);
+  assert N == 3 * 4
+  assert cc_per_slice == [4,4,4]
+
+  cc_labels, cc_per_slice, N = fastcrackle.connected_components(labels, 1, 1);
+  assert N == 20 * 20 * 3
+
+  labels = np.ones([20,10,3], dtype=np.uint32, order="F")
+  
+  cc_labels, cc_per_slice, N = fastcrackle.connected_components(labels, 10, 10);
+  assert N == 3 * 2
+  assert cc_per_slice == [2,2,2]
+
+  cc_labels, cc_per_slice, N = fastcrackle.connected_components(labels, 40, 40);
+  assert N == 3
+  assert cc_per_slice == [1,1,1]
 
 
 
