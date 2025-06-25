@@ -241,12 +241,12 @@ uint64_t estimate_provisional_label_count(
 
 template <typename LABEL, typename OUT>
 OUT* connected_components2d_4(
-    const LABEL* in_labels, 
-    const int64_t sx, const int64_t sy, const int64_t sz,
-    OUT *out_labels = NULL, 
-    const uint64_t start_label = 0, uint64_t &N = _dummy_N,
-    int64_t gx = -1, int64_t gy = -1
-  ) {
+  const LABEL* in_labels, 
+  const int64_t sx, const int64_t sy, const int64_t sz,
+  OUT *out_labels = NULL, 
+  const uint64_t start_label = 0, uint64_t &N = _dummy_N,
+  int64_t gx = -1, int64_t gy = -1
+) {
 
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
