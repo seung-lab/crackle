@@ -261,7 +261,9 @@ OUT* connected_components2d_4(
   const int64_t ny = (sy + gy - 1) / gy;
 
   uint64_t max_labels = estimate_provisional_label_count<LABEL>(in_labels, gx, voxels) + 1;
+  max_labels += (sx % gz == 0) ? 0 : sy * sz; // if gx overhangs sx, then need to add some corrections
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
+  max_labels = std::min(max_labels, voxels);
 
   DisjointSet<OUT> equivalences(max_labels);
 
