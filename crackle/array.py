@@ -1,4 +1,4 @@
-from typing import Optional, Union, Any, Dict
+from typing import Optional, Union, Any, Dict, Literal
 
 from .headers import CrackleHeader, LabelFormat
 from .codec import (
@@ -21,6 +21,7 @@ from . import codec
 from .lib import crc32c
 
 import numpy as np
+import numpy.typing as npt
 
 class CrackleArray:
   def __init__(self, binary:bytes, parallel:int = 0):
@@ -84,8 +85,12 @@ class CrackleArray:
   def refit(self):
     return CrackleArray(refit(self.binary))
 
-  def astype(self, dtype):
-    return CrackleArray(astype(self.binary, dtype))
+  def astype(self,   
+    dtype:npt.DTypeLike,
+    order:Literal['C', 'F', 'K', 'A'] = 'K',
+    casting:Literal['no','equiv','safe','same_kind','unsafe'] = "unsafe",
+  ) -> "CrackleArray":
+    return CrackleArray(astype(self.binary, dtype, order, casting))
 
   def renumber(self, start:int = 0) -> bytes:
     return CrackleArray(renumber(self.binary, start))

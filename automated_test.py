@@ -530,6 +530,39 @@ def test_refit():
   arr = arr.refit()
   assert arr.dtype == np.uint8
 
+def test_astype():
+  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
+  arr = crackle.CrackleArray(binary)
+
+  assert arr.astype(np.uint8).dtype == np.uint8
+  assert arr.astype(np.uint16).dtype == np.uint16
+  assert arr.astype(np.uint32).dtype == np.uint32
+  assert arr.astype(np.uint64).dtype == np.uint64
+  arr += 500
+
+  assert arr.astype(np.uint8).dtype == np.uint8
+  assert arr.astype(np.uint16).dtype == np.uint16
+  assert arr.astype(np.uint32).dtype == np.uint32
+  assert arr.astype(np.uint64).dtype == np.uint64
+
+  try:
+    assert arr.astype(np.uint8, casting="safe").dtype == np.uint8
+    assert False
+  except TypeError:
+    pass
+  assert arr.astype(np.uint16, casting="safe").dtype == np.uint16
+  assert arr.astype(np.uint32, casting="safe").dtype == np.uint32
+  assert arr.astype(np.uint64, casting="safe").dtype == np.uint64
+
+  try:
+    arr.astype(np.uint32, casting="no")
+    assert False
+  except TypeError:
+    pass
+
+  assert arr.astype(arr.dtype, order="C").header().fortran_order == False
+  assert arr.astype(arr.dtype, order="F").header().fortran_order == True
+
 def test_contiguous_fortran():
   binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
   

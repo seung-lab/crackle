@@ -1,9 +1,10 @@
-from typing import List, Optional, Tuple, Sequence, Union, Dict
+from typing import List, Optional, Tuple, Sequence, Union, Dict, Literal
 from collections import namedtuple, defaultdict
 import multiprocessing as mp
 import warnings
 
 import numpy as np
+import numpy.typing as npt
 import fastremap
 import fastcrackle
 
@@ -85,14 +86,52 @@ def remap(
   fastcrackle.remap(binary, mapping, preserve_missing_labels, parallel)
   return binary
 
-def astype(binary:bytes, dtype) -> bytes:
+def astype(
+  binary:bytes, 
+  dtype:npt.DTypeLike,
+  order:Literal['C', 'F', 'K', 'A'] = 'K',
+  casting:Literal['no','equiv','safe','same_kind','unsafe'] = "unsafe",
+) -> bytes:
   """
   Change the rendered dtype to the smallest
   dtype needed to render the image without
   loss of precision.
+
+  force: ignore data truncation errors caused by using too small a dtype
   """
   head = header(binary)
-  head.data_width = np.dtype(dtype).itemsize
+  dtype = np.dtype(dtype)
+
+  if np.issubdtype(dtype, np.signedinteger):
+    raise TypeError("Signed integer data types are not currently supported.")
+
+  if casting in ("no", "equiv"):
+    if dtype != head.dtype:
+      raise TypeError(f"Cannot cast dtype {head.dtype} to {dtype} under casting type 'no'")
+  elif casting == "same_kind":
+    if np.issubdtype(head.dtype, np.unsignedinteger):
+      if not np.issubdtype(dtype, np.unsignedinteger):
+        raise TypeError(f"Cannot cast {head.dtype} to {dtype} under casting type 'same_kind'")
+    elif not np.issubdtype(dtype, np.signedinteger):
+      raise TypeError(f"Cannot cast {head.dtype} to {dtype} under casting type 'same_kind'")
+  elif casting == "safe":
+    maxval = max(binary)
+    dtype_max = np.iinfo(dtype).max
+    if maxval > dtype_max:
+      raise TypeError(f"Specified dtype {dtype} supporting maximum value {dtype_max} causes truncation of max value {maxval} under casting type 'safe'")
+    minval = min(binary)
+    dtype_min = np.iinfo(dtype).min
+    if minval < dtype_min:
+      raise TypeError(f"Specified dtype {dtype} supporting minimum value {dtype_min} causes truncation of min value {minval} under casting type 'safe'")
+
+  head.signed = np.issubdtype(dtype, np.signedinteger)
+  head.data_width = dtype.itemsize
+
+  if order == 'C':
+    head.fortran_order = False
+  elif order == 'F':
+    head.fortran_order = True
+
   return b''.join([ 
     head.tobytes(), 
     binary[head.header_bytes:] 
