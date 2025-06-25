@@ -254,10 +254,13 @@ OUT* connected_components2d_4(
   gx = gx > 0 ? gx : sx;
   gy = gy > 0 ? gy : sy;
 
-  const int64_t nx = (sx + (gx/2)) / gx;
-  const int64_t ny = (sy + (gy/2)) / gy;
+  gx = std::min(gx, sx);
+  gy = std::min(gy, sy);
 
-  uint64_t max_labels = estimate_provisional_label_count<LABEL>(in_labels, sx, voxels) + 1;
+  const int64_t nx = (sx + gx - 1) / gx;
+  const int64_t ny = (sy + gy - 1) / gy;
+
+  uint64_t max_labels = estimate_provisional_label_count<LABEL>(in_labels, gx, voxels) + 1;
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   DisjointSet<OUT> equivalences(max_labels);
@@ -265,7 +268,7 @@ OUT* connected_components2d_4(
   if (out_labels == NULL) {
     out_labels = new OUT[voxels]();
   }
-    
+  
   /*
     Layout of forward pass mask. 
     A is the current location.
@@ -283,10 +286,14 @@ OUT* connected_components2d_4(
 
   LABEL cur = 0;
   for (int64_t z = 0; z < sz; z++) {
-    for (int64_t gy_i = 0; gy_i < ny; gy_i++) {
-      for (int64_t gx_i = 0; gx_i < nx; gx_i++) {
-        for (int64_t y = 0; y < gy; y++) {
-          for (int64_t x = 0; x < gx; x++) {
+    for (int64_t gy_i = 0, sy_left = sy; gy_i < ny; gy_i++, sy_left -= gy) {
+      int64_t tail_y = std::min(gy, sy_left);
+
+      for (int64_t y = 0; y < tail_y; y++) {
+        for (int64_t gx_i = 0, sx_left = sx; gx_i < nx; gx_i++, sx_left -= gx) {
+          int64_t tail_x = std::min(sx_left, gx);
+
+          for (int64_t x = 0; x < tail_x; x++) {
             loc = x + gx * gx_i + sx * (y + gy_i * gy) + sxy * z;
             cur = in_labels[loc];
 
