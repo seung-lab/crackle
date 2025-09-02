@@ -92,8 +92,9 @@ class CrackleArray:
   ) -> "CrackleArray":
     return CrackleArray(astype(self.binary, dtype, order, casting))
 
-  def renumber(self, start:int = 0) -> bytes:
-    return CrackleArray(renumber(self.binary, start))
+  def renumber(self, start:int = 0) -> tuple["CrackleArray", dict[int,int]]:
+    binary, mapping = renumber(self.binary, start)
+    return CrackleArray(binary), mapping
 
   def numpy(self, *args, **kwargs) -> np.ndarray:
     return self.decompress(*args, **kwargs)
