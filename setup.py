@@ -20,12 +20,11 @@ else:
   # but we want to not include these flags for aarch64
   if (
     platform.machine().upper() in ('X86_64', 'AMD64') 
-    or platform.system().upper() == "DARWIN"
   ):
     extra_compile_args += [
       '-msse4.2', '-mpclmul' # for x86 and cross compiling x86
     ]
-  else:
+  elif platform.machine().upper() == 'AARCH64':
     extra_compile_args += [
       "-march=armv8-a+crc+simd"  # Enable NEON for aarch64
     ]
