@@ -16,15 +16,21 @@ else:
   extra_compile_args += [
     '-std=c++2a', '-O3',
   ]
+
+  cibw_archs = os.environ.get("CIBW_ARCHS", "").lower()
+  archflags = os.environ.get("ARCHFLAGS", "").lower()
+
   # Apple Silicon arm64 machines cross compile for x86_64, 
   # but we want to not include these flags for aarch64
   if (
-    platform.machine().upper() in ('X86_64', 'AMD64') 
+    "x86_64" in cibw_archs 
+    or "x86_64" in archflags 
+    or platform.machine().lower() in ('x86_64', 'amd64') 
   ):
     extra_compile_args += [
       '-msse4.2', '-mpclmul' # for x86 and cross compiling x86
     ]
-  elif platform.machine().upper() == 'AARCH64':
+  elif platform.machine().lower() == 'aarch64':
     extra_compile_args += [
       "-march=armv8-a+crc+simd"  # Enable NEON for aarch64
     ]
