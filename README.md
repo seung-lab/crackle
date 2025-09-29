@@ -71,6 +71,7 @@ ptc = crackle.point_cloud(binary)
 # rapid and low memory
 voxel_counts = crackle.voxel_counts(binary)
 centroids = crackle.centroids(binary)
+bbxes = crackle.bounding_boxes(binary)
 
 # building big arrays with low memory
 binary = crackle.zeros([5000,5000,5000], dtype=np.uint64, order='F')
