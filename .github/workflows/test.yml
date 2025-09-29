@@ -32,7 +32,17 @@ jobs:
           python -m pip install pytest -r requirements.txt -r requirements-dev.txt
 
       - name: Compile
-        run: python setup.py develop
-
+        run: |
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            if [ "$RUNNER_ARCH" == "X64" ]; then
+                export ARCHFLAGS="-arch x86_64"
+            elif [ "$RUNNER_ARCH" == "ARM64" ]; then
+                export ARCHFLAGS="-arch arm64"
+            else
+                echo "Unsupported architecture $RUNNER_ARCH"
+                exit 1
+            fi
+          fi
+          python setup.py develop
       - name: Test with pytest
         run: pytest -v -x automated_test.py
