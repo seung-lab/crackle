@@ -802,11 +802,6 @@ def test_bounding_boxes():
 
   labels = compresso.load("connectomics.npy.cpso.gz")
 
-  binary = crackle.compress(labels)
-  bbxes = crackle.bounding_boxes(binary)
-
-  import pdb; pdb.set_trace()
-
   labels, _ = fastremap.renumber(labels, in_place=True)
 
   binary = crackle.compress(labels)
