@@ -390,6 +390,37 @@ std::span<const STORED_LABEL> decode_uniq(
 	);
 }
 
+std::vector<uint64_t> unique(const std::span<const unsigned char> &binary) {
+	const CrackleHeader header(binary);
+	std::span<const unsigned char> labels_binary = raw_labels(binary);
+	const uint64_t N = decode_num_labels(header, labels_binary);
+	std::vector<uint64_t> lbls;
+	lbls.reserve(N);
+
+	if (header.stored_data_width == 1) {
+		for (uint8_t l : decode_uniq<uint8_t>(header, labels_binary)) {
+			lbls.push_back(static_cast<uint64_t>(l));
+		}
+	}
+	else if (header.stored_data_width == 2) {
+		for (uint16_t l : decode_uniq<uint16_t>(header, labels_binary)) {
+			lbls.push_back(static_cast<uint64_t>(l));
+		}
+	}
+	else if (header.stored_data_width == 4) {
+		for (uint32_t l : decode_uniq<uint32_t>(header, labels_binary)) {
+			lbls.push_back(static_cast<uint64_t>(l));
+		}
+	}
+	else {
+		for (uint64_t l : decode_uniq<uint64_t>(header, labels_binary)) {
+			lbls.push_back(static_cast<uint64_t>(l));
+		}
+	}
+
+	return lbls;
+}
+
 std::tuple<
 	std::vector<uint64_t>,
 	uint64_t,

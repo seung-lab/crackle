@@ -796,6 +796,28 @@ def test_centroids():
     if i > 20:
       break
 
+def test_bounding_boxes():
+  import scipy.ndimage
+  import fastremap 
+
+  labels = compresso.load("connectomics.npy.cpso.gz")
+
+  binary = crackle.compress(labels)
+  bbxes = crackle.bounding_boxes(binary)
+
+  import pdb; pdb.set_trace()
+
+  labels, _ = fastremap.renumber(labels, in_place=True)
+
+  binary = crackle.compress(labels)
+
+  crackle_slices = crackle.bounding_boxes(binary)
+  scipy_slices = scipy.ndimage.find_objects(labels)
+
+  for i, scipy_slc in enumerate(scipy_slices):
+    ckl_slc = crackle_slices[i+1]
+    assert ckl_slc == scipy_slc
+
 def test_spurious_branch_elimination():
   arr = np.array([
     [0,0,0,0,0,0,0,0,0,0],

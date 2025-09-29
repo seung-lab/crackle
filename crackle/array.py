@@ -6,7 +6,7 @@ from .codec import (
   labels, nbytes, contains, 
   header, crack_codes, num_labels,
   components, point_cloud, voxel_counts,
-  centroids,
+  centroids, bounding_boxes,
 )
 from .operations import (
   astype,
@@ -72,6 +72,9 @@ class CrackleArray:
 
   def centroids(self) -> dict:
     return centroids(self.binary, parallel=self.parallel)
+
+  def bounding_boxes(self) -> dict:
+    return bounding_boxes(self.binary, parallel=self.parallel)
 
   def min(self) -> int:
     return codec.min(self.binary)

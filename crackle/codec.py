@@ -899,5 +899,48 @@ def centroids(
 
   return centroid_data
 
+def bounding_boxes(
+  binary:bytes, 
+  label:Optional[int] = None,
+  parallel:int = 1,
+  no_slice_conversion:bool = False,
+) -> Union[
+  dict[int,tuple[int,int,int,int,int,int]],
+  dict[int,tuple[slice,slice,slice]],
+]:
+  """
+  Calculate the axis aligned bounding box for each label.
+
+  If "label" is provided, compute only that label which
+  may save some computaton.
+  """
+  if label is None:
+    z_start = 0
+    z_end = -1
+  elif not contains(binary, label):
+      raise ValueError(f"Label {label} not contained in image.")
+  else:
+    z_start, z_end = z_range_for_label(binary, label)
+
+  bounding_boxes = fastcrackle.bounding_boxes(binary, z_start, z_end, parallel)
+
+  if label is not None and no_slice_conversion:
+    return bounding_boxes[label]
+
+  if label is not None:
+    bounding_boxes = { label: bounding_boxes[label] }
+
+  for lbl, bbx in bounding_boxes.items():
+    bounding_boxes[lbl] = ( 
+      slice(int(bbx[0]), int(bbx[3])+1), 
+      slice(int(bbx[1]), int(bbx[4])+1), 
+      slice(int(bbx[2]), int(bbx[5])+1) 
+    )
+
+  if label is not None:
+    return bounding_boxes[label]
+  else:
+    return bounding_boxes
+
 
 
