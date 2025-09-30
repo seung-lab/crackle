@@ -31,7 +31,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pytest -r requirements.txt -r requirements-dev.txt
 
-      - name: Compile
+      - name: Compile (macOS/Linux)
+        if: matrix.os != 'windows-latest'
+        shell: bash
         run: |
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
             if [ "$RUNNER_ARCH" == "X64" ]; then
@@ -44,5 +46,10 @@ jobs:
             fi
           fi
           python setup.py develop
+
+      - name: Compile (Windows)
+        if: matrix.os == 'windows-latest'
+        run: python setup.py develop
+      
       - name: Test with pytest
         run: pytest -v -x automated_test.py
