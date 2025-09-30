@@ -913,6 +913,13 @@ def bounding_boxes(
 
   If "label" is provided, compute only that label which
   may save some computaton.
+
+  no_slice_conversion will avoid converting 
+    [xmin, ymin, zmin, xmax, ymax, zmax]
+    into
+    (slice(xmin,xmax+1), slice(ymin,ymax+1), slice(zmin,zmax+1)
+
+    Which can save time and may be in a more desirable format.
   """
   if label is None:
     z_start = 0
