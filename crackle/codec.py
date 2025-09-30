@@ -950,13 +950,13 @@ def bounding_boxes(
   else:
     return bounding_boxes
 
-def each(binary:bytes) -> Iterator[npt.NDArray[np.bool_]]:
+def each(binary:bytes, parallel:int = 0) -> Iterator[npt.NDArray[np.bool_]]:
   """Iterate over the binary representations of each label."""
   class ImageIterator():
     def __len__(self):
       return num_labels(binary)
     def __iter__(self):
       for label in labels(binary):
-        yield (label, decompress(binary, label=label))
+        yield (label, decompress(binary, label=label, parallel=parallel))
 
   return ImageIterator()
