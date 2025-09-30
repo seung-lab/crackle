@@ -902,7 +902,7 @@ def centroids(
 def bounding_boxes(
   binary:bytes, 
   label:Optional[int] = None,
-  parallel:int = 1,
+  parallel:int = 0,
   no_slice_conversion:bool = False,
 ) -> Union[
   dict[int,tuple[int,int,int,int,int,int]],
