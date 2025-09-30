@@ -43,6 +43,7 @@ from .codec import (
 	nbytes, components, component_lengths,
 	header, contains, crack_codes, num_labels,
 	point_cloud, voxel_counts, centroids, bounding_boxes,
+	each,
 )
 from .operations import (
 	astype, ascontiguousarray, asfortranarray,

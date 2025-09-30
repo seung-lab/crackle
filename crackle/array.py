@@ -6,7 +6,7 @@ from .codec import (
   labels, nbytes, contains, 
   header, crack_codes, num_labels,
   components, point_cloud, voxel_counts,
-  centroids, bounding_boxes,
+  centroids, bounding_boxes, each,
 )
 from .operations import (
   astype,
@@ -129,6 +129,9 @@ class CrackleArray:
   def save(self, filelike):
     import crackle.util
     return crackle.util.save(self, filelike)
+
+  def each(self):
+    return each(self.binary)
 
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):

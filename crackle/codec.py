@@ -1,8 +1,9 @@
-from typing import List, Optional, Tuple, Sequence, Union, Dict
+from typing import List, Optional, Tuple, Sequence, Union, Dict, Iterator
 from collections import namedtuple
 import multiprocessing as mp
 
 import numpy as np
+import numpy.typing as npt
 import fastremap
 import fastcrackle
 
@@ -949,5 +950,13 @@ def bounding_boxes(
   else:
     return bounding_boxes
 
+def each(binary:bytes) -> Iterator[npt.NDArray[np.bool_]]:
+  """Iterate over the binary representations of each label."""
+  class ImageIterator():
+    def __len__(self):
+      return num_labels(binary)
+    def __iter__(self):
+      for label in labels(binary):
+        yield (label, decompress(binary, label=label))
 
-
+  return ImageIterator()
