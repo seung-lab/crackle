@@ -368,6 +368,37 @@ py::dict centroids(
 	return pycentroids;
 }
 
+py::dict bounding_boxes(
+	const py::buffer &buffer,
+	const int64_t z_start = 0, 
+	const int64_t z_end = -1, 
+	size_t parallel = 1
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	auto bbxes = crackle::operations::bounding_boxes(data, info.size, z_start, z_end, parallel);
+	
+	py::dict pybbxes;
+	for (const auto& [label, bbx] : bbxes) {
+		py::array_t<uint32_t> np_xyz({6}, {sizeof(uint32_t)});
+		auto buf = np_xyz.mutable_unchecked<1>();
+		buf(0) = bbx[0];
+		buf(1) = bbx[1];
+		buf(2) = bbx[2];
+		buf(3) = bbx[3];
+		buf(4) = bbx[4];
+		buf(5) = bbx[5];
+		pybbxes[py::int_(label)] = np_xyz;
+	}
+
+	return pybbxes;
+}
+
 py::array get_slice_vcg(
 	const py::bytes &buffer, 
 	const int64_t z
@@ -492,6 +523,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("point_cloud", &point_cloud, "Extract one or more point clouds without decompressing.");
 	m.def("voxel_counts", &voxel_counts, "Compute the voxel counts for each label in the dataset.");
 	m.def("centroids", &centroids, "Compute the centroid for each label in the dataset.");
+	m.def("bounding_boxes", &bounding_boxes, "Compute the bounding box for each label in the dataset.");
 	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
