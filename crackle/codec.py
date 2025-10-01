@@ -697,12 +697,15 @@ def condense_unique(binary:bytes) -> bytes:
   head.num_label_bytes = len(labels_binary)
   head.is_sorted = True
 
+  crack_crcs = comps["crcs"][4:]
+
   return b''.join([
     head.tobytes(),
     comps["z_index"],
     labels_binary,
     comps["crack_codes"],
-    comps["crcs"],
+    crc32c(labels_binary).to_bytes(4, 'little'),
+    crack_crcs,
   ])
 
 def point_cloud(
