@@ -670,7 +670,7 @@ def condense_unique(binary:bytes) -> bytes:
 
   reduced_uniq = fastremap.unique(uniq)
 
-  if np.all(uniq == reduced_uniq):
+  if len(uniq) == len(reduced_uniq) and np.all(uniq == reduced_uniq):
     return binary
 
   mapping = { u: i for i, u in enumerate(reduced_uniq) }
@@ -702,6 +702,7 @@ def condense_unique(binary:bytes) -> bytes:
     comps["z_index"],
     labels_binary,
     comps["crack_codes"],
+    comps["crcs"],
   ])
 
 def point_cloud(
