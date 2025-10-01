@@ -675,7 +675,7 @@ def condense_unique(binary:bytes) -> bytes:
 
   mapping = { u: i for i, u in enumerate(reduced_uniq) }
 
-  N = num_labels(binary)
+  N = len(reduced_uniq)
   key_width = compute_byte_width(N)
 
   keys = extract_keys(binary)
@@ -688,7 +688,7 @@ def condense_unique(binary:bytes) -> bytes:
 
   labels_binary = b''.join([
     len(reduced_uniq).to_bytes(8, 'little'),
-    reduced_uniq.astype(head.stored_dtype).tobytes(),
+    reduced_uniq.astype(head.stored_dtype, copy=False).tobytes(),
     labels_idx,
     keys.tobytes(),
   ])
@@ -696,6 +696,7 @@ def condense_unique(binary:bytes) -> bytes:
   comps = components(binary)
   head.num_label_bytes = len(labels_binary)
   head.is_sorted = True
+  head.stored_data_width = compute_byte_width(reduced_uniq[-1])
 
   crack_crcs = comps["crcs"][4:]
 
