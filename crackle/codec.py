@@ -681,15 +681,12 @@ def condense_unique(binary:bytes) -> bytes:
   keys = extract_keys(binary)
   keys = np.array([ mapping[u] for u in uniq[keys] ], dtype=f'u{key_width}')
 
-  raw = raw_labels(binary)
-  idx_bytes = head.component_width() * head.sz
-  offset = 8 + N * head.stored_data_width
-  labels_idx = raw[offset:offset + idx_bytes]
+  label_components = decode_flat_labels(head, binary)
 
   labels_binary = b''.join([
     len(reduced_uniq).to_bytes(8, 'little'),
     reduced_uniq.astype(head.stored_dtype, copy=False).tobytes(),
-    labels_idx,
+    label_components["components_per_grid"].tobytes(),
     keys.tobytes(),
   ])
 
