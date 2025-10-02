@@ -801,7 +801,7 @@ def connected_components(
       ze = minfn((z+1)*cz, arr.shape[2])
       yield arr[:,:,zs:ze]
   
-  cz = int(memory_target / (arr.shape[0] * arr.shape[1] * np.dtype(arr.dtype).itemsize))
+  cz = int(memory_target / (arr.shape[0] * arr.shape[1] * (np.dtype(arr.dtype).itemsize + 8)))
   cz = maxfn(cz, 2)
 
   ccl = cc3d.connected_components_stack(
