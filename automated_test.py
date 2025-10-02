@@ -109,6 +109,15 @@ def test_connectomics_npy():
   recovered = crackle.decompress(binary)
   assert np.all(labels == recovered)
 
+def test_connected_components():
+  import cc3d
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels, allow_pins=False)
+  cc_binary = crackle.connected_components(binary)
+  cc_labels, N = cc3d.connected_components(labels, return_N=True)
+  assert N == (crackle.num_labels(cc_binary) - 1) # num labels includes 0
+  assert np.all(cc_labels == crackle.decompress(cc_binary))
+
 def test_watershed():
   labels = compresso.load("ws.npy.cpso.gz")
   binary = crackle.compress(labels, allow_pins=False)
