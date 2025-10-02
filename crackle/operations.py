@@ -14,6 +14,7 @@ from .codec import (
   decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
   reencode, background_color, crack_crcs, labels_crc,
+  condense_unique,
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c

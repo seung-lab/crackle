@@ -683,7 +683,7 @@ def condense_unique(binary:bytes) -> bytes:
 
   raw = raw_labels(binary)
   idx_bytes = head.component_width() * head.sz
-  offset = 8 + N * head.stored_data_width + idx_bytes
+  offset = 8 + N * head.stored_data_width
   labels_idx = raw[offset:offset + idx_bytes]
 
   labels_binary = b''.join([
@@ -702,9 +702,9 @@ def condense_unique(binary:bytes) -> bytes:
 
   return b''.join([
     head.tobytes(),
-    comps["z_index"],
+    comps["z_index"].tobytes(),
     labels_binary,
-    comps["crack_codes"],
+    comps["crack_codes"].tobytes(),
     crc32c(labels_binary).to_bytes(4, 'little'),
     crack_crcs,
   ])
