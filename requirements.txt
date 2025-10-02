@@ -1,4 +1,4 @@
-numpy
 fastremap
-pybind11
 google_crc32c
+numpy
+pybind11
