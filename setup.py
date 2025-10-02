@@ -43,6 +43,9 @@ setuptools.setup(
     "remote": [
       "cloud-files",
     ],
+    "ccl": [ 
+      "connected-components-3d",
+    ],
   },
   ext_modules=[
     Pybind11Extension(

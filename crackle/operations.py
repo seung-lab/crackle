@@ -14,6 +14,7 @@ from .codec import (
   decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
   reencode, background_color, crack_crcs, labels_crc,
+  condense_unique,
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c
@@ -763,5 +764,53 @@ def recompress(
     )
 
   return zstack(binaries)
+
+def connected_components(
+  binary:bytes, 
+  connectivity:Literal[6,26] = 26,
+  binary_image:bool = False,
+  memory_target:int = int(100e6),
+  progress:bool = False,
+) -> "CrackleArray":
+  """
+  Perform 3D connected component labeling and return the result
+  as a CrackleArray.
+
+  binary: crackle byte stream
+  connectivity: 6 = voxel faces, 26 = faces, edges, corners
+  binary_image: consider all non-zero voxels as foreground
+  memory_target: determines how many z-slices to process at once.
+    The larger the target, the faster this will go.
+  """
+  try:
+    import cc3d
+  except ImportError:
+    print("This function requires cc3d. pip install connected-components-3d.")
+    raise
+  from .array import CrackleArray
+  from tqdm import tqdm
+
+  arr = CrackleArray(binary)
+  maxfn = __builtins__["max"] # name collision
+  minfn = __builtins__["min"] # name collision
+
+  def zstack(cz:int) -> np.ndarray:
+    nz = int(np.ceil(arr.shape[2] / cz))
+    for z in tqdm(range(nz), disable=(not progress), desc="Connected Components"):
+      zs = z*cz
+      ze = minfn((z+1)*cz, arr.shape[2])
+      yield arr[:,:,zs:ze]
+  
+  cz = int(memory_target / (arr.shape[0] * arr.shape[1] * (np.dtype(arr.dtype).itemsize + 8)))
+  cz = maxfn(cz, 2)
+
+  ccl = cc3d.connected_components_stack(
+    zstack(cz), 
+    connectivity=connectivity,
+    binary_image=binary_image,
+  )
+  return condense_unique(ccl.binary)
+
+
 
 

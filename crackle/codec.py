@@ -675,35 +675,33 @@ def condense_unique(binary:bytes) -> bytes:
 
   mapping = { u: i for i, u in enumerate(reduced_uniq) }
 
-  N = num_labels(binary)
+  N = len(reduced_uniq)
   key_width = compute_byte_width(N)
 
   keys = extract_keys(binary)
   keys = np.array([ mapping[u] for u in uniq[keys] ], dtype=f'u{key_width}')
 
-  raw = raw_labels(binary)
-  idx_bytes = head.component_width() * head.sz
-  offset = 8 + N * head.stored_data_width + idx_bytes
-  labels_idx = raw[offset:offset + idx_bytes]
+  label_components = decode_flat_labels(head, binary)
 
   labels_binary = b''.join([
     len(reduced_uniq).to_bytes(8, 'little'),
-    reduced_uniq.astype(head.stored_dtype).tobytes(),
-    labels_idx,
+    reduced_uniq.astype(head.stored_dtype, copy=False).tobytes(),
+    label_components["components_per_grid"].tobytes(),
     keys.tobytes(),
   ])
 
   comps = components(binary)
   head.num_label_bytes = len(labels_binary)
   head.is_sorted = True
+  head.stored_data_width = compute_byte_width(reduced_uniq[-1])
 
   crack_crcs = comps["crcs"][4:]
 
   return b''.join([
     head.tobytes(),
-    comps["z_index"],
+    comps["z_index"].tobytes(),
     labels_binary,
-    comps["crack_codes"],
+    comps["crack_codes"].tobytes(),
     crc32c(labels_binary).to_bytes(4, 'little'),
     crack_crcs,
   ])
@@ -954,13 +952,37 @@ def bounding_boxes(
   else:
     return bounding_boxes
 
-def each(binary:bytes, parallel:int = 0) -> Iterator[npt.NDArray[np.bool_]]:
-  """Iterate over the binary representations of each label."""
+def each(binary:bytes, parallel:int = 0, crop:bool = True) -> Iterator[npt.NDArray[np.bool_]]:
+  """
+  Iterate over the binary representations of each label.
+
+  e.g. 
+
+  for label, binary_image in each(binary):
+    pass
+
+  parallel: how many threads to use for decoding (0 = num cores)
+  crop: if true, each binary image will be closely cropped
+  """
+
+  if crop:
+    bbxes = bounding_boxes(binary)
+    head = header(binary)
+
   class ImageIterator():
     def __len__(self):
       return num_labels(binary)
     def __iter__(self):
       for label in labels(binary):
-        yield (label, decompress(binary, label=label, parallel=parallel))
+        binimg = decompress(binary, label=label, parallel=parallel)
+
+        if crop:
+          slc = bbxes[label]
+          if head.fortran_order:
+            binimg = np.asfortranarray(binimg[slc])
+          else:
+            binimg = np.ascontiguousarray(binimg[slc])
+
+        yield (label, binimg)
 
   return ImageIterator()

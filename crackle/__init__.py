@@ -53,7 +53,7 @@ from .operations import (
 	full, zeros, ones,
 	add_scalar, subtract_scalar,
 	multiply_scalar, floordiv_scalar,
-	recompress,
+	recompress, connected_components,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload, bload, save_numpy
