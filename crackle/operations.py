@@ -770,6 +770,7 @@ def connected_components(
   connectivity:Literal[6,26] = 26,
   binary_image:bool = False,
   memory_target:int = int(100e6),
+  progress:bool = False,
 ) -> "CrackleArray":
   """
   Perform 3D connected component labeling and return the result
@@ -787,6 +788,7 @@ def connected_components(
     print("This function requires cc3d. pip install connected-components-3d.")
     raise
   from .array import CrackleArray
+  from tqdm import tqdm
 
   arr = CrackleArray(binary)
   maxfn = __builtins__["max"] # name collision
@@ -794,7 +796,7 @@ def connected_components(
 
   def zstack(cz:int) -> np.ndarray:
     nz = int(np.ceil(arr.shape[2] / cz))
-    for z in tqdm(range(nz)):
+    for z in tqdm(range(nz), disable=(not progress), desc="Connected Components"):
       zs = z*cz
       ze = minfn((z+1)*cz, arr.shape[2])
       yield arr[:,:,zs:ze]
