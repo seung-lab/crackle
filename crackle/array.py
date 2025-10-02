@@ -16,6 +16,7 @@ from .operations import (
   remap,
   add_scalar, subtract_scalar,
   multiply_scalar, floordiv_scalar,
+  connected_components,
 )
 from . import codec
 from .lib import crc32c
@@ -125,6 +126,22 @@ class CrackleArray:
       z_start=z_start, z_end=z_end, 
       parallel=self.parallel
     )
+
+  def connected_components(
+    self, 
+    connectivity:Literal[6,26] = 26,
+    binary_image:bool = False,
+    memory_target:int = int(100e6),
+    progress:bool = False,
+  ) -> "CrackleArray":
+    ccl_binary = connected_components(
+      self.binary, 
+      connectivity=connectivity,
+      binary_image=binary_image,
+      memory_target=memory_target,
+      progress=progress,
+    )
+    return CrackleArray(ccl_binary)
 
   def save(self, filelike):
     import crackle.util
