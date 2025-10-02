@@ -952,13 +952,37 @@ def bounding_boxes(
   else:
     return bounding_boxes
 
-def each(binary:bytes, parallel:int = 0) -> Iterator[npt.NDArray[np.bool_]]:
-  """Iterate over the binary representations of each label."""
+def each(binary:bytes, parallel:int = 0, crop:bool = True) -> Iterator[npt.NDArray[np.bool_]]:
+  """
+  Iterate over the binary representations of each label.
+
+  e.g. 
+
+  for label, binary_image in each(binary):
+    pass
+
+  parallel: how many threads to use for decoding (0 = num cores)
+  crop: if true, each binary image will be closely cropped
+  """
+
+  if crop:
+    bbxes = bounding_boxes(binary)
+    head = header(binary)
+
   class ImageIterator():
     def __len__(self):
       return num_labels(binary)
     def __iter__(self):
       for label in labels(binary):
-        yield (label, decompress(binary, label=label, parallel=parallel))
+        binimg = decompress(binary, label=label, parallel=parallel)
+
+        if crop:
+          slc = bbxes[label]
+          if head.fortran_order:
+            binimg = np.asfortranarray(binimg[slc])
+          else:
+            binimg = np.ascontiguousarray(binimg[slc])
+
+        yield (label, binimg)
 
   return ImageIterator()
