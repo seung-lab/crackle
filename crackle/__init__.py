@@ -54,6 +54,7 @@ from .operations import (
 	add_scalar, subtract_scalar,
 	multiply_scalar, floordiv_scalar,
 	recompress, connected_components,
+	mask, mask_except,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload, bload, save_numpy
