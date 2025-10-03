@@ -35,6 +35,12 @@ mx = crackle.max(binary)
 # check if label in array in log(N) time
 has_label = crackle.contains(binary, label)
 
+# iterate over all binary images rapidly. crop
+# crops to the ROI in the z dimension and makes
+# iteration a bit faster
+for label, binimg in crackle.each(binary, crop=True):
+  pass
+
 # Remap labels without decompressing. Could
 # be useful for e.g. proofreading.
 remapped = crackle.remap(
