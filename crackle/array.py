@@ -18,7 +18,7 @@ from .operations import (
   multiply_scalar, floordiv_scalar,
   connected_components,
 )
-from . import codec
+from . import codec, operations
 from .lib import crc32c
 
 import numpy as np
@@ -87,10 +87,10 @@ class CrackleArray:
     )
 
   def min(self) -> int:
-    return codec.min(self.binary)
+    return operations.min(self.binary)
 
   def max(self) -> int:
-    return codec.max(self.binary)
+    return operations.max(self.binary)
 
   def remap(self, mapping:Dict[int,int], preserve_missing_labels:bool = False):
     return CrackleArray(remap(self.binary, mapping, preserve_missing_labels))
