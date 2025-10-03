@@ -1,4 +1,4 @@
-from typing import Optional, Union, Any, Dict, Literal
+from typing import Optional, Union, Any, Dict, Literal, Iterator
 
 from .headers import CrackleHeader, LabelFormat
 from .codec import (
@@ -154,8 +154,8 @@ class CrackleArray:
     import crackle.util
     return crackle.util.save(self, filelike)
 
-  def each(self, crop:bool = True):
-    return each(self.binary, parallel=self.parallel, crop=crop)
+  def each(self, crop:bool = True, labels:Optional[Iterator[int]] = None):
+    return each(self.binary, parallel=self.parallel, crop=crop, labels=labels)
 
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):
