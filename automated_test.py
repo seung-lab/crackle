@@ -295,6 +295,18 @@ def test_mask():
   gt = [0] + list(range(500,1000))
   assert np.all(labels == gt)
 
+def test_mask_except():
+  labels = np.arange(0,1000).reshape((10,10,10)).astype(np.uint32)
+  binary = crackle.compress(labels)
+
+  labels = crackle.labels(binary)
+  assert np.all(labels == np.arange(0,1000))
+
+  binary = crackle.mask_except(binary, list(range(500)))
+  labels = crackle.labels(binary)
+  gt = list(range(0,500))
+  assert np.all(labels == gt)
+
 def test_big_remap():
   import time
   labels = np.arange(0,10000000).reshape((100,100,1000)).astype(np.uint32)
