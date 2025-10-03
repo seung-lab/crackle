@@ -973,7 +973,7 @@ def each(binary:bytes, parallel:int = 0, crop:bool = True) -> Iterator[npt.NDArr
       return num_labels(binary)
     def __iter__(self):
       for label in labels(binary):
-        res = decompress_binary_image(
+        binimg = decompress(
           binary,
           label=label,
           parallel=parallel,
@@ -981,15 +981,12 @@ def each(binary:bytes, parallel:int = 0, crop:bool = True) -> Iterator[npt.NDArr
         )
 
         if crop:
-          binimg, z_start = res
           slc = bbxes[label]
           slc = (slc[0], slc[1], slice(None))
           if head.fortran_order:
             binimg = np.asfortranarray(binimg[slc])
           else:
             binimg = np.ascontiguousarray(binimg[slc])
-        else:
-          binimg = res
 
         yield (label, binimg)
 
