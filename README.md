@@ -73,6 +73,15 @@ voxel_counts = crackle.voxel_counts(binary)
 centroids = crackle.centroids(binary)
 bbxes = crackle.bounding_boxes(binary)
 
+# low memory CCL, the more memory you provide, the faster it goes
+ccl_binary = crackle.connected_components(
+  binary, 
+  connectivity=26, # 6 (faces) & 26 (faces,edges,corners) supported
+  memory_target=int(1e9), # bytes
+  progress=True,
+  return_mapping = False, # can also return { cc label: original label }
+)
+
 # building big arrays with low memory
 binary = crackle.zeros([5000,5000,5000], dtype=np.uint64, order='F')
 
