@@ -968,8 +968,11 @@ def each(
   parallel: how many threads to use for decoding (0 = num cores)
   crop: if true, each binary image will be closely cropped
   """
+  all_labels = globals()["labels"](binary)
   if labels is None:
-    labels = globals()["labels"](binary)
+    labels = all_labels
+  else:
+    labels = list(set(all_labels).intersection(set(labels)))
 
   if crop:
     bbxes = bounding_boxes(binary)
