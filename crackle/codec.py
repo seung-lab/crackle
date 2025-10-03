@@ -424,9 +424,6 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
   min_cc = cc_idxs[0]
   max_cc = cc_idxs[-1]
 
-  z_start = 0
-  z_end = head.sz - 1
-
   z_start = np.searchsorted(components_per_grid, min_cc)
   z_end = np.searchsorted(components_per_grid, max_cc)
 
