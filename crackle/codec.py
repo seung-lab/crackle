@@ -967,6 +967,7 @@ def each(
 
   parallel: how many threads to use for decoding (0 = num cores)
   crop: if true, each binary image will be closely cropped
+  labels: limit evalation to these labels
   """
   all_labels = globals()["labels"](binary)
   if labels is None:
