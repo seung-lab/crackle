@@ -59,3 +59,9 @@ from .operations import (
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload, bload, save_numpy
 
+def compressa(*args, **kwargs) -> CrackleArray:
+  """compress but return the result as a CrackleArray."""
+  binary = compress(*args, **kwargs)
+  return CrackleArray(binary)
+
+
