@@ -828,6 +828,10 @@ def connected_components(
   orig_components = decode_flat_labels(header(binary), binary)
   ccl_components = decode_flat_labels(header(ccl_binary), ccl_binary)
 
+  if len(orig_components["cc_map"]) != len(ccl_components["cc_map"]):
+    binary = compress(decompress(binary))
+    orig_components = decode_flat_labels(header(binary), binary)
+
   orig_map = orig_components["unique"][ orig_components["cc_map"] ]
   cc_map = ccl_components["unique"][ ccl_components["cc_map"] ]
 
