@@ -115,6 +115,9 @@ class CrackleArray:
   def decompress(self, label:Optional[int] = None, crop:bool = False) -> bytes:
     return decompress(self.binary, label=label, parallel=self.parallel, crop=crop)
 
+  def condense(self) -> "CrackleArray":
+    return CrackleArray(codec.condense_unique(self.binary))
+
   def point_cloud(
     self, 
     label:Optional[int] = None,
@@ -151,8 +154,8 @@ class CrackleArray:
     import crackle.util
     return crackle.util.save(self, filelike)
 
-  def each(self):
-    return each(self.binary)
+  def each(self, crop:bool = True):
+    return each(self.binary, parallel=self.parallel, crop=crop)
 
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):
