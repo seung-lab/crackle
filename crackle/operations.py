@@ -772,7 +772,7 @@ def connected_components(
   memory_target:int = int(100e6),
   progress:bool = False,
   return_mapping:bool = False,
-) -> Union["CrackleArray", tuple["CrackleArray", Dict[int,int]]]:
+) -> Union["CrackleArray", tuple["CrackleArray", dict[int,int]]]:
   """
   Perform 3D connected component labeling and return the result
   as a CrackleArray.
@@ -791,7 +791,6 @@ def connected_components(
       return CrackleArray
     else:
       return (CrackleArray, { cc label: original label })
-
   """
   try:
     import cc3d

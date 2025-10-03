@@ -133,13 +133,15 @@ class CrackleArray:
     binary_image:bool = False,
     memory_target:int = int(100e6),
     progress:bool = False,
-  ) -> "CrackleArray":
+    return_mapping:bool = False,
+  ) -> Union["CrackleArray", tuple["CrackleArray", dict[int,int]]]:
     ccl_binary = connected_components(
       self.binary, 
       connectivity=connectivity,
       binary_image=binary_image,
       memory_target=memory_target,
       progress=progress,
+      return_mapping=return_mapping,
     )
     return CrackleArray(ccl_binary)
 
