@@ -8,6 +8,7 @@ import numpy.typing as npt
 import fastremap
 import fastcrackle
 
+from . import codec
 from .codec import (
   compress, decompress, decompress_range, labels, 
   header, raw_labels, decode_flat_labels,
@@ -86,6 +87,44 @@ def remap(
     binary = bytearray(binary)
   fastcrackle.remap(binary, mapping, preserve_missing_labels, parallel)
   return binary
+
+def mask(
+  binary:bytes,
+  labels:list[int],
+  value:int = 0,
+  in_place:bool = False,
+  parallel:int = 0,
+) -> bytes:
+  """Mask the indicated labels with value."""
+  masked_binary = remap(
+    binary, 
+    { lbl: value for lbl in labels },
+    preserve_missing_labels=True,
+    in_place=in_place,
+    parallel=parallel
+  )
+  return condense_unique(masked_binary)
+
+def mask_except(
+  binary:bytes,
+  labels:list[int],
+  value:int = 0,
+  in_place:bool = False,
+  parallel:int = 0,
+) -> bytes:
+  """Mask all labels except the indicated labels with value."""
+  all_labels = set(codec.labels(binary))
+  mapping = {
+    segid: (value if segid not in all_labels else segid) 
+    for segid in all_labels
+  }
+  masked_binary = remap(
+    binary,
+    mapping,
+    in_place=in_place,
+    parallel=parallel,
+  )
+  return condense_unique(masked_binary)
 
 def astype(
   binary:bytes, 

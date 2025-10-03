@@ -157,6 +157,26 @@ class CrackleArray:
   def each(self, crop:bool = True, labels:Optional[Iterator[int]] = None):
     return each(self.binary, parallel=self.parallel, crop=crop, labels=labels)
 
+  def mask(self, labels:list[int], value:int = 0, in_place:bool = False) -> "CrackleArray":
+    binary = operations.mask(
+      self.binary, 
+      labels=labels, 
+      value=value,
+      in_place=in_place,
+      parallel=self.parallel,
+    )
+    return CrackleArray(binary)
+
+  def mask_except(self, labels:list[int], value:int = 0, in_place:bool = False) -> "CrackleArray":
+    binary = operations.mask_except(
+      self.binary, 
+      labels=labels, 
+      value=value,
+      in_place=in_place,
+      parallel=self.parallel,
+    )
+    return CrackleArray(binary)
+
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):
       return self.min() == other and self.max() == other
