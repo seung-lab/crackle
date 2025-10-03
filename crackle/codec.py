@@ -538,6 +538,8 @@ def decompress(
   """
   Decompress a Crackle binary into a Numpy array. 
   If label is provided, decompress into  a binary (bool) image.
+  crop only has meaning in the context of label where it will
+    return an image cropped in Z to the ROI.
   """
   if label is None:
     return decompress_range(binary, None, None, parallel)
