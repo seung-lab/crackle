@@ -427,15 +427,14 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
   z_start = 0
   z_end = head.sz - 1
 
-  for z in range(head.sz):
-    if components_per_grid[z] >= min_cc:
-      z_start = z
-      break
+  z_start = np.searchsorted(components_per_grid, min_cc)
+  z_end = np.searchsorted(components_per_grid, max_cc)
 
-  for z in range(head.sz - 1, -1, -1):
-    if components_per_grid[z] <= max_cc:
-      z_end = z + 1
-      break
+  if components_per_grid[z_start] == min_cc:
+    z_start = min(z_start + 1, head.sz - 1)
+
+  if components_per_grid[z_end] == max_cc:
+    z_end = min(z_end + 1, head.sz - 1)
 
   return (int(z_start), int(z_end+1))
 
@@ -507,10 +506,10 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
 
 def decompress_binary_image(
   binary:bytes, 
-  label:Optional[int],
+  label:int,
   parallel:int,
   crop:bool = True,
-) -> np.ndarray:
+) -> npt.NDArray[np.bool_]:
   z_start, z_end = z_range_for_label(binary, label)
   header = CrackleHeader.frombytes(binary)
   order = "F" if header.fortran_order else "C"
@@ -537,6 +536,7 @@ def decompress(
   binary:bytes, 
   label:Optional[int] = None,
   parallel:int = 0,
+  crop:bool = False,
 ) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array. 
@@ -544,7 +544,7 @@ def decompress(
   """
   if label is None:
     return decompress_range(binary, None, None, parallel)
-  return decompress_binary_image(binary, label, parallel, crop=False)
+  return decompress_binary_image(binary, label, parallel, crop=crop)
 
 def decompress_range(
   binary:bytes, 
@@ -974,14 +974,23 @@ def each(binary:bytes, parallel:int = 0, crop:bool = True) -> Iterator[npt.NDArr
       return num_labels(binary)
     def __iter__(self):
       for label in labels(binary):
-        binimg = decompress(binary, label=label, parallel=parallel)
+        res = decompress_binary_image(
+          binary,
+          label=label,
+          parallel=parallel,
+          crop=crop,
+        )
 
         if crop:
+          binimg, z_start = res
           slc = bbxes[label]
+          slc = (slc[0], slc[1], slice(None))
           if head.fortran_order:
             binimg = np.asfortranarray(binimg[slc])
           else:
             binimg = np.ascontiguousarray(binimg[slc])
+        else:
+          binimg = res
 
         yield (label, binimg)
 

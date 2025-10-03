@@ -112,8 +112,8 @@ class CrackleArray:
   def numpy(self, *args, **kwargs) -> np.ndarray:
     return self.decompress(*args, **kwargs)
 
-  def decompress(self, label:Optional[int] = None) -> bytes:
-    return decompress(self.binary, label, parallel=self.parallel)
+  def decompress(self, label:Optional[int] = None, crop:bool = False) -> bytes:
+    return decompress(self.binary, label=label, parallel=self.parallel, crop=crop)
 
   def point_cloud(
     self, 
