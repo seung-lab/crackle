@@ -771,7 +771,8 @@ def connected_components(
   binary_image:bool = False,
   memory_target:int = int(100e6),
   progress:bool = False,
-) -> "CrackleArray":
+  return_mapping:bool = False,
+) -> Union["CrackleArray", tuple["CrackleArray", Dict[int,int]]]:
   """
   Perform 3D connected component labeling and return the result
   as a CrackleArray.
@@ -781,6 +782,16 @@ def connected_components(
   binary_image: consider all non-zero voxels as foreground
   memory_target: determines how many z-slices to process at once.
     The larger the target, the faster this will go.
+  return_mapping: if true, also return a dictionary mapping
+    cc label -> original label
+
+  
+  Returns: 
+    if return_mapping:
+      return CrackleArray
+    else:
+      return (CrackleArray, { cc label: original label })
+
   """
   try:
     import cc3d
@@ -809,7 +820,27 @@ def connected_components(
     connectivity=connectivity,
     binary_image=binary_image,
   )
-  return condense_unique(ccl.binary)
+  ccl_binary = condense_unique(ccl.binary)
+  del ccl
+
+  if not return_mapping:
+    return ccl_binary
+
+  orig_components = decode_flat_labels(header(binary), binary)
+  ccl_components = decode_flat_labels(header(ccl_binary), ccl_binary)
+
+  orig_map = orig_components["unique"][ orig_components["cc_map"] ]
+  cc_map = ccl_components["unique"][ ccl_components["cc_map"] ]
+
+  mapping = { 
+    int(ccl_label): int(orig_label)
+    for orig_label, ccl_label in zip(orig_map, cc_map)
+  }
+
+  return (ccl_binary, mapping)
+
+
+
 
 
 
