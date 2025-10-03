@@ -113,9 +113,10 @@ def mask_except(
   parallel:int = 0,
 ) -> bytes:
   """Mask all labels except the indicated labels with value."""
-  all_labels = set(codec.labels(binary))
+  all_labels = codec.labels(binary)
+  labels = set(labels)
   mapping = {
-    segid: (value if segid not in all_labels else segid) 
+    segid: (value if segid not in labels else segid) 
     for segid in all_labels
   }
   masked_binary = remap(
