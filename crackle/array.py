@@ -154,7 +154,7 @@ class CrackleArray:
     import crackle.util
     return crackle.util.save(self, filelike)
 
-  def each(self, crop:bool = True, labels:Optional[Iterator[int]] = None):
+  def each(self, crop:bool = True, labels:Optional[Iterator[int]] = None) -> Iterator[npt.NDArray[np.bool_]]:
     return each(self.binary, parallel=self.parallel, crop=crop, labels=labels)
 
   def mask(self, labels:list[int], value:int = 0, in_place:bool = False) -> "CrackleArray":
