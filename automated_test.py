@@ -851,6 +851,17 @@ def test_spurious_branch_elimination():
 
   assert np.all(recovered == arr)
 
+def test_each():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels, allow_pins=False)
+
+  i = 0
+  for label, binimg in crackle.each(binary, crop=False):
+    assert np.all((labels == label) == binimg)
+    i += 1
+    if i > 30:
+      break
+
 
 
 
