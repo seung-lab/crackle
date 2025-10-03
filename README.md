@@ -36,8 +36,7 @@ mx = crackle.max(binary)
 has_label = crackle.contains(binary, label)
 
 # iterate over all binary images rapidly. crop
-# crops to the ROI in the z dimension and makes
-# iteration a bit faster
+# close crops to the ROI and makes iteration a bit faster
 for label, binimg in crackle.each(binary, crop=True):
   pass
 
