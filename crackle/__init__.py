@@ -35,7 +35,7 @@ connected components at once.
 
 Author: William Silversmith
 Affiliation: Princeton Neuroscience Institute
-Date: December 2022 - January 2025
+Date: December 2022 - October 2025
 """
 from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
