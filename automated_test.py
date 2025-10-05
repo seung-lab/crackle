@@ -886,6 +886,18 @@ def test_each():
     if i > 30:
       break
 
+  bbxes = crackle.bounding_boxes(binary)
+  
+  i = 0
+  for label, binimg in crackle.each(binary, crop=True):
+    slc = bbxes[label]
+    gt = labels[slc] == label
+    assert np.all(gt == binimg)
+
+    i += 1
+    if i > 30:
+      break
+
 
 
 
