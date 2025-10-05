@@ -995,7 +995,7 @@ def each(
 
         if crop:
           slc = bbxes[label]
-          slc = (slc[0], slc[1], slice(None))
+          slc = (slice(slc[0], slc[3]+1), slice(slc[1], slc[4]+1), slice(None))
           if head.fortran_order:
             binimg = np.asfortranarray(binimg[slc])
           else:
