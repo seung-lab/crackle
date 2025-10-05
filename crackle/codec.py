@@ -933,8 +933,10 @@ def bounding_boxes(
 
   bounding_boxes = fastcrackle.bounding_boxes(binary, z_start, z_end, parallel)
 
-  if label is not None and no_slice_conversion:
-    return bounding_boxes[label]
+  if no_slice_conversion:
+    if label is not None:
+      return bounding_boxes[label]
+    return bounding_boxes
 
   if label is not None:
     bounding_boxes = { label: bounding_boxes[label] }
@@ -976,7 +978,7 @@ def each(
     labels = list(set(all_labels).intersection(set(labels)))
 
   if crop:
-    bbxes = bounding_boxes(binary)
+    bbxes = bounding_boxes(binary, no_slice_conversion=True)
     head = header(binary)
 
   class ImageIterator():
