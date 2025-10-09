@@ -655,9 +655,9 @@ OUT* decompress(
 }
 
 template <typename LABEL, typename OUT>
-LABEL* decompress(
+OUT* decompress(
 	const std::vector<unsigned char>& buffer,
-	LABEL* output = NULL,
+	OUT* output = NULL,
 	const int64_t z_start = -1, const int64_t z_end = -1,
 	size_t parallel = 1,
 	const std::optional<uint64_t> label = std::nullopt
@@ -673,9 +673,9 @@ LABEL* decompress(
 }
 
 template <typename LABEL, typename OUT>
-LABEL* decompress(
+OUT* decompress(
 	const std::span<const unsigned char>& buffer,
-	LABEL* output = NULL,
+	OUT* output = NULL,
 	const int64_t z_start = -1, const int64_t z_end = -1,
 	size_t parallel = 1, 	
 	const std::optional<uint64_t> label = std::nullopt
@@ -692,9 +692,9 @@ LABEL* decompress(
 
 
 template <typename LABEL, typename OUT>
-LABEL* decompress(
+OUT* decompress(
 	const std::string &buffer,
-	LABEL* output = NULL,
+	OUT* output = NULL,
 	const int64_t z_start = -1, const int64_t z_end = -1,
 	size_t parallel = 1,
 	const std::optional<uint64_t> label = std::nullopt
