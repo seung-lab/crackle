@@ -27,6 +27,7 @@
 #define __CC3D_SPECIAL_2_4_HPP__
 
 #include <algorithm>
+#include <vector>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
@@ -40,25 +41,21 @@ static uint64_t _dummy_N;
 template <typename T>
 class DisjointSet {
 public:
-  T *ids;
+  std::vector<T> ids;
   uint64_t length;
 
   DisjointSet (uint64_t len) {
     length = len;
-    ids = new T[length]();
+    ids.resize(len, 0);
   }
 
   DisjointSet (const DisjointSet &cpy) {
     length = cpy.length;
-    ids = new T[length]();
+    ids.resize(length, 0);
 
     for (int i = 0; i < length; i++) {
       ids[i] = cpy.ids[i];
     }
-  }
-
-  ~DisjointSet () {
-    delete []ids;
   }
 
   T root (T n) {
@@ -77,7 +74,8 @@ public:
 
   void add(T p) {
     if (p >= length) {
-      throw std::runtime_error("maximum length exception");
+      length *= 2;
+      ids.resize(length, 0);
     }
 
     if (ids[p] == 0) {
@@ -171,7 +169,7 @@ OUT* color_connectivity_graph(
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = estimate_provisional_label_count_vcg(vcg, sx) + 1;
+  uint64_t max_labels = voxels / 10;
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   if (out_labels == NULL) {
