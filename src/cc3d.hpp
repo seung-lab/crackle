@@ -202,11 +202,11 @@ OUT* color_connectivity_graph(
 
         if (x > 0 && (vcg[loc] & 0b0010)) {
           out_labels[loc] = out_labels[loc+B];
-          if (y > 0 && (vcg[loc+B] & 0b1000) == 0 && (vcg[loc] & 0b1000)) {
+          if ((vcg[loc+B] & 0b1000) == 0 && (vcg[loc] & 0b1000)) {
             equivalences.unify(out_labels[loc], out_labels[loc+C]);
           }
         }
-        else if (y > 0 && (vcg[loc] & 0b1000)) {
+        else if ((vcg[loc] & 0b1000)) {
           out_labels[loc] = out_labels[loc+C];
         }
         else {
