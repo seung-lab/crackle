@@ -27,6 +27,7 @@
 #define __CC3D_SPECIAL_2_4_HPP__
 
 #include <algorithm>
+#include <vector>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
@@ -40,25 +41,21 @@ static uint64_t _dummy_N;
 template <typename T>
 class DisjointSet {
 public:
-  T *ids;
+  std::vector<T> ids;
   uint64_t length;
 
   DisjointSet (uint64_t len) {
     length = len;
-    ids = new T[length]();
+    ids.resize(len, 0);
   }
 
   DisjointSet (const DisjointSet &cpy) {
     length = cpy.length;
-    ids = new T[length]();
+    ids.resize(length, 0);
 
     for (int i = 0; i < length; i++) {
       ids[i] = cpy.ids[i];
     }
-  }
-
-  ~DisjointSet () {
-    delete []ids;
   }
 
   T root (T n) {
@@ -77,7 +74,8 @@ public:
 
   void add(T p) {
     if (p >= length) {
-      throw std::runtime_error("maximum length exception");
+      length *= 2;
+      ids.resize(length, 0);
     }
 
     if (ids[p] == 0) {
@@ -144,22 +142,6 @@ OUT* relabel(
   return out_labels;
 }
 
-uint64_t estimate_provisional_label_count_vcg(
-  const std::vector<uint8_t>& vcg, const int64_t sx
-) {
-  uint64_t count = 0; // number of transitions between labels
-  int64_t voxels = static_cast<int64_t>(vcg.size());
-
-  for (int64_t loc = 0; loc < voxels; loc += sx) {
-    count += 1;
-    for (int64_t x = 1; x < sx; x++) {
-      count += ((vcg[loc+x] & 0b0010) == 0);
-    }
-  }
-
-  return count;
-}
-
 template <typename OUT>
 OUT* color_connectivity_graph(
   const std::vector<uint8_t> &vcg, // voxel connectivity graph
@@ -171,7 +153,7 @@ OUT* color_connectivity_graph(
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = estimate_provisional_label_count_vcg(vcg, sx) + 1;
+  uint64_t max_labels = (voxels / 8) + 1;
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   if (out_labels == NULL) {
@@ -202,7 +184,7 @@ OUT* color_connectivity_graph(
 
         if (x > 0 && (vcg[loc] & 0b0010)) {
           out_labels[loc] = out_labels[loc+B];
-          if (y > 0 && (vcg[loc + C] & 0b0010) == 0 && (vcg[loc] & 0b1000)) {
+          if (y > 0 && (vcg[loc + B] & 0b1000) == 0 && (vcg[loc] & 0b1000)) {
             equivalences.unify(out_labels[loc], out_labels[loc+C]);
           }
         }
@@ -222,22 +204,6 @@ OUT* color_connectivity_graph(
   return out_labels;
 }
 
-template <typename LABEL>
-uint64_t estimate_provisional_label_count(
-  const LABEL* in_labels, const int64_t sx, const int64_t voxels
-) {
-  uint64_t count = 0; // number of transitions between labels
-
-  for (int64_t loc = 0; loc < voxels; loc += sx) {
-    count += 1;
-    for (int64_t x = 1; x < sx; x++) {
-      count += (in_labels[loc + x] != in_labels[loc + x - 1]);
-    }
-  }
-
-  return count;
-}
-
 template <typename LABEL, typename OUT>
 OUT* connected_components2d_4(
     const LABEL* in_labels, 
@@ -249,7 +215,7 @@ OUT* connected_components2d_4(
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = estimate_provisional_label_count<LABEL>(in_labels, sx, voxels) + 1;
+  uint64_t max_labels = (voxels / 8) + 1;
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   DisjointSet<OUT> equivalences(max_labels);
