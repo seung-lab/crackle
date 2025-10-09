@@ -153,7 +153,7 @@ OUT* color_connectivity_graph(
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = voxels / 8;
+  uint64_t max_labels = (voxels / 8) + 1;
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   if (out_labels == NULL) {
@@ -215,7 +215,7 @@ OUT* connected_components2d_4(
   const int64_t sxy = sx * sy;
   const int64_t voxels = sx * sy * sz;
 
-  uint64_t max_labels = voxels / 8;
+  uint64_t max_labels = (voxels / 8) + 1;
   max_labels = std::min(max_labels, static_cast<uint64_t>(std::numeric_limits<OUT>::max()));
 
   DisjointSet<OUT> equivalences(max_labels);
