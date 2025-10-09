@@ -400,15 +400,14 @@ crack_code_to_symbols(
 
 	std::vector<uint8_t> codepoints;
 	if (markov_model.size() == 0) {
-		codepoints = crackle::crackcodes::unpack_codepoints(code, sx, sy);
+		return crackle::crackcodes::packed_codepoints_to_symbols(nodes, code, sx, sy);
 	}
 	else {
 		uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
 		std::span<const uint8_t> markov_stream(code.data() + index_size, code.size() - index_size);
 		codepoints = crackle::markov::decode_codepoints(markov_stream, markov_model);
+		return crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
 	}
-
-	return crackle::crackcodes::codepoints_to_symbols(nodes, codepoints);
 }
 
 // vcg: voxel connectivity graph

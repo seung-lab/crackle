@@ -521,6 +521,89 @@ encode_boundaries(
 }
 
 std::vector<std::pair<uint64_t, std::vector<unsigned char>> >
+packed_codepoints_to_symbols(
+	const std::vector<uint64_t>& sorted_nodes,
+	const std::span<const unsigned char> &code, 
+	const uint64_t sx, const uint64_t sy
+) {
+	uint32_t index_size = 4 + crackle::lib::ctoid(code, 0, 4);
+
+	std::vector<std::pair<uint64_t, std::vector<unsigned char>> > chains;
+
+	std::vector<unsigned char> symbols;
+	symbols.reserve(4 * (code.size() - index_size) * 4 * 2);
+
+	uint8_t last = 0;
+
+	uint64_t branches_taken = 0;
+	uint64_t node = 0;
+
+	constexpr char remap[4] = { 'u', 'r', 'd', 'l' };
+
+	uint64_t node_i = 0;
+
+	uint8_t last_move = DirectionCode::NONE;
+
+	for (uint64_t i = index_size; i < code.size(); i++) {
+		for (uint64_t j = 0; j < 4; j++) {
+			if (branches_taken == 0) {
+				if (node_i >= sorted_nodes.size()) {
+					return chains;
+				}
+				node = sorted_nodes[node_i];
+				node_i++;
+				j--; // b/c i will be incremented
+				branches_taken = 1;
+				continue;
+			}
+
+			uint8_t move = static_cast<uint8_t>((code[i] >> (2*j)) & 0b11);
+			move += last;
+			move &= 0b11;
+			last = move;
+
+			// by chance, up^down and left^right 
+			// both evaluate to 0b10
+			if ((move ^ last_move) != 0b10) {
+				symbols.push_back(remap[move]);
+				last_move = move;
+				continue;
+			}
+			else if (
+				// equivalent to:
+				// move == DirectionCode::UP || move == DirectionCode::LEFT
+				// 
+				// which is equivalent to (because we already check 
+				// against last_move in move ^ last_move = 0b10) which
+				// means last move is guaranteed to be its opposite.
+				//
+				// (move == DirectionCode::UP && last_move == DirectionCode::DOWN)
+				// || (move == DirectionCode::LEFT && last_move == DirectionCode::RIGHT)
+				popcount(move) != 1 // 00 (LEFT) or 11 (UP), 7 operations -> 2
+			) {
+				symbols.back() = 't';
+				branches_taken--;
+				last_move = DirectionCode::NONE;
+			}
+			else { // the code here is DOWN+UP or RIGHT+LEFT
+				symbols.back() = 'b';
+				branches_taken++;
+				last_move = DirectionCode::NONE;
+			}
+
+			if (branches_taken == 0) {
+				chains.push_back(std::make_pair(node, symbols));
+				symbols.clear();
+			}
+
+		}
+	}
+
+	return chains;
+}
+
+
+std::vector<std::pair<uint64_t, std::vector<unsigned char>> >
 codepoints_to_symbols(
 	const std::vector<uint64_t>& sorted_nodes,
 	const std::vector<uint8_t>& codepoints
