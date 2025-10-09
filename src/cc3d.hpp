@@ -142,22 +142,6 @@ OUT* relabel(
   return out_labels;
 }
 
-uint64_t estimate_provisional_label_count_vcg(
-  const std::vector<uint8_t>& vcg, const int64_t sx
-) {
-  uint64_t count = 0; // number of transitions between labels
-  int64_t voxels = static_cast<int64_t>(vcg.size());
-
-  for (int64_t loc = 0; loc < voxels; loc += sx) {
-    count += 1;
-    for (int64_t x = 1; x < sx; x++) {
-      count += ((vcg[loc+x] & 0b0010) == 0);
-    }
-  }
-
-  return count;
-}
-
 template <typename OUT>
 OUT* color_connectivity_graph(
   const std::vector<uint8_t> &vcg, // voxel connectivity graph
@@ -233,22 +217,6 @@ OUT* color_connectivity_graph(
 
   relabel<OUT>(out_labels, voxels, new_label, equivalences, N);
   return out_labels;
-}
-
-template <typename LABEL>
-uint64_t estimate_provisional_label_count(
-  const LABEL* in_labels, const int64_t sx, const int64_t voxels
-) {
-  uint64_t count = 0; // number of transitions between labels
-
-  for (int64_t loc = 0; loc < voxels; loc += sx) {
-    count += 1;
-    for (int64_t x = 1; x < sx; x++) {
-      count += (in_labels[loc + x] != in_labels[loc + x - 1]);
-    }
-  }
-
-  return count;
 }
 
 template <typename LABEL, typename OUT>
