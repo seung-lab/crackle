@@ -62,6 +62,6 @@ from .util import save, load, aload, bload, save_numpy
 def compressa(*args, **kwargs) -> CrackleArray:
   """compress but return the result as a CrackleArray."""
   binary = compress(*args, **kwargs)
-  return CrackleArray(binary)
+  return CrackleArray(binary, parallel=kwargs.get("parallel", 0))
 
 
