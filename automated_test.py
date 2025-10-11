@@ -283,6 +283,22 @@ def test_remap():
   labels = crackle.labels(binary)
   assert np.all(labels == ans)
 
+  labels = np.arange(0,1000).reshape((10,10,10)).astype(np.uint16)
+  binary = crackle.compress(labels)
+
+  binary = crackle.remap(binary, { i:i+70000 for i in range(1000) }, preserve_missing_labels=False)
+  
+  uniq_labels = crackle.labels(binary)
+  assert np.all(uniq_labels == np.arange(70000,71000))
+  head = crackle.header(binary)
+  assert head.stored_data_width == 4
+  assert head.data_width == 4
+
+  new_labels = crackle.decompress(binary)
+  labels = labels.astype(np.uint32) + 70000
+  assert np.all(labels == new_labels)
+
+
 def test_mask():
   labels = np.arange(0,1000).reshape((10,10,10)).astype(np.uint32)
   binary = crackle.compress(labels)
