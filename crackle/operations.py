@@ -88,18 +88,18 @@ def remap(
 
   head = header(binary)
   dtype = head.dtype
-  
+
   if head.data_width < 8:
-    maxval = max(mapping.values())
+    maxval = __builtins__["max"](mapping.values())
     dtype = fastremap.fit_dtype(head.dtype, maxval)
 
-  if dtype == head.dtype:
+  if np.dtype(dtype).itemsize <= head.stored_data_width:
     fastcrackle.remap(binary, mapping, preserve_missing_labels, parallel)
     return binary
 
   # need to widen unique labels before remapping
   # if max value larger than supported values
-  label_components = decode_flat_labels(binary)
+  label_components = decode_flat_labels(head, binary)
   uniq = label_components["unique"]
   uniq = fastremap.remap(
     uniq, 
@@ -107,7 +107,7 @@ def remap(
     preserve_missing_labels=preserve_missing_labels, 
     in_place=in_place
   )
-  data_width = np.dtype(uniq).itemsize
+  data_width = np.dtype(uniq.dtype).itemsize
 
   if data_width > head.data_width:
     head.data_width = data_width
@@ -120,6 +120,8 @@ def remap(
     label_components["components_per_grid"].tobytes(),
     label_components["cc_map"].tobytes(),
   ])
+
+  head.num_label_bytes = len(labels_binary)
 
   comps = components(binary)
   crack_crcs = comps["crcs"][4:]
