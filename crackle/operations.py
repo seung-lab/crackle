@@ -85,8 +85,55 @@ def remap(
   """
   if not in_place:
     binary = bytearray(binary)
-  fastcrackle.remap(binary, mapping, preserve_missing_labels, parallel)
-  return binary
+
+  head = header(binary)
+  dtype = head.dtype
+
+  if head.data_width < 8:
+    maxval = __builtins__["max"](mapping.values())
+    dtype = fastremap.fit_dtype(head.dtype, maxval)
+
+  if np.dtype(dtype).itemsize <= head.stored_data_width:
+    fastcrackle.remap(binary, mapping, preserve_missing_labels, parallel)
+    return binary
+
+  # need to widen unique labels before remapping
+  # if max value larger than supported values
+  label_components = decode_flat_labels(head, binary)
+  uniq = label_components["unique"]
+  uniq = fastremap.remap(
+    uniq, 
+    mapping, 
+    preserve_missing_labels=preserve_missing_labels, 
+    in_place=in_place
+  )
+  data_width = np.dtype(uniq.dtype).itemsize
+
+  if data_width > head.data_width:
+    head.data_width = data_width
+  head.stored_data_width = data_width
+  head.is_sorted = np.all(uniq[:-1] <= uniq[1:])
+
+  labels_binary = b''.join([
+    len(uniq).to_bytes(8, 'little'),
+    uniq.astype(head.stored_dtype, copy=False).tobytes(),
+    label_components["components_per_grid"].tobytes(),
+    label_components["cc_map"].tobytes(),
+  ])
+
+  head.num_label_bytes = len(labels_binary)
+
+  comps = components(binary)
+  crack_crcs = comps["crcs"][4:]
+
+  return b''.join([
+    head.tobytes(),
+    comps["z_index"].tobytes(),
+    labels_binary,
+    comps["crack_codes"].tobytes(),
+    crc32c(labels_binary).to_bytes(4, 'little'),
+    crack_crcs,
+  ])
 
 def mask(
   binary:bytes,
