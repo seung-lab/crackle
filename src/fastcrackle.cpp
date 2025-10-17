@@ -434,23 +434,25 @@ void remap(
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
 
-	if (static_cast<uint64_t>(info.size) < crackle::CrackleHeader::header_size) {
+	uint64_t num_bytes = info.size * info.itemsize;
+
+	if (num_bytes < crackle::CrackleHeader::header_size) {
 		throw std::runtime_error("binary too small");
 	}
 
 	crackle::CrackleHeader header(data);
 
 	if (header.stored_data_width == 1) {
-		crackle::remap<uint8_t>(data, info.size, mapping, preserve_missing_labels, parallel);
+		crackle::remap<uint8_t>(data, num_bytes, mapping, preserve_missing_labels, parallel);
 	}
 	else if (header.stored_data_width == 2) {
-		crackle::remap<uint16_t>(data, info.size, mapping, preserve_missing_labels, parallel);
+		crackle::remap<uint16_t>(data, num_bytes, mapping, preserve_missing_labels, parallel);
 	}
 	else if (header.stored_data_width == 4) {
-		crackle::remap<uint32_t>(data, info.size, mapping, preserve_missing_labels, parallel);
+		crackle::remap<uint32_t>(data, num_bytes, mapping, preserve_missing_labels, parallel);
 	}
 	else {
-		crackle::remap<uint64_t>(data, info.size, mapping, preserve_missing_labels, parallel);
+		crackle::remap<uint64_t>(data, num_bytes, mapping, preserve_missing_labels, parallel);
 	}
 }
 
