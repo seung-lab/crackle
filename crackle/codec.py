@@ -958,7 +958,8 @@ def each(
   binary:bytes, 
   parallel:int = 0,
   crop:bool = True,
-  labels:Optional[Iterator[int]] = None
+  labels:Optional[Iterator[int]] = None,
+  multi:bool = False,
 ) -> Iterator[npt.NDArray[np.bool_]]:
   """
   Iterate over the binary representations of each label.
@@ -968,21 +969,32 @@ def each(
   for label, binary_image in each(binary):
     pass
 
+  if multi is enabled, up to 255 labels will be colored at a time,
+  which uses the same amount of uint8 memory and radically increases
+  the performance for dense images by almost 255x.
+
+  for label, tmp_label, image in each(binary, multi=True):
+    pass
+
   parallel: how many threads to use for decoding (0 = num cores)
   crop: if true, each binary image will be closely cropped
   labels: limit evalation to these labels
+  multi: render 255 labels at a time, crop is not supported for this
+    operation.
   """
+  from .operations import mask_except, renumber
+
   all_labels = globals()["labels"](binary)
   if labels is None:
     labels = all_labels
   else:
     labels = list(set(all_labels).intersection(set(labels)))
 
-  if crop:
+  if crop and not multi:
     bbxes = bounding_boxes(binary, no_slice_conversion=True)
     head = header(binary)
 
-  class ImageIterator():
+  class BinaryImageIterator():
     def __len__(self):
       return len(labels)
     def __iter__(self):
@@ -1004,4 +1016,26 @@ def each(
 
         yield (label, binimg)
 
-  return ImageIterator()
+  class MultiImageIterator():
+    def __len__(self):
+      return len(labels)
+    def __iter__(self):
+      
+      decompress_cycles = int(np.ceil(len(labels) / 255.0))
+
+      for cycle_i in range(decompress_cycles):
+        label_subset = labels[cycle_i * 255 : (cycle_i+1) * 255]
+
+        sub_binary = mask_except(binary, label_subset, parallel=parallel)
+        sub_binary, mapping = renumber(sub_binary, parallel=parallel)
+        subset_image = decompress(sub_binary, parallel=parallel)
+
+        for label in label_subset:
+          yield (label, mapping[label], subset_image)
+
+  if multi:
+    return MultiImageIterator()
+  else:
+    return BinaryImageIterator()
+
+

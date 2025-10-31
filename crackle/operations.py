@@ -235,7 +235,7 @@ def refit(binary:bytes) -> bytes:
   dtype = fastremap.fit_dtype(head.dtype, max(binary))
   return astype(binary, dtype)
 
-def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
+def renumber(binary:bytes, start:int = 0, parallel:int = 0) -> Tuple[bytes, dict]:
   """
   Renumber the array and resize the data type
   to be the smallest one to fit without loss of
@@ -244,7 +244,7 @@ def renumber(binary:bytes, start=0) -> Tuple[bytes, dict]:
   head = header(binary)
   uniq = fastremap.unique(labels(binary))
   mapping = { u: start+i for i,u in enumerate(uniq) }
-  binary = refit(remap(binary, mapping))
+  binary = refit(remap(binary, mapping, parallel=parallel))
 
   if not head.is_sorted:
     head.is_sorted = True
