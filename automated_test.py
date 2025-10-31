@@ -891,6 +891,22 @@ def test_spurious_branch_elimination():
 
   assert np.all(recovered == arr)
 
+def test_each_multi():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels, allow_pins=False)
+
+  i = 0
+  for label, tmp_label, image in crackle.each(binary, multi=True):
+    if label == 0:
+      continue
+    binary_image = (image == tmp_label)
+    gt = (labels == label)
+    assert np.all(binary_image == gt)
+    if i > 10:
+      break
+
+    i += 1
+
 def test_each():
   labels = compresso.load("connectomics.npy.cpso.gz")
   binary = crackle.compress(labels, allow_pins=False)
