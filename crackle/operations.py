@@ -421,7 +421,7 @@ def _zstack_pins(
   ])
 
 
-def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
+def zstack(images:Sequence[Union[np.ndarray, "CrackleArray", bytes]]) -> bytes:
   """
   Given a set of arrays or crackle compressed binaries that
   represent images of equal height and width and compatible 
@@ -437,6 +437,8 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
   Why use this? You can iteratively build a huge array within
   limited ram.
   """
+  from .array import CrackleArray
+
   binaries = []
 
   first_head = None
@@ -449,6 +451,8 @@ def zstack(images:Sequence[Union[np.ndarray, bytes]]) -> bytes:
 
     if isinstance(binary, np.ndarray):
       binary = compress(binary)
+    elif isinstance(binary, CrackleArray):
+      binary = reencode(binary.binary, markov_model_order=0)
     else:
       binary = reencode(binary, markov_model_order=0)
 
