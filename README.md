@@ -40,6 +40,13 @@ has_label = crackle.contains(binary, label)
 for label, binimg in crackle.each(binary, crop=True):
   pass
 
+# iterate over 255 labels at a time. Useful if your downstream
+# processing supports multilabel images but you need an 8x reduction
+# in memory usage compared to a uint64 image. Much faster than binary
+# image iteration. img is reused for 255 iterations before being replaced.
+for label, tmp_label, img in crackle.each(binary, multi=True):
+  pass
+
 # Remap labels without decompressing. Could
 # be useful for e.g. proofreading.
 remapped = crackle.remap(
