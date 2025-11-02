@@ -559,6 +559,34 @@ py::array voxel_connectivity_graph(
 	return to_numpy<uint8_t>(vcg, head.sx, head.sy, z_end - z_start);
 }
 
+py::dict contacts(
+	const py::buffer buffer, 
+	const int64_t z_start = 0, int64_t z_end = -1,
+	const float wx = 1.0, const float wy = 1.0, const float wz = 1.0
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	auto surface_contacts = crackle::operations::contacts(
+		data, info.size, 
+		z_start, z_end, 
+		wx, wy, wz
+	);
+	
+	py::dict pyareas;
+	for (const auto& [pear, area] : surface_contacts) {
+		py::tuple key = py::make_tuple(py::int_(pear.first), py::int_(pear.second));
+		pyareas[key] = py::float_(area);
+	}
+
+	return pyareas;
+}
+
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -578,6 +606,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("bounding_boxes", &bounding_boxes, "Compute the bounding box for each label in the dataset.");
 	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
 	m.def("voxel_connectivity_graph", &voxel_connectivity_graph, "Extract the voxel connectivity graph from the image.");
+	m.def("contacts", &contacts, "Find the contact area between pairs of regions.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())

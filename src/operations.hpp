@@ -938,6 +938,207 @@ auto voxel_connectivity_graph(
 	);
 }
 
+struct pair_hash {
+	inline std::size_t operator()(const std::pair<uint64_t,uint64_t> & v) const {
+		return v.first * 31 + v.second; // arbitrary hash fn
+	}
+};
+
+const std::unordered_map<std::pair<uint64_t,uint64_t>, float, pair_hash> 
+contacts(
+	const unsigned char* buffer,
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	const float wx = 1,
+	const float wy = 1,
+	const float wz = 1
+) {
+	if (num_bytes < CrackleHeader::header_size) {
+		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
+		err += std::to_string(num_bytes);
+		throw std::runtime_error(err);
+	}
+
+	const CrackleHeader header(buffer);
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+	const uint64_t sz = header.sz;
+	const uint64_t sxy = header.sx * header.sy;
+
+	if (header.format_version > CrackleHeader::current_version) {
+		std::string err = "crackle: Invalid format version.";
+		err += std::to_string(header.format_version);
+		throw std::runtime_error(err);
+	}
+
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(sz - 1)), static_cast<int64_t>(0));
+	z_end = z_end < 0 ? static_cast<int64_t>(sz) : z_end;
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(sz)), static_cast<int64_t>(0));
+
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
+	}
+
+	const int64_t szr = z_end - z_start;
+
+	const uint64_t voxels = (
+		static_cast<uint64_t>(sx) 
+		* static_cast<uint64_t>(sy) 
+		* static_cast<uint64_t>(szr)
+	);
+
+	std::unordered_map<std::pair<uint64_t, uint64_t>, float, pair_hash> edges;
+
+	if (voxels == 0) {
+		return edges;
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
+
+	std::vector<uint8_t> vcg(sxy);
+	std::vector<std::vector<uint32_t>> ccls(2);
+	std::vector<std::vector<uint64_t>> label_maps(2);
+	for (size_t t = 0; t < ccls.size(); t++) {
+		ccls[t].resize(sxy);
+	}
+
+	crack_code_to_vcg(
+		/*code=*/crack_codes[0],
+		/*sx=*/sx, /*sy=*/sy,
+		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+		/*markov_model=*/markov_model,
+		/*slice_edges=*/vcg.data()
+	);
+
+	uint64_t N = 0;
+	crackle::cc3d::color_connectivity_graph<uint32_t>(
+		vcg, sx, sy, 1, ccls[0].data(), N
+	);
+
+	label_maps[0] = decode_label_map<uint64_t>(
+		header, binary, ccls[0].data(), N, z_start, z_start+1
+	);
+
+	const float area_x = wy * wz;
+	const float area_y = wx * wz;
+	const float area_z = wx * wy;
+
+	for (size_t y = 0; y < sy; y++) {
+		for (size_t x = 0; x < sx; x++) {
+			const int64_t loc = x + sx * y;
+
+			if (x < sx - 1 && ccls[0][loc] != ccls[0][loc+1]) {
+				edges[std::pair<uint64_t,uint64_t>(
+					label_maps[0][ccls[0][loc]],
+					label_maps[0][ccls[0][loc+1]]
+				)] += area_x;
+			}
+			if (y < sy - 1 && ccls[0][loc] != ccls[0][loc+sx]) {
+				edges[std::pair<uint64_t,uint64_t>(
+					label_maps[0][ccls[0][loc]],
+					label_maps[0][ccls[0][loc+sx]]
+				)] += area_y;
+			}
+		}
+	}
+
+	for (size_t z = z_start + 1, i = 1; i < crack_codes.size(); z++, i++) {
+		size_t bottom_j = i & 0b1;
+		size_t top_j = (i-1) & 0b1;
+
+
+		crack_code_to_vcg(
+			/*code=*/crack_codes[i],
+			/*sx=*/sx, /*sy=*/sy,
+			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+			/*markov_model=*/markov_model,
+			/*slice_edges=*/vcg.data()
+		);
+
+		std::vector<uint32_t>& top_ccl = ccls[top_j];
+		std::vector<uint32_t>& bottom_ccl = ccls[bottom_j];
+
+		uint64_t N = 0;
+		crackle::cc3d::color_connectivity_graph<uint32_t>(
+			vcg, sx, sy, 1, bottom_ccl.data(), N
+		);
+
+		label_maps[bottom_j] = decode_label_map<uint64_t>(
+			header, binary, bottom_ccl.data(), N, z, z+1
+		);
+
+		const std::vector<uint64_t>& top_labels = label_maps[top_j];
+		const std::vector<uint64_t>& bottom_labels = label_maps[bottom_j];
+
+		for (size_t y = 0; y < sy; y++) {
+			for (size_t x = 0; x < sx; x++) {
+				const int64_t loc = x + sx * y;
+
+				if (x < sx - 1 && bottom_ccl[loc] != bottom_ccl[loc+1]) {
+					const uint64_t a = bottom_labels[bottom_ccl[loc]];
+					const uint64_t b = bottom_labels[bottom_ccl[loc+1]];
+
+					const std::pair<uint64_t,uint64_t> p = (a <= b) 
+						? std::pair<uint64_t,uint64_t>(a,b)
+						: std::pair<uint64_t,uint64_t>(b,a);
+
+					edges[p] += area_x;
+				}
+				if (y < sy - 1 && bottom_ccl[loc] != bottom_ccl[loc+sx]) {
+					const uint64_t a = bottom_labels[bottom_ccl[loc]];
+					const uint64_t b = bottom_labels[bottom_ccl[loc+sx]];
+
+					const std::pair<uint64_t,uint64_t> p = (a <= b) 
+						? std::pair<uint64_t,uint64_t>(a,b)
+						: std::pair<uint64_t,uint64_t>(b,a);
+						
+					edges[p] += area_y;
+				}
+				if (bottom_ccl[loc] != top_ccl[loc]) {
+					const uint64_t a = bottom_labels[bottom_ccl[loc]];
+					const uint64_t b = top_labels[top_ccl[loc]];
+
+					const std::pair<uint64_t,uint64_t> p = (a <= b) 
+						? std::pair<uint64_t,uint64_t>(a,b)
+						: std::pair<uint64_t,uint64_t>(b,a);
+
+					edges[p] += area_z;
+				}
+			}
+		}
+	}
+
+	return edges;
+}
+
+auto contacts(
+	const std::span<const unsigned char>& buffer,
+	const int64_t z_start = -1, 
+	const int64_t z_end = -1,
+	const float wx = 1,
+	const float wy = 1,
+	const float wz = 1
+) {
+	return contacts(
+		buffer.data(),
+		buffer.size(),
+		z_start, z_end,
+		wx, wy, wz
+	);
+}
+
+
 
 };
 };

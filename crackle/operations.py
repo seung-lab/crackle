@@ -953,5 +953,15 @@ def voxel_connectivity_graph(
   head = header(binary)
   return vcg.reshape((head.sx, head.sy, head.sz), order="F")
 
+def contacts(
+  binary:bytes,
+  anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
+) -> dict[tuple[int,int], float]:
+  """
+  Extract the contact area between regions.
+  """
+  wx, wy, wz = anisotropy
+  return fastcrackle.contacts(binary, 0, -1, wx, wy ,wz)
+
 
 
