@@ -529,8 +529,7 @@ py::array voxel_connectivity_graph(
 		parallel, connectivity
 	);
 
-	crackle::CrackleHeader head(data);
-	py::array vcg = py::array_t<uint8_t>(head.voxels());
+	py::array vcg = py::array_t<uint8_t>(vcg_tmp.size());
 	std::memcpy(vcg.mutable_data(), vcg_tmp.data(), vcg_tmp.size() * sizeof(uint8_t));
 	return vcg;
 }
