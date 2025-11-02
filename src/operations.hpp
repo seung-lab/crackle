@@ -772,7 +772,7 @@ auto bounding_boxes(
 	);
 }
 
-std::vector<uint8_t> voxel_connectivity_graph(
+uint8_t* voxel_connectivity_graph(
 	const unsigned char* buffer,
 	const size_t num_bytes,
 	int64_t z_start = -1,
@@ -825,8 +825,10 @@ std::vector<uint8_t> voxel_connectivity_graph(
 		* static_cast<uint64_t>(szr)
 	);
 
+	uint8_t* vcg = new uint8_t[voxels];
+
 	if (voxels == 0) {
-		return std::vector<uint8_t>(voxels);
+		return vcg;
 	}
 
 	std::span<const unsigned char> binary(buffer, num_bytes);
@@ -836,7 +838,7 @@ std::vector<uint8_t> voxel_connectivity_graph(
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
-	std::vector<uint8_t> vcg(voxels);
+	
 
 	if (parallel == 0) {
 		parallel = std::thread::hardware_concurrency();
@@ -854,7 +856,7 @@ std::vector<uint8_t> voxel_connectivity_graph(
 				/*sx=*/sx, /*sy=*/sy,
 				/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
 				/*markov_model=*/markov_model,
-				/*slice_edges=*/(vcg.data() + i * sxy)
+				/*slice_edges=*/(vcg + i * sxy)
 			);
 		});
 	}
@@ -871,10 +873,7 @@ std::vector<uint8_t> voxel_connectivity_graph(
 		ccls[t].resize(sxy);
 	}
 
-	std::span<const uint8_t> init_sub_vcg(
-		vcg.begin(), 
-		vcg.begin() + sxy
-	);
+	std::span<const uint8_t> init_sub_vcg(vcg, vcg + sxy);
 
 	uint64_t N = 0;
 	crackle::cc3d::color_connectivity_graph<uint32_t>(
@@ -893,8 +892,8 @@ std::vector<uint8_t> voxel_connectivity_graph(
 		std::vector<uint32_t>& bottom_ccl = ccls[bottom_j];
 
 		const std::span<uint8_t> sub_vcg(
-			vcg.begin() + i * sxy, 
-			vcg.begin() + (i+1) * sxy
+			vcg + i * sxy, 
+			vcg + (i+1) * sxy
 		);
 
 		uint64_t N = 0;

@@ -17,6 +17,27 @@
 namespace py = pybind11;
 
 template <typename LABEL>
+py::array to_numpy(
+	LABEL* output,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {
+	py::capsule capsule(output, [](void* ptr) {
+		if (ptr) {
+			delete[] static_cast<LABEL*>(ptr);
+		}
+	});
+
+	uint64_t width = sizeof(LABEL);
+
+	return py::array_t<LABEL>(
+		{sx,sy,sz},
+		{width, sx * width, sx * sy * width},
+		output,
+		capsule
+	);
+}
+
+template <typename LABEL>
 py::array decompress_helper(
 	const crackle::CrackleHeader& head, 
 	const uint8_t* buffer,
@@ -511,7 +532,7 @@ py::array index_range(
 
 py::array voxel_connectivity_graph(
 	const py::buffer buffer, 
-	const int64_t z_start = 0, const int64_t z_end = -1,
+	const int64_t z_start = 0, int64_t z_end = -1,
 	const size_t parallel = 1,
 	const int connectivity = 4
 ) {
@@ -522,16 +543,20 @@ py::array voxel_connectivity_graph(
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
-	const std::vector<uint8_t> vcg_tmp = crackle::operations::voxel_connectivity_graph(
+	uint8_t* vcg = crackle::operations::voxel_connectivity_graph(
 		data, 
 		info.size, 
 		z_start, z_end, 
 		parallel, connectivity
 	);
 
-	py::array vcg = py::array_t<uint8_t>(vcg_tmp.size());
-	std::memcpy(vcg.mutable_data(), vcg_tmp.data(), vcg_tmp.size() * sizeof(uint8_t));
-	return vcg;
+	crackle::CrackleHeader head(data);
+
+	if (z_end < 0 || z_end >= head.sz) {
+		z_end = head.sz;
+	}
+
+	return to_numpy<uint8_t>(vcg, head.sx, head.sy, z_end - z_start);
 }
 
 PYBIND11_MODULE(fastcrackle, m) {
