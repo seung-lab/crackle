@@ -933,9 +933,25 @@ def connected_components(
 
   return (ccl_binary, mapping)
 
+def voxel_connectivity_graph(
+  binary:bytes,
+  connectivity:Literal[4,6] = 6,
+  parallel:int = 0,
+) -> npt.NDArray[np.uint8]:
+  """
+  Extract the voxel connectivity graph from a crackle
+  array as a uint8 array.
 
+  bitset (right hand side is LSB): 00-z+z-y+y-x+x
+  """
+  if connectivity not in [4,6]:
+    raise ValueError(f"Only 4 and 6 connected are supported. Got: {connectivity}")
 
-
+  z_start = 0
+  z_end = -1
+  vcg = fastcrackle.voxel_connectivity_graph(binary, z_start, z_end, parallel, connectivity)
+  head = header(binary)
+  return vcg.reshape((head.sx, head.sy, head.sz), order="F")
 
 
 

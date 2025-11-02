@@ -17,6 +17,27 @@
 namespace py = pybind11;
 
 template <typename LABEL>
+py::array to_numpy(
+	LABEL* output,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {
+	py::capsule capsule(output, [](void* ptr) {
+		if (ptr) {
+			delete[] static_cast<LABEL*>(ptr);
+		}
+	});
+
+	uint64_t width = sizeof(LABEL);
+
+	return py::array_t<LABEL>(
+		{sx,sy,sz},
+		{width, sx * width, sx * sy * width},
+		output,
+		capsule
+	);
+}
+
+template <typename LABEL>
 py::array decompress_helper(
 	const crackle::CrackleHeader& head, 
 	const uint8_t* buffer,
@@ -509,6 +530,35 @@ py::array index_range(
 	}
 }
 
+py::array voxel_connectivity_graph(
+	const py::buffer buffer, 
+	const int64_t z_start = 0, int64_t z_end = -1,
+	const size_t parallel = 1,
+	const int connectivity = 4
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	uint8_t* vcg = crackle::operations::voxel_connectivity_graph(
+		data, 
+		info.size, 
+		z_start, z_end, 
+		parallel, connectivity
+	);
+
+	crackle::CrackleHeader head(data);
+
+	if (z_end < 0 || z_end >= head.sz) {
+		z_end = head.sz;
+	}
+
+	return to_numpy<uint8_t>(vcg, head.sx, head.sy, z_end - z_start);
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -527,6 +577,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("centroids", &centroids, "Compute the centroid for each label in the dataset.");
 	m.def("bounding_boxes", &bounding_boxes, "Compute the bounding box for each label in the dataset.");
 	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
+	m.def("voxel_connectivity_graph", &voxel_connectivity_graph, "Extract the voxel connectivity graph from the image.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())

@@ -27,11 +27,12 @@
 #define __CC3D_SPECIAL_2_4_HPP__
 
 #include <algorithm>
-#include <vector>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <stdexcept>
+#include <span>
+#include <vector>
 
 namespace crackle {
 namespace cc3d {
@@ -144,7 +145,7 @@ OUT* relabel(
 
 template <typename OUT>
 OUT* color_connectivity_graph(
-  const std::vector<uint8_t> &vcg, // voxel connectivity graph
+  const std::span<const uint8_t> &vcg, // voxel connectivity graph
   const int64_t sx, const int64_t sy, const int64_t sz,
   OUT* out_labels = NULL,
   uint64_t &N = _dummy_N

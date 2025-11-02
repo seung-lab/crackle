@@ -16,7 +16,7 @@ from .operations import (
   remap,
   add_scalar, subtract_scalar,
   multiply_scalar, floordiv_scalar,
-  connected_components,
+  connected_components, voxel_connectivity_graph,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -149,6 +149,11 @@ class CrackleArray:
     if return_mapping:
       return (CrackleArray(out[0]), out[1])
     return CrackleArray(out)
+
+  def voxel_connectivity_graph(
+    self, connectivity:Literal[4,6] = 4,
+  ) -> npt.NDArray[np.uint8]:
+    return voxel_connectivity_graph(self.binary, connectivity, self.parallel)
 
   def save(self, filelike):
     import crackle.util
