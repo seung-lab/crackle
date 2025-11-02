@@ -838,8 +838,6 @@ uint8_t* voxel_connectivity_graph(
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
-	
-
 	if (parallel == 0) {
 		parallel = std::thread::hardware_concurrency();
 	}
