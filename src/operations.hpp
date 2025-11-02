@@ -772,106 +772,6 @@ auto bounding_boxes(
 	);
 }
 
-// template <typename LABEL>
-// std::vector<uint8_t> process_slices(
-// 	const unsigned char* buffer,
-// 	const size_t num_bytes,
-// 	int64_t z_start, int64_t z_end,
-// 	size_t parallel,
-// 	// z, i, vcg slice, ccl slice
-// 	std::function<void(size_t, size_t, std::vector<uint8_t>&, std::vector<uint32_t>&)> fn
-// ) {
-// 	if (num_bytes < CrackleHeader::header_size) {
-// 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
-// 		err += std::to_string(num_bytes);
-// 		throw std::runtime_error(err);
-// 	}
-
-// 	const CrackleHeader header(buffer);
-
-// 	const uint64_t sx = header.sx;
-// 	const uint64_t sy = header.sy;
-// 	const uint64_t sz = header.sz;
-// 	const uint64_t sxy = header.sx * header.sy;
-
-// 	if (header.format_version > CrackleHeader::current_version) {
-// 		std::string err = "crackle: Invalid format version.";
-// 		err += std::to_string(header.format_version);
-// 		throw std::runtime_error(err);
-// 	}
-
-// 	z_start = std::max(std::min(z_start, static_cast<int64_t>(sz - 1)), static_cast<int64_t>(0));
-// 	z_end = z_end < 0 ? static_cast<int64_t>(sz) : z_end;
-// 	z_end = std::max(std::min(z_end, static_cast<int64_t>(sz)), static_cast<int64_t>(0));
-
-// 	if (z_start >= z_end) {
-// 		std::string err = "crackle: Invalid range: ";
-// 		err += std::to_string(z_start);
-// 		err += std::string(" - ");
-// 		err += std::to_string(z_end);
-// 		throw std::runtime_error(err);
-// 	}
-
-// 	const int64_t szr = z_end - z_start;
-
-// 	const uint64_t voxels = (
-// 		static_cast<uint64_t>(sx) 
-// 		* static_cast<uint64_t>(sy) 
-// 		* static_cast<uint64_t>(szr)
-// 	);
-
-// 	if (voxels == 0) {
-// 		return std::vector<uint8_t>(voxels);
-// 	}
-
-// 	std::span<const unsigned char> binary(buffer, num_bytes);
-
-// 	// only used for markov compressed streams
-// 	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
-	
-// 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
-
-// 	if (parallel == 0) {
-// 		parallel = std::thread::hardware_concurrency();
-// 	}
-// 	parallel = std::min(parallel, static_cast<size_t>(szr));
-
-// 	ThreadPool pool(parallel);
-
-// 	std::vector<std::vector<uint8_t>> vcgs(parallel);
-// 	std::vector<std::vector<uint32_t>> ccls(parallel);
-
-// 	for (size_t t = 0; t < parallel; t++) {
-// 		vcgs[t].resize(sxy);
-// 		ccls[t].resize(sxy);
-// 	}
-
-// 	for (size_t z = z_start, i = 0; i < crack_codes.size(); z++, i++) {
-// 		pool.enqueue([&,z,i](size_t t){
-// 			std::vector<uint8_t>& vcg = vcgs[t];
-// 			std::vector<uint32_t>& ccl = ccls[t];
-// 			auto& crack_code = crack_codes[i];
-
-// 			crack_code_to_vcg(
-// 				/*code=*/crack_code,
-// 				/*sx=*/sx, /*sy=*/sy,
-// 				/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
-// 				/*markov_model=*/markov_model,
-// 				/*slice_edges=*/vcg.data()
-// 			);
-
-// 			uint64_t N = 0;
-// 			crackle::cc3d::color_connectivity_graph<uint32_t>(
-// 				vcg, sx, sy, 1, ccl.data(), N
-// 			);
-
-// 			fn(z, i, vcg, ccl);
-// 		});
-// 	}
-
-// 	pool.join();
-// }
-
 std::vector<uint8_t> voxel_connectivity_graph(
 	const unsigned char* buffer,
 	const size_t num_bytes,
@@ -880,8 +780,8 @@ std::vector<uint8_t> voxel_connectivity_graph(
 	size_t parallel = 1,
 	const int connectivity = 4
 ) {
-	if (connectivity != 4) {
-		std::string err = "crackle: voxel_connectivity_graph: only connectivity 4 is currently supported.";
+	if (connectivity != 4 && connectivity != 6) {
+		std::string err = "crackle: voxel_connectivity_graph: only connectivity 4 and 6 are currently supported.";
 		err += std::to_string(num_bytes);
 		throw std::runtime_error(err);
 	}
@@ -936,6 +836,8 @@ std::vector<uint8_t> voxel_connectivity_graph(
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
+	std::vector<uint8_t> vcg(voxels);
+
 	if (parallel == 0) {
 		parallel = std::thread::hardware_concurrency();
 	}
@@ -943,9 +845,7 @@ std::vector<uint8_t> voxel_connectivity_graph(
 
 	ThreadPool pool(parallel);
 
-	std::vector<uint8_t> vcg(voxels);
-
-	for (uint64_t z = z_start, i = 0; i < crack_codes.size(); z++, i++) {
+	for (uint64_t i = 0; i < crack_codes.size(); i++) {
 		pool.enqueue([&,i](size_t t){
 			auto& crack_code = crack_codes[i];
 
@@ -960,6 +860,68 @@ std::vector<uint8_t> voxel_connectivity_graph(
 	}
 
 	pool.join();
+
+	if (sz == 1 || connectivity == 4) {
+		return vcg;
+	}
+
+	std::vector<std::vector<uint32_t>> ccls(2);
+	std::vector<std::vector<uint64_t>> label_maps(2);
+	for (size_t t = 0; t < ccls.size(); t++) {
+		ccls[t].resize(sxy);
+	}
+
+	std::span<const uint8_t> init_sub_vcg(
+		vcg.begin(), 
+		vcg.begin() + sxy
+	);
+
+	uint64_t N = 0;
+	crackle::cc3d::color_connectivity_graph<uint32_t>(
+		init_sub_vcg, sx, sy, 1, ccls[0].data(), N
+	);
+
+	label_maps[0] = decode_label_map<uint64_t>(
+		header, binary, ccls[0].data(), N, z_start, z_start+1
+	);
+
+	for (size_t z = z_start + 1, i = 1; i < crack_codes.size(); z++, i++) {
+		size_t bottom_j = i & 0b1;
+		size_t top_j = (i-1) & 0b1;
+
+		std::vector<uint32_t>& top_ccl = ccls[top_j];
+		std::vector<uint32_t>& bottom_ccl = ccls[bottom_j];
+
+		const std::span<uint8_t> sub_vcg(
+			vcg.begin() + i * sxy, 
+			vcg.begin() + (i+1) * sxy
+		);
+
+		uint64_t N = 0;
+		crackle::cc3d::color_connectivity_graph<uint32_t>(
+			sub_vcg, sx, sy, 1, bottom_ccl.data(), N
+		);
+
+		label_maps[bottom_j] = decode_label_map<uint64_t>(
+			header, binary, bottom_ccl.data(), N, z, z+1
+		);
+
+		const std::vector<uint64_t>& top_labels = label_maps[top_j];
+		const std::vector<uint64_t>& bottom_labels = label_maps[bottom_j];
+
+		for (size_t y = 0; y < sy; y++) {
+			for (size_t x = 0; x < sx; x++) {
+				const int64_t loc = x + sx * y;
+				const uint64_t bottom_label = bottom_labels[bottom_ccl[loc]];
+				const uint64_t top_label = top_labels[top_ccl[loc]];
+
+				if (bottom_label == top_label) {
+					vcg[loc + (z-1) * sxy] |= 0b010000;
+					vcg[loc + z * sxy] |= 0b100000;
+				}
+			}
+		}
+	}
 
 	return vcg;
 }
