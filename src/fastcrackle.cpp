@@ -509,6 +509,32 @@ py::array index_range(
 	}
 }
 
+py::array voxel_connectivity_graph(
+	const py::buffer buffer, 
+	const int64_t z_start = 0, const int64_t z_end = -1,
+	const size_t parallel = 1,
+	const int connectivity = 4
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	const std::vector<uint8_t> vcg_tmp = crackle::operations::voxel_connectivity_graph(
+		data, 
+		info.size, 
+		z_start, z_end, 
+		parallel, connectivity
+	);
+
+	crackle::CrackleHeader head(data);
+	py::array vcg = py::array_t<uint8_t>(head.voxels());
+	std::memcpy(vcg.mutable_data(), vcg_tmp.data(), vcg_tmp.size() * sizeof(uint8_t));
+	return vcg;
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -527,6 +553,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("centroids", &centroids, "Compute the centroid for each label in the dataset.");
 	m.def("bounding_boxes", &bounding_boxes, "Compute the bounding box for each label in the dataset.");
 	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
+	m.def("voxel_connectivity_graph", &voxel_connectivity_graph, "Extract the voxel connectivity graph from the image.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())
