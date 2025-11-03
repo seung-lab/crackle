@@ -946,6 +946,20 @@ def test_voxel_connectivity_graph():
   assert np.all(gt_vcg == crackle_vcg)
 
 
+def test_contacts():
+  import cc3d
+  import fastremap 
+
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  
+  gt_contacts = cc3d.contacts(labels, connectivity=6)
+
+  binary = crackle.compress(labels)
+
+  crackle_contacts = crackle.contacts(binary)
+
+  assert np.all(gt_contacts == crackle_contacts)
+
 
 
 
