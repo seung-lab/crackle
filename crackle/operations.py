@@ -958,7 +958,7 @@ def contacts(
   anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
 ) -> dict[tuple[int,int], float]:
   """
-  Extract the contact area between regions.
+  Extract the 6-connected contact area between regions.
   """
   wx, wy, wz = anisotropy
   return fastcrackle.contacts(binary, 0, -1, wx, wy ,wz)
