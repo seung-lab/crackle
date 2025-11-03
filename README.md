@@ -59,6 +59,10 @@ remapped = crackle.refit(binary)
 # renumber array and change dtype to smallest possible
 remapped = crackle.renumber(binary, start=0)
 
+is_equal = crackle.array_equal(binary1, binary2)
+arr == arr2 # syntactic sugar for CrackleArrays
+arr.array_equal(arr2) # method call for CrackleArrays
+
 # for working with files
 # if .gz is appended to the filename, the file will be
 # automatically gzipped (or ungzipped)
