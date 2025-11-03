@@ -1039,16 +1039,28 @@ contacts(
 			const int64_t loc = x + sx * y;
 
 			if (x < sx - 1 && ccls[0][loc] != ccls[0][loc+1]) {
-				edges[std::pair<uint64_t,uint64_t>(
-					label_maps[0][ccls[0][loc]],
-					label_maps[0][ccls[0][loc+1]]
-				)] += area_x;
+				const uint64_t a = label_maps[0][ccls[0][loc]];
+				const uint64_t b = label_maps[0][ccls[0][loc+1]];
+
+				if (a != 0 && b != 0) {
+					const std::pair<uint64_t,uint64_t> p = (a <= b) 
+						? std::pair<uint64_t,uint64_t>(a,b)
+						: std::pair<uint64_t,uint64_t>(b,a);
+
+					edges[p] += area_x;
+				}
 			}
 			if (y < sy - 1 && ccls[0][loc] != ccls[0][loc+sx]) {
-				edges[std::pair<uint64_t,uint64_t>(
-					label_maps[0][ccls[0][loc]],
-					label_maps[0][ccls[0][loc+sx]]
-				)] += area_y;
+				const uint64_t a = label_maps[0][ccls[0][loc]];
+				const uint64_t b = label_maps[0][ccls[0][loc+sx]];
+
+				if (a != 0 && b != 0) {
+					const std::pair<uint64_t,uint64_t> p = (a <= b) 
+						? std::pair<uint64_t,uint64_t>(a,b)
+						: std::pair<uint64_t,uint64_t>(b,a);
+
+					edges[p] += area_y;
+				}
 			}
 		}
 	}
@@ -1089,31 +1101,37 @@ contacts(
 					const uint64_t a = bottom_labels[bottom_ccl[loc]];
 					const uint64_t b = bottom_labels[bottom_ccl[loc+1]];
 
-					const std::pair<uint64_t,uint64_t> p = (a <= b) 
-						? std::pair<uint64_t,uint64_t>(a,b)
-						: std::pair<uint64_t,uint64_t>(b,a);
+					if (a != 0 && b != 0) {
+						const std::pair<uint64_t,uint64_t> p = (a <= b) 
+							? std::pair<uint64_t,uint64_t>(a,b)
+							: std::pair<uint64_t,uint64_t>(b,a);
 
-					edges[p] += area_x;
+						edges[p] += area_x;
+					}
 				}
 				if (y < sy - 1 && bottom_ccl[loc] != bottom_ccl[loc+sx]) {
 					const uint64_t a = bottom_labels[bottom_ccl[loc]];
 					const uint64_t b = bottom_labels[bottom_ccl[loc+sx]];
 
-					const std::pair<uint64_t,uint64_t> p = (a <= b) 
-						? std::pair<uint64_t,uint64_t>(a,b)
-						: std::pair<uint64_t,uint64_t>(b,a);
-						
-					edges[p] += area_y;
+					if (a != 0 && b != 0) {
+						const std::pair<uint64_t,uint64_t> p = (a <= b) 
+							? std::pair<uint64_t,uint64_t>(a,b)
+							: std::pair<uint64_t,uint64_t>(b,a);
+							
+						edges[p] += area_y;
+					}
 				}
 				if (bottom_ccl[loc] != top_ccl[loc]) {
 					const uint64_t a = bottom_labels[bottom_ccl[loc]];
 					const uint64_t b = top_labels[top_ccl[loc]];
 
-					const std::pair<uint64_t,uint64_t> p = (a <= b) 
-						? std::pair<uint64_t,uint64_t>(a,b)
-						: std::pair<uint64_t,uint64_t>(b,a);
+					if (a != 0 && b != 0) {
+						const std::pair<uint64_t,uint64_t> p = (a <= b) 
+							? std::pair<uint64_t,uint64_t>(a,b)
+							: std::pair<uint64_t,uint64_t>(b,a);
 
-					edges[p] += area_z;
+						edges[p] += area_z;
+					}
 				}
 			}
 		}
