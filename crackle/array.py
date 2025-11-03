@@ -19,6 +19,7 @@ from .operations import (
   connected_components, 
   voxel_connectivity_graph,
   contacts,
+  array_equal,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -195,11 +196,14 @@ class CrackleArray:
     )
     return CrackleArray(binary)
 
+  def array_equal(self, other:"CrackleArray") -> bool:
+    return array_equal(self.binary, other.binary)
+
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):
       return self.min() == other and self.max() == other
     elif isinstance(other, CrackleArray):
-      return self.binary == other.binary
+      return self.array_equal(other)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 

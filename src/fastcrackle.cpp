@@ -586,6 +586,32 @@ py::dict contacts(
 	return pyareas;
 }
 
+bool array_equal(
+	const py::buffer buffer1, 
+	const py::buffer buffer2,
+	const size_t parallel = 1
+) {
+	py::buffer_info info1 = buffer1.request();
+	py::buffer_info info2 = buffer2.request();
+
+	if (info1.ndim != 1 || info2.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data1 = static_cast<uint8_t*>(info1.ptr);
+	uint8_t* data2 = static_cast<uint8_t*>(info2.ptr);
+
+	if (data1 == data2) {
+		return true;
+	}
+
+	return crackle::operations::array_equal(
+		data1, info1.size,
+		data2, info2.size,
+		parallel
+	);
+}
+
 
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
@@ -607,6 +633,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("get_slice_vcg", &get_slice_vcg, "Debugging tool for examining the voxel connectivity graph of a slice.");
 	m.def("voxel_connectivity_graph", &voxel_connectivity_graph, "Extract the voxel connectivity graph from the image.");
 	m.def("contacts", &contacts, "Find the contact area between pairs of regions.");
+	m.def("array_equal", &array_equal, "Check if two crackle arrays are equal regardless of encoding.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())

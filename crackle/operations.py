@@ -963,5 +963,43 @@ def contacts(
   wx, wy, wz = anisotropy
   return fastcrackle.contacts(binary, 0, -1, wx, wy ,wz)
 
+def array_equal(
+  binary1:bytes, 
+  binary2:bytes,
+  parallel:int = 0,
+) -> bool:
+  """
+  Check if arrays have the same contents regardless of
+  encoding representation.
+  """
+  h1 = header(binary1)
+  h2 = header(binary2)
+
+  if (
+    h1.sx != h2.sx
+    or h1.sy != h2.sy
+    or h1.sz != h2.sz
+  ):
+    return False
+
+  uniq1 = labels(binary1)
+  uniq2 = labels(binary2)
+
+  if np.any(uniq1 != uniq2):
+    return False
+
+  return fastcrackle.array_equal(binary1, binary2, parallel)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
