@@ -89,6 +89,13 @@ voxel_counts = crackle.voxel_counts(binary)
 centroids = crackle.centroids(binary)
 bbxes = crackle.bounding_boxes(binary)
 
+# extract the 4-way or 6-way voxel connectivity graph
+# note: 4-way is stored in the format so is extremely fast
+vcg = crackle.voxel_connectivity_graph(binary, connectivity=6)
+
+# surface area for 6-connected region contacts
+contacts = crackle.contacts(binary, anisotropy=(32,32,40))
+
 # low memory CCL, the more memory you provide, the faster it goes
 ccl_binary = crackle.connected_components(
   binary, 
