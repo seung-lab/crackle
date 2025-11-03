@@ -960,8 +960,12 @@ def test_contacts():
 
   assert np.all(gt_contacts == crackle_contacts)
 
+def test_array_equal():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels)
 
-
+  assert crackle.array_equal(binary, binary)
+  
 
 
 
