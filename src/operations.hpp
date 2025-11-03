@@ -1034,33 +1034,26 @@ contacts(
 	const float area_y = wx * wz;
 	const float area_z = wx * wy;
 
+
+	auto add_edge = [&edges](uint64_t a, uint64_t b, float area) {
+		if (a != 0 && b != 0) {
+			const std::pair<uint64_t,uint64_t> p = (a <= b) 
+				? std::pair<uint64_t,uint64_t>(a,b)
+				: std::pair<uint64_t,uint64_t>(b,a);
+				
+			edges[p] += area;
+		}
+	};
+
 	for (size_t y = 0; y < sy; y++) {
 		for (size_t x = 0; x < sx; x++) {
 			const int64_t loc = x + sx * y;
 
 			if (x < sx - 1 && ccls[0][loc] != ccls[0][loc+1]) {
-				const uint64_t a = label_maps[0][ccls[0][loc]];
-				const uint64_t b = label_maps[0][ccls[0][loc+1]];
-
-				if (a != 0 && b != 0) {
-					const std::pair<uint64_t,uint64_t> p = (a <= b) 
-						? std::pair<uint64_t,uint64_t>(a,b)
-						: std::pair<uint64_t,uint64_t>(b,a);
-
-					edges[p] += area_x;
-				}
+				add_edge(label_maps[0][ccls[0][loc]], label_maps[0][ccls[0][loc+1]], area_x);
 			}
 			if (y < sy - 1 && ccls[0][loc] != ccls[0][loc+sx]) {
-				const uint64_t a = label_maps[0][ccls[0][loc]];
-				const uint64_t b = label_maps[0][ccls[0][loc+sx]];
-
-				if (a != 0 && b != 0) {
-					const std::pair<uint64_t,uint64_t> p = (a <= b) 
-						? std::pair<uint64_t,uint64_t>(a,b)
-						: std::pair<uint64_t,uint64_t>(b,a);
-
-					edges[p] += area_y;
-				}
+				add_edge(label_maps[0][ccls[0][loc]], label_maps[0][ccls[0][loc+sx]], area_y);
 			}
 		}
 	}
@@ -1098,40 +1091,25 @@ contacts(
 				const int64_t loc = x + sx * y;
 
 				if (x < sx - 1 && bottom_ccl[loc] != bottom_ccl[loc+1]) {
-					const uint64_t a = bottom_labels[bottom_ccl[loc]];
-					const uint64_t b = bottom_labels[bottom_ccl[loc+1]];
-
-					if (a != 0 && b != 0) {
-						const std::pair<uint64_t,uint64_t> p = (a <= b) 
-							? std::pair<uint64_t,uint64_t>(a,b)
-							: std::pair<uint64_t,uint64_t>(b,a);
-
-						edges[p] += area_x;
-					}
+					add_edge(
+						bottom_labels[bottom_ccl[loc]], 
+						bottom_labels[bottom_ccl[loc+1]],
+						area_x
+					);
 				}
 				if (y < sy - 1 && bottom_ccl[loc] != bottom_ccl[loc+sx]) {
-					const uint64_t a = bottom_labels[bottom_ccl[loc]];
-					const uint64_t b = bottom_labels[bottom_ccl[loc+sx]];
-
-					if (a != 0 && b != 0) {
-						const std::pair<uint64_t,uint64_t> p = (a <= b) 
-							? std::pair<uint64_t,uint64_t>(a,b)
-							: std::pair<uint64_t,uint64_t>(b,a);
-							
-						edges[p] += area_y;
-					}
+					add_edge(
+						bottom_labels[bottom_ccl[loc]],
+						bottom_labels[bottom_ccl[loc+sx]],
+						area_y
+					);
 				}
-				if (bottom_ccl[loc] != top_ccl[loc]) {
-					const uint64_t a = bottom_labels[bottom_ccl[loc]];
-					const uint64_t b = top_labels[top_ccl[loc]];
-
-					if (a != 0 && b != 0) {
-						const std::pair<uint64_t,uint64_t> p = (a <= b) 
-							? std::pair<uint64_t,uint64_t>(a,b)
-							: std::pair<uint64_t,uint64_t>(b,a);
-
-						edges[p] += area_z;
-					}
+				if (bottom_labels[bottom_ccl[loc]] != top_labels[top_ccl[loc]]) {
+					add_edge(
+						bottom_labels[bottom_ccl[loc]],
+						top_labels[top_ccl[loc]],
+						area_z
+					);
 				}
 			}
 		}
