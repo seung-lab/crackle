@@ -930,7 +930,20 @@ def test_each():
     if i > 30:
       break
 
+def test_voxel_connectivity_graph():
+  import cc3d
+  import fastremap 
 
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  labels, _ = fastremap.renumber(labels, in_place=True)
+
+  gt_vcg = cc3d.voxel_connectivity_graph(labels, connectivity=6)
+
+  binary = crackle.compress(labels)
+
+  crackle_vcg = crackle.voxel_connectivity_graph(binary, connectivity=6)
+
+  assert np.all(gt_vcg == crackle_vcg)
 
 
 
