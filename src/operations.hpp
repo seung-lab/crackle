@@ -800,6 +800,16 @@ uint8_t* voxel_connectivity_graph(
 		}
 	}
 
+	// set boundary to passable for compatibility with
+	// certain operations like autapse elimination
+	for (size_t y = 0; y < sy; y++) {
+		for (size_t x = 0; x < sx; x++) {
+			const int64_t loc = x + sx * y;
+			vcg[loc] |= 0b100000;
+			vcg[loc + (sz-1) * sxy] |= 0b010000;
+		}
+	}
+
 	return vcg;
 }
 
