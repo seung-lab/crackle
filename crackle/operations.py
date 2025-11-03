@@ -963,5 +963,59 @@ def contacts(
   wx, wy, wz = anisotropy
   return fastcrackle.contacts(binary, 0, -1, wx, wy ,wz)
 
+def array_equal(
+  binary1:bytes, 
+  binary2:bytes,
+  parallel:int = 0,
+) -> bool:
+  """
+  Check if arrays have the same contents regardless of
+  encoding representation.
+  """
+  h1 = header(binary1)
+  h2 = header(binary2)
 
+  if (
+    h1.sx != h2.sx
+    or h1.sy != h2.sy
+    or h1.sz != h2.sz
+  ):
+    return False
+
+  if num_labels(binary1) != num_labels(binary2):
+    return False
+
+  uniq1 = labels(binary1)
+  uniq2 = labels(binary2)
+
+  if np.any(uniq1 != uniq2):
+    return False
+
+  return fastcrackle.array_equal(binary1, binary2, parallel)
+
+def structure_equal(
+  binary1:bytes, 
+  binary2:bytes,
+  parallel:int = 0,
+) -> bool:
+  """
+  Check if images have the same structure regardless of
+  labeling.
+  """
+  h1 = header(binary1)
+  h2 = header(binary2)
+
+  if (
+    h1.sx != h2.sx
+    or h1.sy != h2.sy
+    or h1.sz != h2.sz
+  ):
+    return False
+
+  if h1.format_version == 0 or h2.format_version == 0:
+    vcg1 = voxel_connectivity_graph(binary1, connectivity=4, parallel=parallel)
+    vcg2 = voxel_connectivity_graph(binary2, connectivity=4, parallel=parallel)
+    return np.all(vcg1 == vcg2)
+  else:
+    return np.all(crack_crcs(binary1) == crack_crcs(binary2))
 

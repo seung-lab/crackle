@@ -59,6 +59,10 @@ remapped = crackle.refit(binary)
 # renumber array and change dtype to smallest possible
 remapped = crackle.renumber(binary, start=0)
 
+is_equal = crackle.array_equal(binary1, binary2)
+arr == arr2 # syntactic sugar for CrackleArrays
+arr.array_equal(arr2) # method call for CrackleArrays
+
 # for working with files
 # if .gz is appended to the filename, the file will be
 # automatically gzipped (or ungzipped)
@@ -162,7 +166,7 @@ python setup.py develop
 | Labels       | header.num_label_bytes        | Can be either "flat" labels or "pins". Describes how to color connected components.                                                                                   |
 | Crack Codes    | Variable length.           | Instructions for drawing crack boundaries.             |
 | Labels crc32c    | (v1 only) 4(le)           | v0: n/a, v1: crc32c of the labels binary.             |
-| Labels crc32c    | (v1 only) header.sz * 4(le)           | v0: n/a, v1: crc32c of the uncompressed uint32_t fortran order connected component labeling of each z-slice.             |
+| Crack crc32c    | (v1 only) header.sz * 4(le)           | v0: n/a, v1: crc32c of the uncompressed uint32_t fortran order connected component labeling of each z-slice.             |
 
 ### A Note on CRCs
 

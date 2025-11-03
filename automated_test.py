@@ -960,8 +960,43 @@ def test_contacts():
 
   assert np.all(gt_contacts == crackle_contacts)
 
+def test_array_equal_simple():
+  binary = crackle.compress(np.zeros([100,100,100]))
+  binary2 = crackle.compress(np.zeros([23,1,33]))
+  assert not crackle.array_equal(binary, binary2)
+
+  binary = crackle.compress(np.zeros([23,1,33]))
+  binary2 = crackle.compress(np.zeros([23,1,33]))
+  assert crackle.array_equal(binary, binary2)
+
+  arr = np.random.randint(0,500, size=[100,103,101]).astype(np.uint16)
+  arr2 = np.random.randint(0,500, size=[100,103,101]).astype(np.uint16)
+
+  binary = crackle.compress(arr)
+  binary2 = crackle.compress(arr2)
+
+  assert np.all(arr == arr2) == crackle.array_equal(binary, binary2)
+
+def test_array_equal_real_data():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  binary = crackle.compress(labels, markov_model_order=0)
+  markov_binary = crackle.codec.reencode(binary, markov_model_order=5)
+
+  assert crackle.array_equal(binary, binary)
+  assert crackle.array_equal(binary, markov_binary)
+
+  labels2 = labels.copy()
+  binary2 = crackle.compress(labels2)
+
+  assert crackle.array_equal(binary, binary2)
+
+  labels2[100,100,100] = labels2[400,400,400]
+  binary2 = crackle.compress(labels2)
+
+  assert not crackle.array_equal(binary, binary2)
 
 
+  
 
 
 

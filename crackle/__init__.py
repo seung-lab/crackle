@@ -57,6 +57,7 @@ from .operations import (
 	mask, mask_except, 
 	voxel_connectivity_graph,
 	contacts,
+	array_equal,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload, bload, save_numpy
