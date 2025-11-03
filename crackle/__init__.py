@@ -54,7 +54,9 @@ from .operations import (
 	add_scalar, subtract_scalar,
 	multiply_scalar, floordiv_scalar,
 	recompress, connected_components,
-	mask, mask_except,
+	mask, mask_except, 
+	voxel_connectivity_graph,
+	contacts,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload, bload, save_numpy

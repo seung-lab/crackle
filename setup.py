@@ -20,6 +20,9 @@ else:
   cibw_archs = os.environ.get("CIBW_ARCHS", "").lower()
   archflags = os.environ.get("ARCHFLAGS", "").lower()
 
+  if archflags == "":
+    os.environ["ARCHFLAGS"] = f"-arch {platform.machine()}"
+
   # Apple Silicon arm64 machines cross compile for x86_64, 
   # but we want to not include these flags for aarch64
   if (
