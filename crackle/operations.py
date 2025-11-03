@@ -982,6 +982,9 @@ def array_equal(
   ):
     return False
 
+  if num_labels(binary1) != num_labels(binary2):
+    return False
+
   uniq1 = labels(binary1)
   uniq2 = labels(binary2)
 
