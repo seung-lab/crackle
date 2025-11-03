@@ -166,7 +166,7 @@ python setup.py develop
 | Labels       | header.num_label_bytes        | Can be either "flat" labels or "pins". Describes how to color connected components.                                                                                   |
 | Crack Codes    | Variable length.           | Instructions for drawing crack boundaries.             |
 | Labels crc32c    | (v1 only) 4(le)           | v0: n/a, v1: crc32c of the labels binary.             |
-| Labels crc32c    | (v1 only) header.sz * 4(le)           | v0: n/a, v1: crc32c of the uncompressed uint32_t fortran order connected component labeling of each z-slice.             |
+| Crack crc32c    | (v1 only) header.sz * 4(le)           | v0: n/a, v1: crc32c of the uncompressed uint32_t fortran order connected component labeling of each z-slice.             |
 
 ### A Note on CRCs
 
