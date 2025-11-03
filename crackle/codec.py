@@ -128,7 +128,7 @@ def labels_crc(binary:bytes) -> Optional[int]:
   crcl = head.sz * 4 + 4 
   return int.from_bytes(binary[-crcl:-crcl+4], 'little')
 
-def crack_crcs(binary:bytes) -> Optional[int]:
+def crack_crcs(binary:bytes) -> Optional[npt.NDArray[np.uint32]]:
   """Retrieve the stored crack code crc32cs."""
   head = CrackleHeader.frombytes(binary)
 
