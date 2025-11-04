@@ -115,8 +115,20 @@ def print_header(src):
 
 
 	num_labels = crackle.util.load_num_labels(src)
+	voxels = head.voxels()
+	if voxels > 1e12:
+		magnitude = f"{voxels / 1e12:.2f} teravoxels"
+	elif voxels > 1e9:
+		magnitude = f"{voxels / 1e9:.2f} gigavoxels"
+	elif voxels > 1e6:
+		magnitude = f"{voxels / 1e6:.2f} megavoxels"
+	elif voxels > 1e3:
+		magnitude = f"{voxels / 1e3:.2f} kilovoxels"
+	else:
+		magnitude = f"{voxels} voxels"
 
 	print(f"Filename: {src}")
+	print(f"size: {magnitude}")
 	for key,val in head.__dict__.items():
 		print(f"{key}: {val}")
 	print(f"num_labels: {num_labels}")
