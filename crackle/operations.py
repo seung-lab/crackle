@@ -1012,10 +1012,11 @@ def structure_equal(
   ):
     return False
 
-  if h1.format_version == 0 or h2.format_version == 0:
-    vcg1 = voxel_connectivity_graph(binary1, connectivity=4, parallel=parallel)
-    vcg2 = voxel_connectivity_graph(binary2, connectivity=4, parallel=parallel)
-    return np.all(vcg1 == vcg2)
-  else:
-    return np.all(crack_crcs(binary1) == crack_crcs(binary2))
+  if h1.format_version > 0 and h2.format_version > 0:
+    if not np.all(crack_crcs(binary1) == crack_crcs(binary2)):
+      return False
+
+  vcg1 = voxel_connectivity_graph(binary1, connectivity=4, parallel=parallel)
+  vcg2 = voxel_connectivity_graph(binary2, connectivity=4, parallel=parallel)
+  return np.all(vcg1 == vcg2)
 
