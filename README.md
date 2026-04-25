@@ -34,6 +34,8 @@ mn = crackle.min(binary)
 mx = crackle.max(binary)
 # check if label in array in log(N) time
 has_label = crackle.contains(binary, label)
+# extract a range of labels in something like log(N) time
+labels = crackle.contains_range(binary, low, high)
 
 # iterate over all binary images rapidly. crop
 # close crops to the ROI and makes iteration a bit faster
