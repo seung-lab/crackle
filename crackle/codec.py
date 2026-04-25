@@ -101,6 +101,60 @@ def contains(binary:bytes, label:int) -> bool:
   else:
     return False
 
+def contains_range(binary:bytes, low:int, high:int) -> npt.NDArray[np.integer]:
+  """
+  Query a crackle file for whether it contains anything
+  between low (inclusive) to high (exclusive).
+  
+  Returns the range found.
+  """
+  head = header(binary)
+
+  if low >= high:
+    return np.zeros([0], dtype=head.stored_dtype)
+
+  if not head.is_sorted:
+    arr = labels(binary)
+    return arr[(arr >= low) & (arr < high)]
+
+  hb = head.header_bytes
+  offset = hb + head.grid_index_bytes
+
+  # bgcolor, num labels (u64), N labels, pins
+  bg_color_arr = np.zeros([0], dtype=head.stored_dtype)
+  if head.label_format == LabelFormat.PINS_VARIABLE_WIDTH:
+    bgcolor = background_color(binary)
+    if low <= bgcolor < high:
+      bg_color_arr = np.array([ bgcolor ], dtype=head.stored_dtype)
+    offset += head.stored_data_width
+
+  num_labels = int.from_bytes(binary[offset:offset+8], 'little')
+  offset += 8
+  uniq = np.frombuffer(
+    binary,
+    offset=offset,
+    count=num_labels,
+    dtype=head.stored_dtype
+  )
+  try:
+    np.asarray(low, dtype=uniq.dtype)
+  except OverflowError:
+    return bg_color_arr # it can't possibly be contained in the array
+
+  idx_low = np.searchsorted(uniq, low)
+  idx_high = np.searchsorted(uniq, high)
+
+  if idx_low < 0 and idx_high < 0:
+    return bg_color_arr
+  elif idx_low >= uniq.size and idx_high >= uniq.size:
+    return bg_color_arr
+  elif idx_low < 0 and idx_high < uniq.size:
+    return np.concatenate([ bg_color_arr, uniq[:idx_high] ])
+  elif idx_low >= 0 and idx_high >= uniq.size:
+    return np.concatenate([ bg_color_arr, uniq[idx_low:] ])
+  else:
+    return np.concatenate([ bg_color_arr, uniq[idx_low:idx_high]  ])
+
 def raw_labels(binary:bytes) -> np.ndarray:
   """
   Return only the labels section of the binary.

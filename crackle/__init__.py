@@ -41,7 +41,7 @@ from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
 	compress, decompress, labels,
 	nbytes, components, component_lengths,
-	header, contains, crack_codes, num_labels,
+	header, contains, contains_range, crack_codes, num_labels,
 	point_cloud, voxel_counts, centroids, bounding_boxes,
 	each,
 )

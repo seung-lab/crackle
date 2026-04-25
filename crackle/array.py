@@ -3,7 +3,7 @@ from typing import Optional, Union, Any, Dict, Literal, Iterator
 from .headers import CrackleHeader, LabelFormat
 from .codec import (
   compress, decompress, decompress_range, 
-  labels, nbytes, contains, 
+  labels, nbytes, contains, contains_range,
   header, crack_codes, num_labels,
   components, point_cloud, voxel_counts,
   centroids, bounding_boxes, each,
@@ -198,6 +198,9 @@ class CrackleArray:
 
   def array_equal(self, other:"CrackleArray") -> bool:
     return array_equal(self.binary, other.binary)
+
+  def contains_range(self, low:int, high:int) -> npt.NDArray[np.integer]:
+    return contains_range(self.binary, low, high)
 
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):
