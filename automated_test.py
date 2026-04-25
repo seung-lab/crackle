@@ -259,6 +259,25 @@ def test_contains():
   assert crackle.contains(binary, 21954124) == False
   assert crackle.contains(binary, -12998124) == False
 
+def test_contains_range():
+  labels = np.random.randint(0,4, size=(100,100,10), dtype=np.uint32)
+  binary = crackle.compress(labels)
+
+  assert crackle.contains_range(binary, -2, -2).size == 0
+  assert crackle.contains_range(binary, -1, -2).size == 0
+  assert crackle.contains_range(binary, 0, 1).size == 1
+  assert crackle.contains_range(binary, 0, 2).size == 2
+  assert crackle.contains_range(binary, 0, 3).size == 3
+  assert crackle.contains_range(binary, 0, 4).size == 4
+  assert crackle.contains_range(binary, 0, 100).size == 4
+  assert crackle.contains_range(binary, 1, 4).size == 3
+  assert crackle.contains_range(binary, 2, 4).size == 2
+  assert crackle.contains_range(binary, 3, 4).size == 1
+  assert crackle.contains_range(binary, 5, 6).size == 0
+  assert crackle.contains_range(binary, 2, 1).size == 0
+
+  assert np.all(crackle.contains_range(binary, 0, 4) == np.array([0,1,2,3]))
+  
 def test_remap():
   labels = np.arange(0,1000).reshape((10,10,10)).astype(np.uint32)
   binary = crackle.compress(labels)
