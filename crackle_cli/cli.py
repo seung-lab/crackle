@@ -37,8 +37,9 @@ def normalize_extension(path):
 @click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
 @click.option('-M', '--cache-meta', default=False, is_flag=True, help="Create a sidecar parquet file with voxel counts, bounding boxes with filename .meta.parquet.", show_default=True)
+@click.option('-S', '--skip-empty', default=False, is_flag=True, help="Skip sidecar generation for empty (background only) crackle files.", show_default=True)
 @click.argument("source", nargs=-1)
-def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip, cache_meta):
+def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip, cache_meta, skip_empty):
 	"""
 	Compress and decompress crackle (.ckl) files to and from numpy (.npy) files.
 
@@ -66,7 +67,7 @@ def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip, c
 			continue
 
 		if cache_meta and compress and orig_markov is None and normalize_extension(src).endswith('.ckl'):
-			create_sidecar_file(src)
+			create_sidecar_file(src, skip_empty)
 			continue
 
 		if compress:
@@ -76,7 +77,7 @@ def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip, c
 
 		if cache_meta:
 			if ckl_path:
-				create_sidecar_file(ckl_path)
+				create_sidecar_file(ckl_path, skip_empty)
 
 def check_binary(src):
 	try:
@@ -157,8 +158,12 @@ def print_header(src):
 	print(f"num_labels: {num_labels}")
 	print()
 
-def create_sidecar_file(src):
+def create_sidecar_file(src, skip_empty):
 	arr = crackle.aload(src, allow_mmap=True)
+
+	if skip_empty and (arr.num_labels() <= 1) and (0 in arr):
+		return
+
 	meta_path = normalize_extension(src)
 	meta_path += ".meta.parquet"
 	arr.cache_meta(meta_path)
