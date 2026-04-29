@@ -19,26 +19,41 @@ class Tuple3(click.ParamType):
         self.fail(f"'{value}' does not contain a comma delimited list of 3 integers.")
     return value
 
+def normalize_extension(path):
+	path = removesuffix(path, ".lzma")
+	path = removesuffix(path, ".gz")
+	path = removesuffix(path, ".xz")
+	path = removesuffix(path, ".bz2")
+	path = removesuffix(path, ".zstd")
+	return path
+
 @click.command()
 @click.option("-c/-d", "--compress/--decompress", default=True, is_flag=True, help="Compress from or decompress to a numpy .npy file.", show_default=True)
 @click.option('-i', "--info", default=False, is_flag=True, help="Print the header for the file.", show_default=True)
 @click.option('-l', "--labels", default=False, is_flag=True, help="Print unique labels contained in the image.", show_default=True)
 @click.option('-t', "--test", default=False, is_flag=True, help="Check for file corruption and report damaged areas.", show_default=True)
 @click.option('-p', '--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
-@click.option('-m', '--markov', default=0, help="If >0, use this order of markov compression for the crack code.", show_default=True)
+@click.option('-m', '--markov', default=None, help="If >0, use this order of markov compression for the crack code.", show_default=True)
 @click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
+@click.option('-M', '--cache-meta', default=False, is_flag=True, help="Create a sidecar parquet file with voxel counts, bounding boxes with filename .meta.parquet.", show_default=True)
 @click.argument("source", nargs=-1)
-def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip):
+def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip, cache_meta):
 	"""
 	Compress and decompress crackle (.ckl) files to and from numpy (.npy) files.
 
 	Compatible with crackle format version 0 streams.
 	"""
+	orig_markov = markov
+	markov = markov or 0
+
 	for i in range(len(source)):
 		if source[i] == "-":
 			source = source[:i] + sys.stdin.readlines() + source[i+1:]
 	
+	if not compress and not keep and cache_meta:
+		print("Warning: -M/--cache-meta has no effect when decompressing without --keep", file=sys.stderr)
+
 	for src in source:
 		if info:
 			print_header(src)
@@ -50,10 +65,18 @@ def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip):
 			print_labels(src)
 			continue
 
+		if cache_meta and compress and orig_markov is None and normalize_extension(src).endswith('.ckl'):
+			create_sidecar_file(src)
+			continue
+
 		if compress:
-			compress_file(src, allow_pins, markov, gzip, keep)
+			ckl_path = compress_file(src, allow_pins, markov, gzip, keep)
 		else:
-			decompress_file(src, keep)
+			ckl_path = decompress_file(src, keep)
+
+		if cache_meta:
+			if ckl_path:
+				create_sidecar_file(ckl_path)
 
 def check_binary(src):
 	try:
@@ -134,18 +157,24 @@ def print_header(src):
 	print(f"num_labels: {num_labels}")
 	print()
 
+def create_sidecar_file(src):
+	arr = crackle.aload(src, allow_mmap=True)
+	meta_path = normalize_extension(src)
+	meta_path += ".meta.parquet"
+	arr.cache_meta(meta_path)
+
 def decompress_file(src, keep):
 	try:
 		arr = crackle.util.aload(src)
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
-		return
+		return None
 	except crackle.FormatError as err:
 		print("crackle:", err)
-		return
+		return None
 	except crackle.DecodeError:
 		print(f"crackle: {src} could not be decoded.")
-		return
+		return None
 
 	dest = src.replace(".ckl", "").replace(".gz", "").replace(".xz", "").replace(".lzma", "")
 	_, ext = os.path.splitext(dest)
@@ -165,6 +194,11 @@ def decompress_file(src, keep):
 		print(f"crackle: Unable to write {dest}. Aborting.")
 		sys.exit()
 
+	if keep:
+		return src
+	else:
+		return None
+
 def compress_file(src, allow_pins, markov, gzip, keep):
 	is_crackle = False
 	try:
@@ -175,15 +209,13 @@ def compress_file(src, allow_pins, markov, gzip, keep):
 			is_crackle = True
 		except:
 			print(f"crackle: {src} is not a numpy or crackle file.")
-			return
+			return None
 	except FileNotFoundError:
 		print(f"crackle: File \"{src}\" does not exist.")
-		return
+		return None
 
 	orig_src = src
-	src = removesuffix(src, ".lzma")
-	src = removesuffix(src, ".gz")
-	src = removesuffix(src, ".xz")
+	src = normalize_extension(src)
 	src = removesuffix(src, ".ckl")
 
 	dest = f"{src}.ckl"
@@ -198,7 +230,7 @@ def compress_file(src, allow_pins, markov, gzip, keep):
 	del data
 
 	if dest == orig_src:
-		return
+		return dest
 		
 	try:
 		stat = os.stat(dest)
@@ -209,6 +241,8 @@ def compress_file(src, allow_pins, markov, gzip, keep):
 	except (FileNotFoundError, ValueError) as err:
 		print(f"crackle: Unable to write {dest}. Aborting.")
 		sys.exit()
+
+	return dest
 
 def removesuffix(x:str, suffix:str) -> str:
   if x.endswith(suffix):

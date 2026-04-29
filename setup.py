@@ -49,6 +49,9 @@ setuptools.setup(
     "ccl": [ 
       "connected-components-3d",
     ],
+    "meta": [
+      "pyarrow",
+    ],
   },
   ext_modules=[
     Pybind11Extension(

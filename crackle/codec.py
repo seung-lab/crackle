@@ -1092,4 +1092,53 @@ def each(
   else:
     return BinaryImageIterator()
 
+def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.parquet.table":
+  """
+  Compute object voxel counts, bounding boxes and save
+  them into a parquet file at path.
+  """
+  import pyarrow as pa
+  import pyarrow.parquet as pq
+
+  cts = voxel_counts(binary, parallel=parallel)
+  # no slice conversion is a performance optimization, we don't need
+  # the bboxes converted to python slices, just as 6 integers
+  bbxs = bounding_boxes(binary, parallel=parallel, no_slice_conversion=True)
+
+  labels = sorted(list(cts.keys()))
+  cts = [ cts[label] for label in labels ]
+
+  min_x = [ bbxs[label][0] for label in labels ]
+  min_y = [ bbxs[label][1] for label in labels ]
+  min_z = [ bbxs[label][2] for label in labels ]
+  max_x = [ bbxs[label][3] for label in labels ]
+  max_y = [ bbxs[label][4] for label in labels ]
+  max_z = [ bbxs[label][5] for label in labels ]
+
+  schema = pa.schema([
+    pa.field('label', pa.uint64()),
+    pa.field('voxel_count', pa.uint32()),
+    pa.field('min_x', pa.uint32()),
+    pa.field('min_y', pa.uint32()),
+    pa.field('min_z', pa.uint32()),
+    pa.field('max_x', pa.uint32()),
+    pa.field('max_y', pa.uint32()),
+    pa.field('max_z', pa.uint32()),
+  ])
+
+  table = pa.table({
+    'label': labels,
+    'voxel_count': cts,
+    'min_x': min_x,
+    'min_y': min_y,
+    'min_z': min_z,
+    'max_x': max_x,
+    'max_y': max_y,
+    'max_z': max_z,
+  }, schema=schema)
+
+  pq.write_table(table, path, compression="zstd")
+
+  return table
+
 
