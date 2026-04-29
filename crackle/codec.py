@@ -1105,23 +1105,25 @@ def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.Table":
   # the bboxes converted to python slices, just as 6 integers
   bbxs = bounding_boxes(binary, parallel=parallel, no_slice_conversion=True)
 
-  labels = sorted(list(cts.keys()))
-  cts = [ cts[label] for label in labels ]
-
-  min_x = [ bbxs[label][0] for label in labels ]
-  min_y = [ bbxs[label][1] for label in labels ]
-  min_z = [ bbxs[label][2] for label in labels ]
-  max_x = [ bbxs[label][3] for label in labels ]
-  max_y = [ bbxs[label][4] for label in labels ]
-  max_z = [ bbxs[label][5] for label in labels ]
+  labels = np.asarray(sorted(list(cts.keys())), dtype=np.uint64)
+  cts = np.asarray([ cts[label] for label in labels ], dtype=np.uint32)
 
   head = header(binary)
   max_dim = max(head.sx, head.sy, head.sz)
 
   if max_dim <= np.iinfo(np.uint16).max:
     bbox_type = pa.uint16()
+    bbox_dtype = np.uint16
   else:
     bbox_type = pa.uint32()
+    bbox_dtype = np.uint32
+
+  min_x = np.asarray([ bbxs[label][0] for label in labels ], dtype=bbox_dtype)
+  min_y = np.asarray([ bbxs[label][1] for label in labels ], dtype=bbox_dtype)
+  min_z = np.asarray([ bbxs[label][2] for label in labels ], dtype=bbox_dtype)
+  max_x = np.asarray([ bbxs[label][3] for label in labels ], dtype=bbox_dtype)
+  max_y = np.asarray([ bbxs[label][4] for label in labels ], dtype=bbox_dtype)
+  max_z = np.asarray([ bbxs[label][5] for label in labels ], dtype=bbox_dtype)
 
   schema = [
     pa.field('label', pa.uint64()),
