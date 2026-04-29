@@ -1092,7 +1092,7 @@ def each(
   else:
     return BinaryImageIterator()
 
-def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.parquet.table":
+def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.Table":
   """
   Compute object voxel counts, bounding boxes and save
   them into a parquet file at path.
@@ -1115,27 +1115,43 @@ def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.parquet.tab
   max_y = [ bbxs[label][4] for label in labels ]
   max_z = [ bbxs[label][5] for label in labels ]
 
-  schema = pa.schema([
+  head = header(binary)
+  max_dim = max(head.sx, head.sy, head.sz)
+
+  if max_dim <= np.iinfo(np.uint16).max:
+    bbox_type = pa.uint16()
+  else:
+    bbox_type = pa.uint32()
+
+  schema = [
     pa.field('label', pa.uint64()),
     pa.field('voxel_count', pa.uint32()),
-    pa.field('min_x', pa.uint32()),
-    pa.field('min_y', pa.uint32()),
-    pa.field('min_z', pa.uint32()),
-    pa.field('max_x', pa.uint32()),
-    pa.field('max_y', pa.uint32()),
-    pa.field('max_z', pa.uint32()),
-  ])
+    pa.field('min_x', bbox_type),
+    pa.field('max_x', bbox_type),
+    pa.field('min_y', bbox_type),
+    pa.field('max_y', bbox_type),
+  ]
 
-  table = pa.table({
+  if head.sz > 1:
+    schema.append(pa.field('min_z', bbox_type))
+    schema.append(pa.field('max_z', bbox_type))
+
+  schema = pa.schema(schema)
+
+  rows = {
     'label': labels,
     'voxel_count': cts,
     'min_x': min_x,
-    'min_y': min_y,
-    'min_z': min_z,
     'max_x': max_x,
+    'min_y': min_y,
     'max_y': max_y,
-    'max_z': max_z,
-  }, schema=schema)
+  }
+
+  if head.sz > 1:
+    rows['min_z'] = min_z
+    rows['max_z'] = max_z
+
+  table = pa.table(rows, schema=schema)
 
   pq.write_table(table, path, compression="zstd")
 
