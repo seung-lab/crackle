@@ -36,7 +36,7 @@ def normalize_extension(path):
 @click.option('-m', '--markov', default=None, help="If >0, use this order of markov compression for the crack code.", show_default=True)
 @click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
-@click.option('-M', '--cache-meta', default=False, is_flag=True, help="Create a sidecar parquet file with voxel counts, bounding boxes with filename .meta.parquet.", show_default=True)
+@click.option('-M', '--cache-meta', default=False, is_flag=True, help="Create a sidecar parquet file with voxel counts, bounding boxes with extension .meta.parquet.", show_default=True)
 @click.option('-S', '--skip-empty', default=False, is_flag=True, help="Skip sidecar generation for empty (background only) crackle files.", show_default=True)
 @click.argument("source", nargs=-1)
 def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip, cache_meta, skip_empty):
