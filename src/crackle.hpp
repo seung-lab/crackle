@@ -633,7 +633,15 @@ OUT* decompress(
 			}
 			else {
 				if (header.fortran_order) {
-					for (uint64_t i = 0; i < sxy; i++) {
+					uint64_t i = 0;
+					uint64_t end = (sxy >> 2) << 2;
+					for (i = 0; i < end; i += 4) {
+						output[i + z * sxy] = label_map[cc_labels[i]];
+						output[i+1 + z * sxy] = label_map[cc_labels[i+1]];
+						output[i+2 + z * sxy] = label_map[cc_labels[i+2]];
+						output[i+3 + z * sxy] = label_map[cc_labels[i+3]];
+					}
+					for (i = end; i < sxy; i++) {
 						output[i + z * sxy] = label_map[cc_labels[i]];
 					}
 				}
