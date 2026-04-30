@@ -68,9 +68,9 @@ def bload(filelike, allow_mmap=False) -> bytes:
   """Load the binary file."""
   return _load(filelike, allow_mmap=allow_mmap)
 
-def load(filelike, label:Optional[int] = None) -> np.ndarray:
+def load(filelike, label:Optional[int] = None, parallel:int = 0) -> np.ndarray:
   """Load an image from a file-like object or file path."""
-  return decompress(_load(filelike), label=label)
+  return decompress(_load(filelike), label=label, parallel=parallel)
 
 def load_numpy(filelike):
   f = io.BytesIO(_load(filelike))
