@@ -186,7 +186,7 @@ OUT* color_connectivity_graph(
         // performance trick that exploits the ideal image statistics
         // there are typically runs of non-boundary voxels, let's try
         // treating the simplest case 4 at a time. Seems to give
-        // a 10% overall improvement.
+        // a 10% overall improvement. 2 is better, 4 is best, 8 is no benefit.
         if (x > 0 && x < sx - 4 && *reinterpret_cast<const uint32_t*>(vcg.data() + loc) == 0b0001111000011110000111100001111) {
           out_labels[loc] = out_labels[loc+B];
           out_labels[loc+1] = out_labels[loc+B];
