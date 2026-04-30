@@ -183,7 +183,18 @@ OUT* color_connectivity_graph(
       for (int64_t x = 0; x < sx; x++) {
         int64_t loc = x + sx * y + sxy * z;
 
-        if (x > 0 && (vcg[loc] & 0b0010)) {
+        // performance trick that exploits the ideal image statistics
+        // there are typically runs of non-boundary voxels, let's try
+        // treating the simplest case 4 at a time. Seems to give
+        // a 10% overall improvement.
+        if (x > 0 && x < sx - 4 && *reinterpret_cast<const uint32_t*>(vcg.data() + loc) == 0b0001111000011110000111100001111) {
+          out_labels[loc] = out_labels[loc+B];
+          out_labels[loc+1] = out_labels[loc+B];
+          out_labels[loc+2] = out_labels[loc+B];
+          out_labels[loc+3] = out_labels[loc+B];
+          x += 3;
+        }
+        else if (x > 0 && (vcg[loc] & 0b0010)) {
           out_labels[loc] = out_labels[loc+B];
           if (y > 0 && (vcg[loc + B] & 0b1000) == 0 && (vcg[loc] & 0b1000)) {
             equivalences.unify(out_labels[loc], out_labels[loc+C]);
