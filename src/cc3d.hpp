@@ -161,6 +161,10 @@ OUT* color_connectivity_graph(
     out_labels = new OUT[voxels]();
   }
 
+  if (voxels == 0) {
+    return out_labels;
+  }
+
   DisjointSet<OUT> equivalences(max_labels);
 
   OUT new_label = 0;
@@ -180,16 +184,55 @@ OUT* color_connectivity_graph(
     const int64_t C = -sx;
 
     for (int64_t y = 1; y < sy; y++) {
-      for (int64_t x = 0; x < sx; x++) {
-        int64_t loc = x + sx * y + sxy * z;
+      int64_t loc = sx * y + sxy * z;
 
-        if (x > 0 && (vcg[loc] & 0b0010)) {
+      if (vcg[loc] & 0b1000) {
+        out_labels[loc] = out_labels[loc+C];
+      }
+      else {
+        new_label++;
+        out_labels[loc] = new_label;
+        equivalences.add(new_label);
+      }
+
+      int64_t x = 0;
+
+      COMPLEX:
+        x++;
+        loc++;
+        if (x >= sx) {
+          continue;
+        }
+
+        if (vcg[loc] & 0b0010) {
           out_labels[loc] = out_labels[loc+B];
-          if (y > 0 && (vcg[loc + B] & 0b1000) == 0 && (vcg[loc] & 0b1000)) {
+          if ((vcg[loc + B] & 0b1000) == 0 && (vcg[loc] & 0b1000)) {
             equivalences.unify(out_labels[loc], out_labels[loc+C]);
           }
+          goto COMPLEX;
         }
-        else if (y > 0 && vcg[loc] & 0b1000) {
+        else if (vcg[loc] & 0b1000) {
+          out_labels[loc] = out_labels[loc+C];
+          goto SIMPLE;
+        }
+        else {
+          new_label++;
+          out_labels[loc] = new_label;
+          equivalences.add(new_label);
+          goto COMPLEX;
+        }
+
+      SIMPLE:
+        x++;
+        loc++;
+        if (x >= sx) {
+          continue;
+        }
+
+        if (vcg[loc] & 0b0010) {
+          out_labels[loc] = out_labels[loc+B];
+        }
+        else if (vcg[loc] & 0b1000) {
           out_labels[loc] = out_labels[loc+C];
         }
         else {
@@ -197,7 +240,7 @@ OUT* color_connectivity_graph(
           out_labels[loc] = new_label;
           equivalences.add(new_label);
         }
-      }
+        goto COMPLEX;
     }
   }
 
