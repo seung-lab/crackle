@@ -185,17 +185,18 @@ OUT* color_connectivity_graph(
 
     for (int64_t y = 1; y < sy; y++) {
       int64_t loc = sx * y + sxy * z;
+      int64_t x = 0;
 
       if (vcg[loc] & 0b1000) {
         out_labels[loc] = out_labels[loc+C];
+        goto SIMPLE;
       }
       else {
         new_label++;
         out_labels[loc] = new_label;
         equivalences.add(new_label);
+        goto COMPLEX;
       }
-
-      int64_t x = 0;
 
       COMPLEX:
         x++;
@@ -208,6 +209,7 @@ OUT* color_connectivity_graph(
           out_labels[loc] = out_labels[loc+B];
           if ((vcg[loc + B] & 0b1000) == 0 && (vcg[loc] & 0b1000)) {
             equivalences.unify(out_labels[loc], out_labels[loc+C]);
+            goto SIMPLE;
           }
           goto COMPLEX;
         }
@@ -231,16 +233,18 @@ OUT* color_connectivity_graph(
 
         if (vcg[loc] & 0b0010) {
           out_labels[loc] = out_labels[loc+B];
+          goto COMPLEX;
         }
         else if (vcg[loc] & 0b1000) {
           out_labels[loc] = out_labels[loc+C];
+          goto SIMPLE;
         }
         else {
           new_label++;
           out_labels[loc] = new_label;
           equivalences.add(new_label);
-        }
-        goto COMPLEX;
+          goto COMPLEX;
+        }   
     }
   }
 
