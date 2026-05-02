@@ -129,7 +129,7 @@ before, middle, after = crackle.zsplit(binary, z=742)
 sections = crackle.zshatter(binary)
 ```
 
-*This repository is currently Beta. It works and the format is reasonably fixed. There may be some improvements down the line (such as 3d compression of crack codes), but they will be a new format version number.*
+*This repository is currently Beta. It works and the format is reasonably fixed. There may be some improvements down the line (such as 3d compression of crack codes, 2d chunking), but they will be a new format version number if necessary to retain backwards compatibility.*
 
 Crackle is a compression codec for 3D dense segmentation (labeled) images. The algorithm accepts both signed and unsigned integer labels (though the implementation currently has some restrictions on signed integers). It is written in C++ and has Python bindings. Crackle uses a two pass compression strategy where the output of crackle may be further comrpessed with a bitstream compressor like gzip, bzip2, zstd, or lzma. However, if the Crackle binary, which is already small, is not further compressed, it supports several efficient operations:
 
@@ -143,6 +143,49 @@ Crackle is inspired by Compresso \[1\]. Compresso innovated by separating labels
 Crackle improves upon Compresso by replacing the bit-packed boundary map with a "crack code" and can also use 3D information to reduce redundancy in labels using "pins".
 
 See benchmarks for more information on Crackle's size and compute effiency.
+
+## Optional Performance Enhancing Sidecar `.ckl.meta.parquet` File
+
+Counting voxels or measuring bounding boxes is fully supported by the bare crackle file, but requires computation which on large images or numerous images can become substantial. Therefore, crackle comes with a facility for generating a `.parquet` file containing this metadata information for faster retrieval. Currently, to avoid engineering complexity, crackle does not make use of this file, so use pyarrow, duckdb, or similar to read it. This extra file adds nothing except performance enhancement for some use cases. **All data can be generated from the crackle file alone, and nothing is lost if the sidecar file is lost.**
+
+You will need pyarrow installed to generate this file: `pip install pyarrow`
+
+```bash
+crackle -M myfile.ckl # generates myfile.ckl.meta.parquet
+```
+
+```python
+import crackle
+
+arr = crackle.aload("myfile.ckl")
+arr.cache_meta("myfile.ckl.meta.parquet") # generate the sidecar file
+```
+
+You can then read the parquet files using your favorite parquet reader. Sometimes it is faster to use crackle methods on single files, but when tested on hundreds of thousands of files, reading voxel counts out of parquet was 100x faster (20 files per second versus 2000 on a Macbook M3).
+
+### Parquet Schema
+
+Bbox type is uint16 unless the xy dimensions of the crackle file exceed 16-bits (65,535) in which case it is uint32.
+
+```
+label: uint64
+voxel_count: uint32
+min_x: uint16 or uint32
+max_x: uint16 or uint32
+min_y: uint16 or uint32
+max_y: uint16 or uint32
+# if it's a 3d crackle file
+min_z: uint16 or uint32
+max_z: uint16 or uint32
+```
+
+### Reading Example
+
+```python
+import pyarrow.parquet as pq
+table = pq.read_table("myfile.ckl.meta.parquet")
+print(table)
+```
 
 ## Installation
 
