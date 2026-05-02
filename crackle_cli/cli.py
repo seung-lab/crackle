@@ -191,6 +191,11 @@ def compress_file(src, allow_pins, markov, gzip, keep):
 		dest += ".gz"
 
 	if is_crackle:
+		if data.header().format_version == 0:
+			# This causes file corruption for some reason. Requires more extensive inquiry.
+			print("Reencoding format version 0 is not currently supported.")
+			return
+
 		data.binary = crackle.codec.reencode(data.binary, markov_model_order=int(markov))
 		data.save(dest)
 	else:
