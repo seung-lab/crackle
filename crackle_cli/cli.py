@@ -43,7 +43,7 @@ def main(compress, info, test, labels, allow_pins, markov, source, keep, gzip, c
 	"""
 	Compress and decompress crackle (.ckl) files to and from numpy (.npy) files.
 
-	Compatible with crackle format version 0 streams.
+	Compatible with crackle format version 0 and 1 streams.
 	"""
 	orig_markov = markov
 	markov = markov or 0
