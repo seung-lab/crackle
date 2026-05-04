@@ -207,7 +207,10 @@ OUT* color_connectivity_graph(
 
         if (vcg[loc] & 0b0010) {
           out_labels[loc] = out_labels[loc+B];
-          if ((vcg[loc + B] & 0b1000) == 0 && (vcg[loc] & 0b1000)) {
+
+          // simplified from:
+          // if ((vcg[loc] & 0b1000) && (vcg[loc + B] & 0b1000) == 0) {
+          if ((vcg[loc] & 0b1000) & ~vcg[loc + B]) {
             equivalences.unify(out_labels[loc], out_labels[loc+C]);
             goto SIMPLE;
           }
@@ -231,13 +234,13 @@ OUT* color_connectivity_graph(
           continue;
         }
 
-        if (vcg[loc] & 0b0010) {
-          out_labels[loc] = out_labels[loc+B];
-          goto COMPLEX;
-        }
-        else if (vcg[loc] & 0b1000) {
+        if (vcg[loc] & 0b1000) {
           out_labels[loc] = out_labels[loc+C];
           goto SIMPLE;
+        }
+        else if (vcg[loc] & 0b0010) {
+          out_labels[loc] = out_labels[loc+B];
+          goto COMPLEX;
         }
         else {
           new_label++;
@@ -251,6 +254,7 @@ OUT* color_connectivity_graph(
   relabel<OUT>(out_labels, voxels, new_label, equivalences, N);
   return out_labels;
 }
+
 
 template <typename LABEL, typename OUT>
 OUT* connected_components2d_4(
