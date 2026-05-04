@@ -291,28 +291,81 @@ OUT* connected_components2d_4(
   int64_t loc = 0;
   OUT next_label = 0;
 
-  LABEL cur = 0;
   for (int64_t z = 0; z < sz; z++) {
-    for (int64_t y = 0; y < sy; y++) {
-      for (int64_t x = 0; x < sx; x++) {
-        loc = x + sx * y + sxy * z;
-        cur = in_labels[loc];
+    loc = sxy * z;
+    for (int64_t x = 0; x < sx; x++, loc++) {
+      if (x > 0 && in_labels[loc] == in_labels[loc + B]) {
+        out_labels[loc] = out_labels[loc + B];
+      }
+      else {
+        next_label++;
+        out_labels[loc] = next_label;
+        equivalences.add(out_labels[loc]);
+      }
+    }
 
-        if (x > 0 && cur == in_labels[loc + B]) {
-          out_labels[loc] = out_labels[loc + B];
-          if (y > 0 && cur == in_labels[loc + C] && cur != in_labels[loc + D]) {
-            equivalences.unify(out_labels[loc], out_labels[loc + C]);
-          }
+    for (int64_t y = 1; y < sy; y++) {
+      loc = sx * y + sxy * z;
+      int64_t x = 0;
+
+      if (in_labels[loc] == in_labels[loc+C]) {
+        out_labels[loc] = out_labels[loc+C];
+        goto SIMPLE;
+      }
+      else {
+        next_label++;
+        out_labels[loc] = next_label;
+        equivalences.add(out_labels[loc]);
+        goto COMPLEX;
+      }
+
+      COMPLEX:
+        x++;
+        loc++;
+        if (x >= sx) {
+          continue;
         }
-        else if (y > 0 && cur == in_labels[loc + C]) {
+
+        if (in_labels[loc] == in_labels[loc + B]) {
+          out_labels[loc] = out_labels[loc + B];
+          if (in_labels[loc] == in_labels[loc + C] && in_labels[loc] != in_labels[loc + D]) {
+            equivalences.unify(out_labels[loc], out_labels[loc + C]);
+            goto SIMPLE;
+          }
+          goto COMPLEX;
+        }
+        else if (in_labels[loc] == in_labels[loc + C]) {
           out_labels[loc] = out_labels[loc + C];
+          goto SIMPLE;
         }
         else {
           next_label++;
           out_labels[loc] = next_label;
           equivalences.add(out_labels[loc]);
+          goto COMPLEX;
         }
-      }
+
+      SIMPLE:
+        x++;
+        loc++;
+        if (x >= sx) {
+          continue;
+        }
+
+        if (in_labels[loc] == in_labels[loc + C]) {
+          out_labels[loc] = out_labels[loc + C];
+          goto SIMPLE;
+        }
+        else if (in_labels[loc] == in_labels[loc + B]) {
+          out_labels[loc] = out_labels[loc + B];
+          goto COMPLEX;
+        }
+        else {
+          next_label++;
+          out_labels[loc] = next_label;
+          equivalences.add(out_labels[loc]);
+          goto COMPLEX;
+        }
     }
   }
 
