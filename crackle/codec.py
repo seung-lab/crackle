@@ -934,7 +934,14 @@ def voxel_counts(
   else:
     z_start, z_end = z_range_for_label(binary, label)
 
-  vcts = fastcrackle.voxel_counts(binary, z_start, z_end, parallel)
+  if num_labels(binary) == 1:
+    single_label = globals()["labels"](binary)[0]
+    head = header(binary)
+    vcts = {
+      single_label: head.voxels(),
+    }
+  else:
+    vcts = fastcrackle.voxel_counts(binary, z_start, z_end, parallel)
 
   if label is not None:
     return vcts[label]
@@ -997,7 +1004,14 @@ def bounding_boxes(
   else:
     z_start, z_end = z_range_for_label(binary, label)
 
-  bounding_boxes = fastcrackle.bounding_boxes(binary, z_start, z_end, parallel)
+  if num_labels(binary) == 1:
+    single_label = globals()["labels"](binary)[0]
+    head = header(binary)
+    bounding_boxes = {
+      single_label: np.array([0, 0, 0, head.sx, head.sy, head.sz], dtype=np.uint32),
+    }
+  else:
+    bounding_boxes = fastcrackle.bounding_boxes(binary, z_start, z_end, parallel)
 
   if no_slice_conversion:
     if label is not None:
