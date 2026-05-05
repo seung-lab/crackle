@@ -622,13 +622,24 @@ def decompress_range(
   z_start = int(z_start)
   z_end = int(z_end)
 
+  order = 'F' if header.fortran_order else 'C'
+
+  shape = (sx, sy, z_end-z_start)
+
   if (sx * sy * sz == 0):
     labels = np.zeros((0,), dtype=header.dtype)
+  elif label is not None and not contains(binary, label):
+    labels = np.zeros(shape, order=order, dtype=header.dtype)
+  elif label is None and num_labels(binary) == 1:
+    single_label = globals()["labels"](binary)[0]
+    if single_label == 0:
+      labels = np.zeros(shape, order=order, dtype=header.dtype)
+    else:
+      labels = np.full(shape, single_label, order=order, dtype=header.dtype)
   else:
     labels = fastcrackle.decompress(binary, z_start, z_end, parallel, label)
 
-  order = 'F' if header.fortran_order else 'C'
-  labels = labels.reshape((sx,sy,z_end - z_start), order=order)
+  labels = labels.reshape(shape, order=order)
 
   if label is not None:
     return labels.view(bool)
