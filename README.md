@@ -10,7 +10,11 @@ crackle -p data.npy # use pin encoding for labels
 crackle -p -m 5 data.npy # use pins and markov model
 crackle -d data.ckl # recovers data.npy
 crackle -m 0 data.ckl # change markov model order
-crackle -t data.ckl # check for file corruption
+crackle --test data.ckl # check for file corruption
+
+# convert between file types if you have the libraries installed
+crackle -z --to tiff -k data.ckl # data.ckl -> zlib compressed data.tiff
+crackle --to nrrd data.ckl # data.ckl -> data.nrrd
 ```
 
 ```python

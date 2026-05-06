@@ -48,9 +48,9 @@ def main(
 ):
 	"""
 	Compress and decompress crackle (.ckl) files 
-	to and from other segmentation file types.
+	to and from other lossless segmentation file types.
 
-	Supports: ckl, npy, nrrd, tiff
+	Supports: ckl, cpso, npy, nrrd, tiff
 
 	Compatible with crackle format version 0 and 1 streams.
 	"""
