@@ -207,7 +207,7 @@ def decompress_file(src, keep):
 def compress_file(src, allow_pins, markov, gzip, keep):
 	is_crackle = False
 	try:
-		data = crackle.util.load_numpy(src)
+		data = crackle.util.load_other(src)
 	except ValueError:
 		try:
 			data = crackle.aload(src, allow_mmap=True)
@@ -221,6 +221,11 @@ def compress_file(src, allow_pins, markov, gzip, keep):
 
 	orig_src = src
 	src = normalize_extension(src)
+	src = removesuffix(src, ".npy")
+	src = removesuffix(src, ".nii")
+	src = removesuffix(src, ".nrrd")
+	src = removesuffix(src, ".tiff")
+	src = removesuffix(src, ".tif")
 	src = removesuffix(src, ".ckl")
 
 	dest = f"{src}.ckl"

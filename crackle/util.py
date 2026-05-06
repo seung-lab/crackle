@@ -12,6 +12,22 @@ from .headers import CrackleHeader
 
 import numpy as np
 
+def normalize_file_ext(filename):
+  filename, ext = os.path.splitext(filename)
+
+  two_pass = ('.ckl', '.cpso')
+
+  if ext in two_pass:
+    return ext
+
+  while True:
+    filename, ext2 = os.path.splitext(filename)
+    if ext2 in two_pass:
+      return ext2
+    elif ext2 == '':
+      return ext
+    ext = ext2
+
 def _load(filelike, size:int = -1, allow_mmap:bool = False):
   if hasattr(filelike, 'read'):
     binary = filelike.read(size)
@@ -71,6 +87,30 @@ def bload(filelike, allow_mmap=False) -> bytes:
 def load(filelike, label:Optional[int] = None, parallel:int = 0) -> np.ndarray:
   """Load an image from a file-like object or file path."""
   return decompress(_load(filelike), label=label, parallel=parallel)
+
+def load_other(filename:str) -> np.ndarray:
+  ext = normalize_file_ext(filename)
+
+  if ext == ".npy":
+    image = load_numpy(filename)
+  elif ext == ".nrrd":
+    import nrrd
+    image, header = nrrd.read(filename)
+    if image.shape[0] == 3 and image.ndim == 3:
+      image = image[...,np.newaxis]
+      image = np.transpose(image, axes=[1,2,3,0])
+    return image
+  elif ext == ".nii":
+    import nibabel as nib
+    image = nib.load(filename)
+    image = np.array(image.dataobj)
+  elif ext in (".tif", ".tiff"):
+    import tifffile
+    image = tifffile.imread(srcpath)
+  else:
+    raise ValueError("Data type not supported: " + ext)
+
+  return np.asfortranarray(image)
 
 def load_numpy(filelike):
   f = io.BytesIO(_load(filelike))
