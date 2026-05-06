@@ -108,7 +108,7 @@ def load_any(filename:str) -> np.ndarray:
     image = np.array(image.dataobj)
   elif ext in (".tif", ".tiff"):
     import tifffile
-    image = tifffile.imread(srcpath)
+    image = tifffile.imread(filename)
   elif ext == ".cpso":
     import compresso
     image = compresso.load(filename)
@@ -182,6 +182,8 @@ def save_nii(arr:Union[np.ndarray, bytes], path:str, affine=None):
 
   if isinstance(arr, bytes):
     arr = crackle.decompress(arr)
+  elif isinstance(arr, CrackleArray):
+    arr = arr.decompress()
 
   img = nib.Nifti1Image(arr, affine)
   # nibabel infers gzip from .nii.gz extension automatically
@@ -193,6 +195,8 @@ def save_nrrd(arr:Union[np.ndarray, bytes], path:str, compress:str = "raw"):
 
   if isinstance(arr, bytes):
     arr = crackle.decompress(arr)
+  elif isinstance(arr, CrackleArray):
+    arr = arr.decompress()
 
   options = {}
   if compress == "gzip":
@@ -213,6 +217,8 @@ def save_tiff(arr:Union[np.ndarray, bytes], path:str, compression='zlib'):
 
   if isinstance(arr, bytes):
     arr = crackle.decompress(arr)
+  elif isinstance(arr, CrackleArray):
+    arr = arr.decompress()
 
   tifffile.imwrite(path, arr, compression=compression)
 
@@ -221,6 +227,8 @@ def save_compresso(arr:Union[np.ndarray, bytes], path:str):
 
   if isinstance(arr, bytes):
     arr = crackle.decompress(arr)
+  elif isinstance(arr, CrackleArray):
+    arr = arr.decompress()
 
   compresso.save(arr, path)
 

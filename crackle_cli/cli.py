@@ -229,7 +229,7 @@ def convert_file(src, allow_pins, markov, gzip, keep, to_format):
 		crackle.util.save_nrrd(arr, dest, compress=compress)
 	elif to_format in ("tiff", "tif"):
 		dest += f".{to_format}"
-		compress = "zlib" if gzip else "raw"
+		compress = "zlib" if gzip else None
 		crackle.util.save_tiff(arr, dest, compression=compress)
 	elif to_format == "cpso":
 		if not dest.endswith(".cpso"):
