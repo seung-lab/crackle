@@ -88,10 +88,12 @@ def load(filelike, label:Optional[int] = None, parallel:int = 0) -> np.ndarray:
   """Load an image from a file-like object or file path."""
   return decompress(_load(filelike), label=label, parallel=parallel)
 
-def load_other(filename:str) -> np.ndarray:
+def load_any(filename:str) -> np.ndarray:
   ext = normalize_file_ext(filename)
 
-  if ext == ".npy":
+  if ext == ".ckl":
+    image = aload(filename)
+  elif ext == ".npy":
     image = load_numpy(filename)
   elif ext == ".nrrd":
     import nrrd
@@ -107,6 +109,9 @@ def load_other(filename:str) -> np.ndarray:
   elif ext in (".tif", ".tiff"):
     import tifffile
     image = tifffile.imread(srcpath)
+  elif ext == ".cpso":
+    import compresso
+    image = compresso.load(filename)
   else:
     raise ValueError("Data type not supported: " + ext)
 
@@ -169,9 +174,59 @@ def save_numpy(
     if isinstance(filelike, str):
       f.close()
 
+def save_nii(arr:Union[np.ndarray, bytes], path:str, affine=None):
+  """Save numpy array as NIfTI. Path should end in .nii or .nii.gz"""
+  import nibabel as nib
+  if affine is None:
+    affine = np.eye(4)
+
+  if isinstance(arr, bytes):
+    arr = crackle.decompress(arr)
+
+  img = nib.Nifti1Image(arr, affine)
+  # nibabel infers gzip from .nii.gz extension automatically
+  nib.save(img, path)
+
+def save_nrrd(arr:Union[np.ndarray, bytes], path:str, compress:str = "raw"):
+  """Save numpy array as NRRD."""
+  import nrrd
+
+  if isinstance(arr, bytes):
+    arr = crackle.decompress(arr)
+
+  options = {}
+  if compress == "gzip":
+    options['encoding'] = 'gzip'
+  elif compress == "bzip2":
+    options['encoding'] = 'bz2'
+  else:
+    options['encoding'] = 'raw'
+
+  nrrd.write(path, arr, options)
+
+def save_tiff(arr:Union[np.ndarray, bytes], path:str, compression='zlib'):
+  """
+  Save numpy array as TIFF.
+  compression: 'zlib' (gzip), 'lzma' (xz), or None
+  """
+  import tifffile
+
+  if isinstance(arr, bytes):
+    arr = crackle.decompress(arr)
+
+  tifffile.imwrite(path, arr, compression=compression)
+
+def save_compresso(arr:Union[np.ndarray, bytes], path:str):
+  import compresso
+
+  if isinstance(arr, bytes):
+    arr = crackle.decompress(arr)
+
+  compresso.save(arr, path)
+
 def save(
   labels:Union[np.ndarray, CrackleArray], 
-  filelike, 
+  filelike,
   **kwargs
 ):
   """Save labels into the file-like object or file path."""
@@ -188,6 +243,21 @@ def save(
     )
   ):
     return save_numpy(binary, filelike)
+  elif (
+    isinstance(filelike, str)
+    and filelike.endswith(".nrrd")
+  ):
+    return save_nrrd(binary, filelike)
+  elif (
+    isinstance(filelike, str)
+    and (filelike.endswith(".tiff") or filelike.endswith(".tif"))
+  ):
+    return save_tiff(binary, filelike)
+  elif (
+    isinstance(filelike, str)
+    and filelike.endswith(".cpso")
+  ):
+    return save_compresso(binary, filelike)
 
   if isinstance(labels, np.ndarray):
     binary = compress(labels, **kwargs)
