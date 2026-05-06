@@ -52,6 +52,11 @@ setuptools.setup(
     "meta": [
       "pyarrow",
     ],
+    "formats": [
+      "compresso",
+      "pynrrd",
+      "tifffile",
+    ],
   },
   ext_modules=[
     Pybind11Extension(
