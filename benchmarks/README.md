@@ -243,6 +243,7 @@ SOLID ONES
 ## connectomics.npy File
 
 512<sup>3</sup> uint32, average of 40 runs per row
+Automatic segmentation from pinky40.
 Version 0.42.0
 
 ### Compression
@@ -279,4 +280,42 @@ markov_order=0, pins=False
 |  9      |  2864.790 |
 |  10     |  3023.260 |
 |  11     |  3087.120 |
+
+## ws.npy File
+
+512<sup>3</sup> uint64, average of 40 runs per row
+Severely oversegmented connectomics data. Watershed.
+
+### Compression
+
+| threads  |  MVx/sec |
+|----------|----------|
+| 1        |  91.433  |
+| 2        |  160.985 |
+| 3        |  216.914 |
+| 4        |  263.826 |
+| 5        |  320.252 |
+| 6        |  371.652 |
+| 7        |  410.977 |
+| 8        |  428.745 |
+| 9        |  422.213 |
+| 10       |  428.822 |
+| 11       |  434.168 |
+
+### Decompression
+
+|   threads  | MVx/sec   |
+|------------|-----------|
+|     1      | 213.377   |
+|     2      | 422.499   |
+|     3      | 600.431   |
+|     4      | 781.879   |
+|     5      | 933.715   |
+|     6      | 1026.622  |
+|     7      | 1066.671  |
+|     8      | 1071.743  |
+|     9      | 1139.713  |
+|     10     | 1192.836  |
+|     11     | 1173.332  |
+
 
