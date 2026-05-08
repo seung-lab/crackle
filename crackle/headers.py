@@ -43,7 +43,7 @@ def crc16(data:List[int]) -> int:
   crc = 0xFFFF # detects zeroed data better than 0x0000
   for i in range(len(data)):
     crc ^= data[i]
-    for k in range(8):
+    for k in range(16):
       if crc & 1:
         crc = (crc >> 1) ^ polynomial
       else:
@@ -126,14 +126,15 @@ class CrackleHeader:
         )
       affine = np.eye(4, dtype=np.float32)
     elif format_version == 2:
-      stored_crc = int.from_bytes(buffer[self.HEADER_BYTES_V2-2:self.HEADER_BYTES_V2], 'little')
-      computed_crc = crc16(buffer[5:self.HEADER_BYTES_V2-2])
+      stored_crc = int.from_bytes(buffer[kls.HEADER_BYTES_V2-2:kls.HEADER_BYTES_V2], 'little')
+      computed_crc = crc16(buffer[5:kls.HEADER_BYTES_V2-2])
+      print(stored_crc, computed_crc)
       if not ignore_crc_check and stored_crc != computed_crc:
         raise FormatError(
           f"The header appears to be corrupted. CRC check failed. "
           f"Computed: {computed_crc} Stored: {stored_crc}"
         )
-      affine = np.frombuffer(buffer[28:self.HEADER_BYTES_V2-2], dtype=np.float32).reshape((4,4), order="F")
+      affine = np.frombuffer(buffer[28:kls.HEADER_BYTES_V2-2], dtype=np.float32).reshape((4,4), order="F")
 
     return CrackleHeader(
       label_format=values[3],

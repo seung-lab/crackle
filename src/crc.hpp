@@ -45,7 +45,7 @@ uint16_t crc16(uint8_t const *data, uint64_t size) {
 	// use implicit +1 representation for right shift, LSB first
 	// use explicit +1 representation for left shit, MSB first
 	constexpr uint16_t polynomial = 0xd175; // implicit
-	uint8_t crc = 0xFFFF; // detects zeroed data better than 0x00
+	uint16_t crc = 0xFFFF; // detects zeroed data better than 0x00
 	while (size--) {
 		crc ^= *data++;
 		for (unsigned int k = 0; k < 16; k++) {

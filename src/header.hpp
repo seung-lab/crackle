@@ -113,7 +113,7 @@ public:
 		bool valid_magic = (buf[0] == 'c' && buf[1] == 'r' && buf[2] == 'k' && buf[3] == 'l');
 		format_version = buf[4];
 
-		if (!valid_magic || format_version > 1) {
+		if (!valid_magic || format_version > CrackleHeader::current_version) {
 			throw std::runtime_error("crackle: Data stream is not valid. Unable to decompress.");
 		}
 
@@ -150,7 +150,7 @@ public:
 		}
 		else {
 			for (int i = 0; i < 16; i++) {
-				affine[i] = lib::ctof(buf + 28 + i * 4);
+				affine[i] = lib::ctof(buf, 28 + i * 4);
 			}
 
 			crc = lib::ctoi<uint16_t>(buf, header_size_v2 - 2);
@@ -166,12 +166,14 @@ public:
 		// We use CRC8 using a polynomial that is good up to 241 bits.
 		// CRC8 is used to reduce false positives vs CRC32 since the
 		// crc field can be damaged itself. 
-		const uint8_t computed_crc = (format_version == 1)
-			? crackle::crc::crc8(buf + 5, header_bytes() - 5)
-			: crackle::crc::crc16(buf + 5, header_bytes() - 5)
+		// In version 2, we use a uint16 to accomodate the affine transform.
+		// This crc polynomial is good up to 4 flips.
+		const uint16_t computed_crc = (format_version >= 2)
+			? crackle::crc::crc16(buf + 5, header_bytes() - 5 - 2) // -2 because crc16 bigger by 1
+			: crackle::crc::crc8(buf + 5, header_bytes() - 5 - 1);
 
 		if (computed_crc != crc) {
-			throw std::runtime_error("crackle: CRC8 check failed. Header may be corrupted. (~4.1% chance of a false positive for a single bit flip).");
+			throw std::runtime_error("crackle: CRC check failed. Header may be corrupted.");
 		}
 	}
 
@@ -308,7 +310,7 @@ public:
 	}
 
 	std::vector<unsigned char> tobytes() const {
-		std::vector<unsigned char> buf(header_size);
+		std::vector<unsigned char> buf(header_bytes());
 		tochars(buf);
 		return buf;
 	}

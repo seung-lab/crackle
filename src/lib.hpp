@@ -1,6 +1,7 @@
 #ifndef __CRACKLE_LIB_HXX__
 #define __CRACKLE_LIB_HXX__
 
+#include <bit>
 #include <vector>
 #include <span>
 
@@ -58,7 +59,7 @@ void itoc_push_back(uint32_t x, std::vector<unsigned char> &buf) {
 }
 
 uint64_t ftoc(float x, std::span<unsigned char>& buf, uint64_t idx) {
-	uint32_t ux = reinterpret_cast<uint32_t>(x);
+	uint32_t ux = std::bit_cast<uint32_t>(x);
 	buf[idx + 0] = ux & 0xFF;
 	buf[idx + 1] = (ux >> 8) & 0xFF;
 	buf[idx + 2] = (ux >> 16) & 0xFF;
@@ -67,7 +68,9 @@ uint64_t ftoc(float x, std::span<unsigned char>& buf, uint64_t idx) {
 }
 
 float ctof(const unsigned char* buf, const uint64_t idx) {
-	return *reinterpret_cast<*float>(buf + idx);
+    float f;
+    std::memcpy(&f, buf + idx, sizeof(f));
+    return f;
 }
 
 template <typename T>
