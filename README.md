@@ -249,15 +249,16 @@ Due to this mutli-crc strategy, it is possible to narrow down corruptions to the
 ### Header
 
 
-| Attribute         | Value             | Type    | Description                                     |
-|-------------------|-------------------|---------|-------------------------------------------------|
-| magic             | crkl              | char[4] | File magic number.                              |
-| format_version    | 0 or 1            | u8      | Stream version.                   |
-| format_field      | bitfield          | u16     | See below.                 |
-| sx, sy, sz        | >= 0              | u32 x 3 | Size of array dimensions.                       |
-| grid_size         | log2(grid_size)   | u8      | Stores log2 of grid dimensions in voxels.          |
-| num_label_bytes   | Any.              | u64      | Number of bytes of the labels section. Note the labels come in at least two format types.          |
-| crc8             | Any.              | u8      | CRC8 of format_field thru num_label_bytes using polynomial 0xe7 (implicit) and 0xFF initialization. |
+| Attribute         | Value             |Versions| Type     | Description                                                                                      |
+|-------------------|-------------------|--------|----------|--------------------------------------------------------------------------------------------------|
+| magic             | crkl              | 0,1,2  | char[4]  | File magic number.                                                                               |
+| format_version    | 0, 1, or 2        | 0,1,2  | u8       | Stream version.                                                                                  |
+| format_field      | bitfield          | 0,1,2  | u16      | See below.                                                                                       |
+| sx, sy, sz        | >= 0              | 0,1,2  | u32 x 3  | Size of array dimensions.                                                                        |
+| grid_size         | log2(grid_size)   | 0,1,2  | u8       | Stores log2 of grid dimensions in voxels.                                                        |
+| num_label_bytes   | Any.              | 0*,1,2 | u64      | Number of bytes of the labels section. v0: uint32 v1+: uint64                                    |
+| affine            | 4x4 matrix        | 2      | f32 x 16 | Stores 4x4 homogeneous affine transform in Fortran order little endian.                                        | 
+| crc               | Any.              | 1,2    | u16      | v1: CRC8 of format_field thru num_label_bytes using polynomial 0xe7 (implicit) and 0xFF initialization. v2: CRC16 of format_field thru num_label_bytes using polynomial 0xd175 (implicit) and 0xFF initialization. |
 
 
 Format Field (u16): DDSSCLLFGOOOOURR (each letter represents a bit, left is LSB)
@@ -272,7 +273,7 @@ OOOO: Nth-Order of Markov Chain (as an unsigned integer, typical values 0, or 3 
 U: if 0, unique labels are sorted, else, unsorted  
 R: Reserved  
 
-CRC8 only covers the header. It doesn't cover the magic number or format version since those are easily human correctable if needed.
+CRC only covers the header. It doesn't cover the magic number or format version since those are easily human correctable if needed.
 
 ### Flat Label Format
 

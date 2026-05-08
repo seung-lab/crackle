@@ -3,6 +3,8 @@
 
 #include "lib.hpp"
 #include "crc.hpp"
+
+#include <array>
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -20,6 +22,13 @@ enum CrackFormat {
 	PERMISSIBLE = 1
 };
 
+const std::array<float, 16> IDENTITY_MATRIX = {
+	1, 0, 0, 0,
+	0, 1, 0, 0,
+	0, 0, 1, 0,
+	0, 0, 0, 1
+};
+
 /* Header: 
  *   'crkl'            : magic number (4 bytes)
  *   format version    : unsigned integer (1 byte) 
@@ -34,10 +43,11 @@ enum CrackFormat {
  */
 struct CrackleHeader {
 public:
-	static constexpr size_t header_size{29};
+	static constexpr size_t header_size{94};
 	static constexpr size_t header_size_v0{24};
 	static constexpr size_t header_size_v1{29};
-	static constexpr uint8_t current_version{1}; 
+	static constexpr size_t header_size_v2{94};
+	static constexpr uint8_t current_version{2}; 
 
 	static constexpr char magic[4]{ 'c', 'r', 'k', 'l' }; 
 	uint8_t format_version; 
@@ -54,7 +64,8 @@ public:
 	bool fortran_order;
 	uint8_t markov_model_order;
 	bool is_sorted;
-	uint8_t crc;
+	uint16_t crc;
+	std::array<float, 16> affine;
 
 	CrackleHeader() :
 		format_version(1),
@@ -64,7 +75,8 @@ public:
 		data_width(1), stored_data_width(1),
 		sx(1), sy(1), sz(1), grid_size(2147483648),
 		num_label_bytes(0), fortran_order(true),
-		markov_model_order(0), is_sorted(1), crc(0xFF)
+		markov_model_order(0), is_sorted(1), crc(0xFFFF),
+		affine{}
 	{}
 
 	CrackleHeader(
@@ -80,7 +92,8 @@ public:
 		const bool _fortran_order,
 		const uint8_t _markov_model_order,
 		const bool _is_sorted,
-		const uint8_t _crc
+		const uint16_t _crc,
+		const std::array<float, 16>& _affine
 	) : 
 		format_version(_format_version),
 		label_format(_label_fmt),
@@ -92,7 +105,8 @@ public:
 		num_label_bytes(_num_label_bytes), 
 		fortran_order(_fortran_order), 
 		markov_model_order(_markov_model_order),
-		is_sorted(_is_sorted), crc(_crc)
+		is_sorted(_is_sorted), crc(_crc), affine(_affine)
+
 	{}
 
 	void assign_from_buffer(const unsigned char* buf) {
@@ -127,10 +141,20 @@ public:
 		is_sorted = !static_cast<bool>((format_bytes >> 13) & 0b1);
 
 		if (format_version == 0) {
+			affine = IDENTITY_MATRIX;
 			return; // no support for CRC
 		}
+		else if (format_version == 1) {
+			affine = IDENTITY_MATRIX;
+			crc = lib::ctoi<uint8_t>(buf, header_size_v1 - 1);
+		}
+		else {
+			for (int i = 0; i < 16; i++) {
+				affine[i] = lib::ctof(buf + 28 + i * 4);
+			}
 
-		crc = lib::ctoi<uint8_t>(buf, 28);
+			crc = lib::ctoi<uint16_t>(buf, header_size_v2 - 2);
+		}
 
 		// calculate crc only on values that impact data interpretation
 		// as lzip author Antonio Diaz Diaz noted, it's important to
@@ -142,7 +166,9 @@ public:
 		// We use CRC8 using a polynomial that is good up to 241 bits.
 		// CRC8 is used to reduce false positives vs CRC32 since the
 		// crc field can be damaged itself. 
-		const uint8_t computed_crc = crackle::crc::crc8(buf + 5, 28 - 5);
+		const uint8_t computed_crc = (format_version == 1)
+			? crackle::crc::crc8(buf + 5, header_bytes() - 5)
+			: crackle::crc::crc16(buf + 5, header_bytes() - 5)
 
 		if (computed_crc != crc) {
 			throw std::runtime_error("crackle: CRC8 check failed. Header may be corrupted. (~4.1% chance of a false positive for a single bit flip).");
@@ -168,6 +194,9 @@ public:
 	uint64_t header_bytes() const {
 		if (format_version == 0) {
 			return header_size_v0;
+		}
+		else if (format_version == 1) {
+			return header_size_v1;
 		}
 		else {
 			return header_size;
@@ -228,7 +257,7 @@ public:
 		// limit. it's better to write a more advanced version than
 		// crash I suppose.
 		if (num_label_bytes > std::numeric_limits<uint32_t>::max()) {
-			fmt_ver = 1;
+			fmt_ver = 2;
 		}
 
 		i += lib::itoc(fmt_ver, buf, i);
@@ -243,6 +272,12 @@ public:
 		}
 		else {
 			i += lib::itoc(static_cast<uint64_t>(num_label_bytes), buf, i);
+		}
+
+		if (fmt_ver == 2) {
+			for (int j = 0; j < 16; j++) {
+				i += lib::ftoc(affine[j], buf, i);
+			}
 		}
 
 		if (fmt_ver == 0) {
@@ -260,8 +295,14 @@ public:
 		// CRC8 is used to reduce false positives vs CRC32 since the
 		// crc field can be damaged itself.
 		uint64_t useful_offset = 5;
-		const uint8_t crc = crackle::crc::crc8(buf.data() + useful_offset, CrackleHeader::header_size - sizeof(uint8_t) - useful_offset);
-		i += lib::itoc(crc, buf, i);
+		if (fmt_ver == 1) {
+			const uint8_t crc = crackle::crc::crc8(buf.data() + useful_offset, CrackleHeader::header_size - sizeof(uint8_t) - useful_offset);
+			i += lib::itoc(crc, buf, i);
+		}
+		else {
+			const uint16_t crc = crackle::crc::crc16(buf.data() + useful_offset, CrackleHeader::header_size - sizeof(uint16_t) - useful_offset);
+			i += lib::itoc(crc, buf, i);
+		}
 
 		return i - idx;
 	}
