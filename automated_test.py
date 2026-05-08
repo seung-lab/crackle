@@ -709,6 +709,8 @@ def test_crc_check_one_bit_error(dtype):
   arr = np.random.randint(0, 255, size=[11,23,37], dtype=dtype)
   binary = bytearray(crackle.compress(arr))
 
+  fmt_version = binary[4]
+
   head = crackle.header(binary) # crashes if bad
   binary[0] = ord('z')
 
@@ -728,7 +730,7 @@ def test_crc_check_one_bit_error(dtype):
   except:
     pass
 
-  binary[4] = 1
+  binary[4] = fmt_version
   head = crackle.header(binary) # crashes if bad
 
   # Hamming Distance 1
