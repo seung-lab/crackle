@@ -298,7 +298,7 @@ public:
 		// crc field can be damaged itself.
 		uint64_t useful_offset = 5;
 		if (fmt_ver == 1) {
-			const uint8_t crc = crackle::crc::crc8(buf.data() + useful_offset, CrackleHeader::header_size - sizeof(uint8_t) - useful_offset);
+			const uint8_t crc = crackle::crc::crc8(buf.data() + useful_offset, CrackleHeader::header_size_v1 - sizeof(uint8_t) - useful_offset);
 			i += lib::itoc(crc, buf, i);
 		}
 		else {
