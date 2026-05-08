@@ -72,7 +72,7 @@ class CrackleHeader:
     signed:bool,
     markov_model_order:int,
     is_sorted:bool,
-    format_version:int = 1,
+    format_version:int = 2,
     crc:Optional[int] = None,
     affine:npt.NDArray[np.float32] = np.eye(4, dtype=np.float32),
   ):
