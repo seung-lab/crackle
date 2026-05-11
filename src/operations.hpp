@@ -139,7 +139,7 @@ void for_each_z_parallel(
 	}
 	parallel = std::min(parallel, static_cast<size_t>(szr));
 
-	ThreadPool pool(parallel);
+	crackle::ThreadPool pool(parallel);
 
 	std::vector<std::vector<uint8_t>> vcgs(parallel);
 	std::vector<std::vector<uint32_t>> ccls(parallel);
@@ -723,7 +723,7 @@ uint8_t* voxel_connectivity_graph(
 	}
 	parallel = std::min(parallel, static_cast<size_t>(szr));
 
-	ThreadPool pool(parallel);
+	crackle::ThreadPool pool(parallel);
 
 	for (uint64_t i = 0; i < crack_codes.size(); i++) {
 		pool.enqueue([&,i](size_t t){
@@ -1068,7 +1068,7 @@ bool array_equal(
 	}
 	parallel = std::min(parallel, sz);
 
-	ThreadPool pool(parallel);
+	crackle::ThreadPool pool(parallel);
 
 	std::vector<std::vector<uint8_t>> vcgs(parallel * 2);
 	std::vector<std::vector<uint32_t>> ccls(parallel * 2);

@@ -33,8 +33,8 @@ May 2019, December 2023, January 2025
   to combine that logic with a thread indicator.
 */
 
-#ifndef THREAD_POOL_H
-#define THREAD_POOL_H
+#ifndef CRACKLE_THREAD_POOL_HPP
+#define CRACKLE_THREAD_POOL_HPP
 
 #include <vector>
 #include <queue>
@@ -45,6 +45,8 @@ May 2019, December 2023, January 2025
 #include <future>
 #include <functional>
 #include <stdexcept>
+
+namespace crackle {
 
 class ThreadPool {
 public:
@@ -131,6 +133,6 @@ inline ThreadPool::~ThreadPool() {
     join();
 }
 
-
+};
 
 #endif

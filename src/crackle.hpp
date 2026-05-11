@@ -122,7 +122,7 @@ std::vector<unsigned char> compress_helper(
 	std::vector<unsigned char> stored_model; // only needed for markov
 	std::vector<std::vector<unsigned char>> crack_codes(crack_codepoints.size());
 
-	ThreadPool pool(parallel);
+	crackle::ThreadPool pool(parallel);
 
 	if (header.markov_model_order > 0) {
 		auto stats = crackle::markov::gather_statistics(
@@ -576,7 +576,7 @@ OUT* decompress(
 	}
 	parallel = std::min(parallel, static_cast<size_t>(szr));
 
-	ThreadPool pool(parallel);
+	crackle::ThreadPool pool(parallel);
 
 	std::vector<std::vector<uint8_t>> vcg_scratch(parallel);
 	std::vector<std::vector<uint32_t>> cc_labels_scratch(parallel);
@@ -911,7 +911,7 @@ std::vector<unsigned char> reencode_with_markov_order(
 	std::vector<unsigned char> stored_model; // only needed for markov
 	std::vector<std::vector<unsigned char>> crack_codes(crack_codepoints.size());
 
-	ThreadPool pool(parallel);
+	crackle::ThreadPool pool(parallel);
 
 	if (header.markov_model_order > 0) {
 		auto stats = crackle::markov::gather_statistics(
@@ -1086,7 +1086,7 @@ void remap(
 		parallel = std::min(parallel, static_cast<size_t>(unique.size() / step));
 		parallel = std::max(parallel, static_cast<size_t>(1));
 
-		ThreadPool pool(parallel);
+		crackle::ThreadPool pool(parallel);
 
 		for (uint64_t i = 0; i < unique.size(); i += step) {
 			pool.enqueue([&,i](size_t t) {
