@@ -48,7 +48,7 @@ std::tuple<
 		cc_labels_scratch[t].resize(sxy);
 	}
 
-	ThreadPool pool(parallel);
+	crackle::ThreadPool pool(parallel);
 
 	std::mutex mtx;
 	uint64_t N = 0;
