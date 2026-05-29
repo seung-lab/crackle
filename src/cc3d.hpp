@@ -185,7 +185,7 @@ OUT* color_connectivity_graph(
 
     for (int64_t y = 1; y < sy; y++) {
       int64_t loc = sx * y + sxy * z;
-      int64_t x = 0;
+      const int64_t loc_end = loc + sx;
 
       if (vcg[loc] & 0b1000) {
         out_labels[loc] = out_labels[loc+C];
@@ -199,9 +199,8 @@ OUT* color_connectivity_graph(
       }
 
       COMPLEX:
-        x++;
         loc++;
-        if (x >= sx) {
+        if (loc >= loc_end) {
           continue;
         }
 
@@ -228,9 +227,8 @@ OUT* color_connectivity_graph(
         }
 
       SIMPLE:
-        x++;
         loc++;
-        if (x >= sx) {
+        if (loc >= loc_end) {
           continue;
         }
 
@@ -306,7 +304,7 @@ OUT* connected_components2d_4(
 
     for (int64_t y = 1; y < sy; y++) {
       loc = sx * y + sxy * z;
-      int64_t x = 0;
+      const int64_t loc_end = loc + sx;
 
       if (in_labels[loc] == in_labels[loc+C]) {
         out_labels[loc] = out_labels[loc+C];
@@ -320,9 +318,8 @@ OUT* connected_components2d_4(
       }
 
       COMPLEX:
-        x++;
         loc++;
-        if (x >= sx) {
+        if (loc >= loc_end) {
           continue;
         }
 
@@ -346,9 +343,8 @@ OUT* connected_components2d_4(
         }
 
       SIMPLE:
-        x++;
         loc++;
-        if (x >= sx) {
+        if (loc >= loc_end) {
           continue;
         }
 
