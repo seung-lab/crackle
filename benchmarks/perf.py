@@ -43,10 +43,19 @@ def run_sample(labels, shape, N, parallel):
 
 N = 3
 shape = (256,256,64)
-parallel = 1
+parallel = 0
+
+print("parallel:", parallel)
+
+print("connectomics.npy (full)")
+labels = compresso.load("benchmarks/connectomics.npy.cpso.gz")
+run_sample(labels, (512,512,512), N, parallel)
+
+print("WATERSHED CUTOUTS (ws.npy, full)")
+labels = compresso.load("benchmarks/ws.npy.cpso.gz")
+run_sample(labels, (512,512,512), N, parallel)
 
 print("shape:", shape)
-print("parallel:", parallel)
 
 print("PINKY40 CUTOUTS (connectomics.npy)")
 labels = compresso.load("benchmarks/connectomics.npy.cpso.gz")
