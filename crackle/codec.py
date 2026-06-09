@@ -777,6 +777,7 @@ def point_cloud(
   parallel:int = 0,
   z_start:int = -1,
   z_end:int = -1,
+  skip_background:bool = True,
 ) -> Union[np.ndarray, Dict[int,np.ndarray]]:
   """
   Extract surface point clouds from the image without fully
@@ -826,7 +827,7 @@ def point_cloud(
   if parallel <= 0:
     parallel = mp.cpu_count()
 
-  ptc = fastcrackle.point_cloud(binary, z_start, z_end, label, parallel)
+  ptc = fastcrackle.point_cloud(binary, z_start, z_end, label, skip_background, parallel)
   
   if len(ptc) == 0:
     if label:

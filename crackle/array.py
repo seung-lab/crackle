@@ -124,13 +124,15 @@ class CrackleArray:
   def point_cloud(
     self, 
     label:Optional[int] = None,
+    skip_background:bool = True,
     z_start:int = -1,
     z_end:int = -1,
   ) -> np.ndarray:
     return point_cloud(
       self.binary, label, 
+      skip_background=skip_background,
       z_start=z_start, z_end=z_end, 
-      parallel=self.parallel
+      parallel=self.parallel,
     )
 
   def connected_components(
