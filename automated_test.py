@@ -663,7 +663,7 @@ def test_point_cloud():
   ], dtype=np.uint32, order="F")
 
   binary = crackle.compress(input_arr)
-  ptc = crackle.point_cloud(binary, 0)[:,:2]
+  ptc = crackle.point_cloud(binary, 0, skip_background=False)[:,:2]
 
   sx, sy = input_arr.shape
 
