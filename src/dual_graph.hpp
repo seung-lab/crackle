@@ -106,13 +106,13 @@ uint8_t compute_next_move(
 			else TRY_DOWN
 			else TRY_LEFT
 		}
-		if (last_move == VCGDirectionCode::LEFT) {
+		else if (last_move == VCGDirectionCode::LEFT) {
 			TRY_DOWN
 			else TRY_LEFT
 			else TRY_UP
 			else TRY_RIGHT
 		}
-		if (last_move == VCGDirectionCode::UP) {
+		else if (last_move == VCGDirectionCode::UP) {
 			TRY_LEFT
 			else TRY_UP
 			else TRY_RIGHT
