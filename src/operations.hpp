@@ -190,6 +190,7 @@ point_cloud(
 	int64_t z_start = -1,
 	int64_t z_end = -1,
 	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
+	const bool skip_background = false,
 	size_t parallel = 1
 ) {
 	const CrackleHeader header = get_header(buffer, num_bytes);
@@ -232,7 +233,11 @@ point_cloud(
 			for (auto ptc_ccl : ptc_ccls) {
 				uint64_t current_label = label_map[label_i];
 				
-				if (selective && !labels_set.contains(current_label)) {
+				if (skip_background && current_label == 0) {
+					label_i++;
+					continue;
+				}
+				else if (selective && !labels_set.contains(current_label)) {
 					label_i++;
 					continue;
 				}
@@ -262,6 +267,7 @@ auto point_cloud(
 	int64_t z_start = -1,
 	int64_t z_end = -1,
 	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
+	const bool skip_background = false,
 	size_t parallel = 1
 ) {
 	CrackleHeader header(buffer);
@@ -269,25 +275,29 @@ auto point_cloud(
 	if (header.data_width == 1) {
 		return point_cloud<uint8_t>(
 			buffer, num_bytes,
-			z_start, z_end, labels, parallel
+			z_start, z_end,
+			labels, skip_background, parallel
 		);
 	}
 	else if (header.data_width == 2) {
 		return point_cloud<uint16_t>(
 			buffer, num_bytes,
-			z_start, z_end, labels, parallel
+			z_start, z_end,
+			labels, skip_background, parallel
 		);
 	}
 	else if (header.data_width == 4) {
 		return point_cloud<uint32_t>(
 			buffer, num_bytes,
-			z_start, z_end, labels, parallel
+			z_start, z_end,
+			labels, skip_background, parallel
 		);
 	}
 	else {
 		return point_cloud<uint64_t>(
 			buffer, num_bytes,
-			z_start, z_end, labels, parallel
+			z_start, z_end,
+			labels, skip_background, parallel
 		);
 	}
 }
@@ -297,12 +307,14 @@ auto point_cloud(
 	const int64_t z_start = -1, 
 	const int64_t z_end = -1,
 	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
+	const bool skip_background = false,
 	size_t parallel = 1
 ) {
 	return point_cloud(
 		buffer.data(),
 		buffer.size(),
-		z_start, z_end, labels, parallel
+		z_start, z_end, 
+		labels, skip_background, parallel
 	);
 }
 
