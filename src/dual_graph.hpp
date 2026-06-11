@@ -5,10 +5,6 @@
 #include <cstdint>
 #include <algorithm>
 
-#include "builtins.hpp"
-#include "cc3d.hpp"
-#include "libdivide.hpp"
-
 namespace crackle {
 namespace dual_graph {
 
