@@ -72,6 +72,30 @@ def test_compress_decompress_z_range(allow_pins):
   recovered = arr[2:100,5:83,-1]
   assert np.all(cutout[2:100,5:83,-1] == recovered)
 
+def test_labels_for_z_range():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+
+  binary = crackle.compress(labels)
+  arr = crackle.CrackleArray(binary)
+
+  uniq = arr.labels()
+  np_uniq = np.unique(labels)
+
+  assert np.all(uniq == np_uniq)
+
+  z0_np_uniq = np.unique(labels[:,:,0])
+  z0_uniq = arr.labels(z=0)
+
+  assert np.all(z0_np_uniq == z0_uniq)
+
+  z511_np_uniq = np.unique(labels[:,:,511])
+  z511_uniq = arr.labels(z=511)
+  assert np.all(z511_np_uniq == z511_uniq)
+
+  z_section_np = np.unique(labels[:,:,93:302])
+  z_section = arr.labels(z=slice(93,302))
+  assert np.all(z_section == z_section_np)
+
 @pytest.mark.parametrize('label', [9999999999, 63408621, 63408621, 28792756])
 def test_decompress_binary_label_flat(label):
   labels = compresso.load("connectomics.npy.cpso.gz")
