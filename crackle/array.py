@@ -66,7 +66,7 @@ class CrackleArray:
   def dtype(self):
     return header(self.binary).dtype
 
-  def labels(self, z:Optional[int|slice] = None):
+  def labels(self, z:Optional[Union[int,slice]] = None):
     if z is not None:
       if isinstance(z, int):
         return labels_for_z_range(self.binary, z, z+1)
