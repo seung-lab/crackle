@@ -3,7 +3,8 @@ from typing import Optional, Union, Any, Dict, Literal, Iterator
 from .headers import CrackleHeader, LabelFormat
 from .codec import (
   compress, decompress, decompress_range, 
-  labels, nbytes, contains, contains_range,
+  labels, labels_for_z_range,  nbytes,
+  contains, contains_range,
   header, crack_codes, num_labels,
   components, point_cloud, voxel_counts,
   centroids, bounding_boxes, each, cache_meta,
@@ -65,8 +66,14 @@ class CrackleArray:
   def dtype(self):
     return header(self.binary).dtype
 
-  def labels(self):
-    return labels(self.binary)
+  def labels(self, z:Optional[int|slice] = None):
+    if z is not None:
+      if isinstance(z, int):
+        return labels_for_z_range(self.binary, z, z+1)
+      else:
+        return labels_for_z_range(self.binary, z.start, z.stop)
+    else:
+      return labels(self.binary)
 
   def num_labels(self) -> int:
     return num_labels(self.binary)
