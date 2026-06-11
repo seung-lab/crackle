@@ -31,6 +31,8 @@ binary_image = crackle.decompress(binary, label=1241)
 
 # get unique labels without decompressing
 uniq = crackle.labels(binary) 
+# get unique labels for a z-range
+uniq = crackle.labels_for_z_range(binary, 5, 10)
 # get num labels without decompressing
 N = crackle.num_labels(binary) 
 # get min and max without decompressing
