@@ -71,9 +71,11 @@ def labels_for_z_range(binary:bytes, z_start:int, z_end:int) -> np.ndarray:
   end_offset = components_per_grid[z_end]
 
   section_labels = cc_map[start_offset:end_offset]
+  section_labels = fastremap.unique(section_labels)
   section_labels = uniq[section_labels]
+  section_labels.sort()
 
-  return fastremap.unique(section_labels).astype(head.dtype, copy=False)
+  return section_labels.astype(head.dtype, copy=False)
 
 def num_labels(binary:bytes) -> int:
   """Returns the number of unique labels."""
