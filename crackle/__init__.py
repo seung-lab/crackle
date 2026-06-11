@@ -39,7 +39,7 @@ Date: December 2022 - October 2025
 """
 from .array import CrackleArray, CrackleRemoteArray
 from .codec import (
-	compress, decompress, labels,
+	compress, decompress, labels, labels_for_z_range,
 	nbytes, components, component_lengths,
 	header, contains, contains_range, crack_codes, num_labels,
 	point_cloud, voxel_counts, centroids, bounding_boxes,

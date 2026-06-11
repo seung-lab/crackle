@@ -49,6 +49,32 @@ def labels(binary:bytes) -> np.ndarray:
     labels.sort()
     return labels.astype(head.dtype, copy=False)
 
+def labels_for_z_range(binary:bytes, z_start:int, z_end:int) -> np.ndarray:
+  """Get the labels for a given z-slice."""
+  head = header(binary)
+  if head.voxels() == 0:
+    return np.zeros((0,), dtype=head.dtype)
+
+  if head.label_format != LabelFormat.FLAT:
+    raise FormatError("Not implemented for pins.")
+  
+  parts = decode_flat_labels(head, binary)
+  num_labels = parts["num_labels"]
+  uniq = parts["unique"]
+  components_per_grid = parts["components_per_grid"]
+  cc_map = parts["cc_map"]
+
+  components_per_grid = np.concatenate(([ 0 ], components_per_grid))
+  components_per_grid = np.cumsum(components_per_grid)
+
+  start_offset = components_per_grid[z_start]
+  end_offset = components_per_grid[z_end]
+
+  section_labels = cc_map[start_offset:end_offset]
+  section_labels = uniq[section_labels]
+
+  return fastremap.unique(section_labels).astype(head.dtype, copy=False)
+
 def num_labels(binary:bytes) -> int:
   """Returns the number of unique labels."""
   head = header(binary)
