@@ -73,7 +73,9 @@ def labels_for_z_range(binary:bytes, z_start:int, z_end:int) -> np.ndarray:
   section_labels = cc_map[start_offset:end_offset]
   section_labels = fastremap.unique(section_labels)
   section_labels = uniq[section_labels]
-  section_labels.sort()
+
+  if not head.is_sorted:
+    section_labels.sort()
 
   return section_labels.astype(head.dtype, copy=False)
 
