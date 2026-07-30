@@ -58,6 +58,7 @@ from .operations import (
 	voxel_connectivity_graph,
 	contacts,
 	array_equal,
+	mode_pooling_2x2x1,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload, bload, save_numpy

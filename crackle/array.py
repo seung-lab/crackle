@@ -21,6 +21,7 @@ from .operations import (
   voxel_connectivity_graph,
   contacts,
   array_equal,
+  mode_pooling_2x2x1,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -161,6 +162,9 @@ class CrackleArray:
     if return_mapping:
       return (CrackleArray(out[0]), out[1])
     return CrackleArray(out)
+
+  def mode_pooling_2x2x1(self) -> "CrackleArray":
+    return CrackleArray(mode_pooling_2x2x1(self.binary), parallel=self.parallel)
 
   def voxel_connectivity_graph(
     self, connectivity:Literal[4,6] = 4,
