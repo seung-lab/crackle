@@ -1222,8 +1222,8 @@ mode_pooling_2x2x1(
 	const uint64_t sx = header.sx;
 	const uint64_t sy = header.sy;
 	
-	const uint64_t osx = ((header.sx + 1) >> 1);
-	const uint64_t osy = ((header.sy + 1) >> 1);
+	const uint64_t osx = ((sx + 1) >> 1);
+	const uint64_t osy = ((sy + 1) >> 1);
 	const uint64_t osxy = osx * osy;
 
 	const size_t xodd = (sx & 0x01);
@@ -1255,24 +1255,24 @@ mode_pooling_2x2x1(
 			  uint64_t ox = 0;
 
 			  for (uint64_t x = 0; x < sx - xodd; x += 2) {
-			    const uint32_t a = ccl[idx(x,y)];
-			    const uint32_t b = ccl[idx(x+1,y)];
-			    const uint32_t c = ccl[idx(x,y+1)];
-			    const uint32_t d = ccl[idx(x+1,y+1)];
+			    const LABEL a = label_map[ccl[idx(x,y)]];
+			    const LABEL b = label_map[ccl[idx(x+1,y)]];
+			    const LABEL c = label_map[ccl[idx(x,y+1)]];
+			    const LABEL d = label_map[ccl[idx(x+1,y+1)]];
 
 			    uint64_t out = oidx(ox, oy);
 
 			    if (a == b) {
-			      oimg[out] = label_map[a];
+			      oimg[out] = a;
 			    }
 			    else if (a == c) {
-			      oimg[out] = label_map[a];
+			      oimg[out] = a;
 			    }
 			    else if (b == c) {
-			      oimg[out] = label_map[b];
+			      oimg[out] = b;
 			    }
 			    else {
-			      oimg[out] = label_map[d];
+			      oimg[out] = d;
 			    }
 
 			    ox++;
