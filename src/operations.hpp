@@ -1197,6 +1197,160 @@ bool array_equal(
 	);
 }
 
+
+template <typename LABEL>
+std::vector<std::vector<unsigned char>>
+mode_pooling_2x2x1(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	const CrackleHeader header = get_header(buffer, num_bytes);
+	const uint64_t voxels = get_voxels(header, z_start, z_end);
+	const int64_t szr = get_szr(header, z_start, z_end);
+
+	if (voxels == 0) {
+		return std::vector<std::vector<unsigned char>>();
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+
+	std::vector<std::vector<unsigned char>> ds_binaries(szr);
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+	
+	const uint64_t osx = ((sx + 1) >> 1);
+	const uint64_t osy = ((sy + 1) >> 1);
+	const uint64_t osxy = osx * osy;
+
+	const size_t xodd = (sx & 0x01);
+	const size_t yodd = (sy & 0x01);
+
+	for_each_z_parallel<LABEL>(
+		buffer, num_bytes,
+		z_start, z_end, parallel,
+		[&](
+			std::vector<uint8_t>& vcg, 
+			std::vector<uint32_t>& ccl, 
+			uint64_t N,
+			std::vector<LABEL>& label_map,
+			int64_t z
+		){
+			std::vector<LABEL> oimg(osxy);
+
+			auto idx = [&](size_t x, size_t y) {
+				return x + sx * y;
+			};
+
+			auto oidx = [&](size_t ox, size_t oy) {
+				return ox + osx * oy;
+			};
+
+			uint64_t oy = 0;
+
+			for (uint64_t y = 0; y < sy - yodd; y += 2) {
+			  uint64_t ox = 0;
+
+			  for (uint64_t x = 0; x < sx - xodd; x += 2) {
+			    const LABEL a = label_map[ccl[idx(x,y)]];
+			    const LABEL b = label_map[ccl[idx(x+1,y)]];
+			    const LABEL c = label_map[ccl[idx(x,y+1)]];
+			    const LABEL d = label_map[ccl[idx(x+1,y+1)]];
+
+			    uint64_t out = oidx(ox, oy);
+
+			    if (a == b) {
+			      oimg[out] = a;
+			    }
+			    else if (a == c) {
+			      oimg[out] = a;
+			    }
+			    else if (b == c) {
+			      oimg[out] = b;
+			    }
+			    else {
+			      oimg[out] = d;
+			    }
+
+			    ox++;
+			  }
+			  if (xodd) {
+			    uint64_t out = oidx(osx - 1, oy);
+			    oimg[out] = label_map[ccl[idx(sx - 1, y)]];
+			  }
+			  oy++;
+			}
+
+			if (yodd) {
+			  for (uint64_t x = 0; x < osx - xodd; x++) {
+			    oimg[oidx(x, osy - 1)] = label_map[ccl[idx(2*x, sy - 1)]];
+			  }
+			  if (xodd) {
+			    oimg[oidx(osx - 1, osy - 1)] = label_map[ccl[idx(sx - 1, sy - 1)]];
+			  }
+			}
+
+			ds_binaries[z-z_start] = crackle::compress<LABEL>(
+				oimg.data(),
+				osx, osy, 1
+			);
+		}
+	);
+
+	return ds_binaries;
+}
+
+auto mode_pooling_2x2x1(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.data_width == 1) {
+		return mode_pooling_2x2x1<uint8_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else if (header.data_width == 2) {
+		return mode_pooling_2x2x1<uint16_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else if (header.data_width == 4) {
+		return mode_pooling_2x2x1<uint32_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else {
+		return mode_pooling_2x2x1<uint64_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+}
+
+auto mode_pooling_2x2x1(
+	const std::span<const unsigned char>& buffer,
+	const int64_t z_start = -1, 
+	const int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	return mode_pooling_2x2x1(
+		buffer.data(),
+		buffer.size(),
+		z_start, z_end, parallel
+	);
+}
+
 };
 };
 

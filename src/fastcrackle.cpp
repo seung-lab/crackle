@@ -617,6 +617,26 @@ bool array_equal(
 	);
 }
 
+py::list mode_pooling_2x2x1(
+	const py::buffer buffer,
+	const int64_t z_start = 0, int64_t z_end = -1,
+	const size_t parallel = 1
+) {
+	py::buffer_info info = buffer.request();
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+
+	std::vector<std::vector<unsigned char>> ds_binaries = crackle::operations::mode_pooling_2x2x1(
+		data, info.size, z_start, z_end, parallel
+	);
+	py::list result;
+	for (const auto& bin : ds_binaries) {
+		result.append(py::bytes(reinterpret_cast<const char*>(bin.data()), bin.size()));
+	}
+	return result;
+}
 
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
@@ -639,6 +659,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("voxel_connectivity_graph", &voxel_connectivity_graph, "Extract the voxel connectivity graph from the image.");
 	m.def("contacts", &contacts, "Find the contact area between pairs of regions.");
 	m.def("array_equal", &array_equal, "Check if two crackle arrays are equal regardless of encoding.");
+	m.def("mode_pooling_2x2x1", &mode_pooling_2x2x1, "Return an array of downsampled crackle binaries in z order.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())
