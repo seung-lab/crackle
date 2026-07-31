@@ -113,6 +113,9 @@ ccl_binary = crackle.connected_components(
   return_mapping = False, # can also return { cc label: original label }
 )
 
+# Create a 2x2 downsampled crackle volume
+downsampled_binary = crackle.mode_pooling_2x2x1(binary)
+
 # building big arrays with low memory
 binary = crackle.zeros([5000,5000,5000], dtype=np.uint64, order='F')
 
@@ -143,6 +146,7 @@ Crackle is a compression codec for 3D dense segmentation (labeled) images. The a
 - Extract unique labels
 - Remap labels
 - Decode by Z-Range
+- Computing slice by slice multithreaded
 
 Crackle is inspired by Compresso \[1\]. Compresso innovated by separating labels from boundary structures. There were conceptually four (but really five) elements in the format: header, labels, bit packed and RLE encoded binary image boundaries, and indeterminate boundary locations. 
 
