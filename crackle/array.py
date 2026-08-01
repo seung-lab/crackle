@@ -164,7 +164,8 @@ class CrackleArray:
     return CrackleArray(out)
 
   def mode_pooling_2x2x1(self) -> "CrackleArray":
-    return CrackleArray(mode_pooling_2x2x1(self.binary), parallel=self.parallel)
+    ds_binary = mode_pooling_2x2x1(self.binary, parallel=self.parallel)
+    return CrackleArray(ds_binary, parallel=self.parallel)
 
   def voxel_connectivity_graph(
     self, connectivity:Literal[4,6] = 4,
