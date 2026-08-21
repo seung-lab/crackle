@@ -58,6 +58,35 @@ void itoc_push_back(uint32_t x, std::vector<unsigned char> &buf) {
 }
 
 template <typename T>
+void itocd_insert(
+	std::vector<unsigned char> &buf, 
+	const std::span<T>& append,
+	const int byte_width
+) {
+	buf.reserve(buf.size() + append.size() * byte_width);
+
+	for (uint64_t i = 0; i < append.size(); i++) {
+		uint64_t x = append[i];
+
+		buf.push_back(x & 0xFF);
+		
+		if (byte_width >= 2) {
+			buf.push_back((x >> 8) & 0xFF);
+		}
+		if (byte_width >= 4) {
+			buf.push_back((x >> 16) & 0xFF);
+			buf.push_back((x >> 24) & 0xFF);
+		}
+		if (byte_width >= 8) {
+			buf.push_back((x >> 32) & 0xFF);
+			buf.push_back((x >> 40) & 0xFF);
+			buf.push_back((x >> 48) & 0xFF);
+			buf.push_back((x >> 56) & 0xFF);
+		}
+	}
+}
+
+template <typename T>
 T ctoi(const unsigned char* buf, const uint64_t idx = 0);
 
 template <>

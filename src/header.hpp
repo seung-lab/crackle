@@ -183,6 +183,10 @@ public:
 		}		
 	}
 
+	uint64_t component_width() const {
+		return crackle::lib::compute_byte_width(sx * sy);
+	}
+
 	uint64_t voxels() const {
 		return static_cast<uint64_t>(sx) * static_cast<uint64_t>(sy) * static_cast<uint64_t>(sz);
 	}

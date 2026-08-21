@@ -995,6 +995,18 @@ auto reencode_with_markov_order(
 	);
 }
 
+auto reencode_with_markov_order(
+	const std::span<unsigned char> &buffer,
+	const int markov_model_order,
+	size_t parallel = 1
+) {
+	return reencode_with_markov_order(
+		buffer.data(),
+		buffer.size(),
+		markov_model_order, parallel
+	);
+}
+
 // MAPTYPE b/c maybe someone will want to use the C++ interface and use 
 // std::unordered_map or a wrapper around py::dict directly to avoid copies.
 template <typename STORED_LABEL, typename MAPTYPE = robin_hood::unordered_flat_map<uint64_t,uint64_t>>
