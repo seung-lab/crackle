@@ -22,6 +22,8 @@ from .operations import (
   contacts,
   array_equal,
   mode_pooling_2x2x1,
+  asfortranarray,
+  ascontiguousarray,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -60,8 +62,14 @@ class CrackleArray:
   def nbytes(self) -> int:
     return nbytes(self.binary)
 
-  def copy(self):
+  def copy(self) -> "CrackleArray":
     return CrackleArray(self.binary)
+
+  def asfortranarray(self) -> "CrackleArray":
+    return CrackleArray(asfortranarray(self.binary))
+
+  def ascontiguousarray(self) -> "CrackleArray":
+    return CrackleArray(ascontiguousarray(self.binary))
 
   @property
   def dtype(self):
