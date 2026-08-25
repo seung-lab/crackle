@@ -1050,6 +1050,11 @@ def component_map(
 
   return fastcrackle.component_map(component_binary, parent_binary, parallel)
 
-def edge_labels(binary:bytes, parallel:int = 0) -> set[int]:
+def edge_labels(binary:Union[bytes, "CrackleArray"], parallel:int = 0) -> set[int]:
+  from .array import CrackleArray
+
+  if isinstance(binary, CrackleArray):
+    binary = binary.binary
+
   return fastcrackle.edge_labels(binary, parallel)
 
