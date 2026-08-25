@@ -24,6 +24,7 @@ from .operations import (
   mode_pooling_2x2x1,
   asfortranarray,
   ascontiguousarray,
+  edge_labels,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -226,6 +227,9 @@ class CrackleArray:
 
   def contains_range(self, low:int, high:int) -> npt.NDArray[np.integer]:
     return contains_range(self.binary, low, high)
+
+  def edge_labels(self) -> set[int]:
+    return edge_labels(self.binary, parallel=self.parallel)
 
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):
