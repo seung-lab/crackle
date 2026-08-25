@@ -638,6 +638,35 @@ py::list mode_pooling_2x2x1(
 	return result;
 }
 
+py::dict component_map(
+	const py::buffer buffer1, 
+	const py::buffer buffer2,
+	const size_t parallel = 1
+) {
+	py::buffer_info info1 = buffer1.request();
+	py::buffer_info info2 = buffer2.request();
+
+	if (info1.ndim != 1 || info2.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	uint8_t* data1 = static_cast<uint8_t*>(info1.ptr);
+	uint8_t* data2 = static_cast<uint8_t*>(info2.ptr);
+
+	auto cpp_mapping = crackle::operations::component_map(
+		data1, info1.size,
+		data2, info2.size,
+		parallel
+	);
+
+	py::dict py_dict;
+	for (const auto& [key, val] : cpp_mapping) {
+		py_dict[py::int_(key)] = py::int_(val);
+	}
+
+	return py_dict;
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -660,6 +689,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("contacts", &contacts, "Find the contact area between pairs of regions.");
 	m.def("array_equal", &array_equal, "Check if two crackle arrays are equal regardless of encoding.");
 	m.def("mode_pooling_2x2x1", &mode_pooling_2x2x1, "Return an array of downsampled crackle binaries in z order.");
+	m.def("component_map", &component_map, "Map child components to parent components (analogue of fastremap.component_map).");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())

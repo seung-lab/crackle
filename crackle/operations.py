@@ -1024,3 +1024,23 @@ def mode_pooling_2x2x1(binary:bytes, parallel:int = 0) -> bytes:
   """Downsample a crackle segmentation 2x2x1 using mode pooling."""
   binaries = fastcrackle.mode_pooling_2x2x1(binary, 0, -1, parallel)
   return zstack(binaries)
+
+def component_map(
+  component_binary:bytes,
+  parent_binary:bytes,
+  parallel:int = 0,
+) -> dict[int,int]:
+  """
+  Given two sets of images that have a surjective mapping between their labels,
+  generate a dictionary for that mapping.
+
+  For example, generate a mapping from connected components of labels to their
+  parent labels.
+
+  e.g. component_map([ 1, 2, 3, 4 ], [ 5, 5, 6, 7 ])
+    returns { 1: 5, 2: 5, 3: 6, 4: 7 }
+
+  Returns: { $COMPONENT_LABEL: $PARENT_LABEL }
+  """
+  return fastcrackle.component_map(component_binary, parent_binary, parallel)
+

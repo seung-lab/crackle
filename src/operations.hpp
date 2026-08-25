@@ -1197,6 +1197,157 @@ bool array_equal(
 	);
 }
 
+std::unordered_map<uint64_t,uint64_t>
+component_map(
+	const unsigned char* buffer1,
+	const size_t num_bytes1,
+	const unsigned char* buffer2,
+	const size_t num_bytes2,
+	size_t parallel = 1
+) {
+	const CrackleHeader header1 = get_header(buffer1, num_bytes1);
+	const CrackleHeader header2 = get_header(buffer2, num_bytes2);
+
+	const uint64_t voxels1 = get_voxels(header1, 0, -1);
+	const uint64_t voxels2 = get_voxels(header2, 0, -1);
+
+	if (
+		header1.sx != header2.sx 
+		|| header1.sy != header2.sy 
+		|| header1.sz != header2.sz
+	) {
+		throw std::invalid_argument("The shapes of the input arrays must match.");
+	}
+
+	if (voxels1 == 0 || voxels2 == 0) {
+		return {};
+	}
+
+	const size_t sx = header1.sx;
+	const size_t sy = header1.sy;
+	const size_t sz = header1.sz;
+
+	std::span<const unsigned char> binary1(buffer1, num_bytes1);
+	std::span<const unsigned char> binary2(buffer2, num_bytes2);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model1 = decode_markov_model(header1, binary1);
+	std::vector<std::vector<uint8_t>> markov_model2 = decode_markov_model(header2, binary2);
+	
+	auto crack_codes1 = get_crack_codes(header1, binary1, 0, sz);
+	auto crack_codes2 = get_crack_codes(header2, binary2, 0, sz);
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, sz);
+
+	ThreadPool pool(parallel);
+
+	std::vector<std::vector<uint8_t>> vcgs(parallel * 2);
+	std::vector<std::vector<uint32_t>> ccls(parallel * 2);
+
+	for (size_t t = 0; t < parallel * 2; t++) {
+		vcgs[t].resize(header1.sx * header1.sy);
+		ccls[t].resize(header1.sx * header1.sy);
+	}
+
+	std::mutex mtx;
+	
+	const uint64_t num_component_labels = crackle::labels::num_labels(binary1);
+
+	std::unordered_map<uint64_t, uint64_t> mapping;
+	mapping.reserve(num_component_labels);
+
+	for (size_t z = 0; z < sz; z++) {
+		pool.enqueue([&,z](size_t t){
+			t *= 2;
+
+			std::vector<uint8_t>& vcg1 = vcgs[t];
+			std::vector<uint8_t>& vcg2 = vcgs[t+1];
+			
+			std::vector<uint32_t>& ccl1 = ccls[t];
+			std::vector<uint32_t>& ccl2 = ccls[t+1];
+
+			auto& crack_code1 = crack_codes1[z];
+			auto& crack_code2 = crack_codes2[z];
+
+			crack_code_to_vcg(
+				/*code=*/crack_code1,
+				/*sx=*/sx, /*sy=*/sy,
+				/*permissible=*/(header1.crack_format == CrackFormat::PERMISSIBLE),
+				/*markov_model=*/markov_model1,
+				/*slice_edges=*/vcg1.data()
+			);
+
+			crack_code_to_vcg(
+				/*code=*/crack_code2,
+				/*sx=*/sx, /*sy=*/sy,
+				/*permissible=*/(header2.crack_format == CrackFormat::PERMISSIBLE),
+				/*markov_model=*/markov_model2,
+				/*slice_edges=*/vcg2.data()
+			);
+
+			uint64_t N1 = 0;
+			crackle::cc3d::color_connectivity_graph<uint32_t>(
+				vcg1, sx, sy, 1, ccl1.data(), N1
+			);
+
+			uint64_t N2 = 0;
+			crackle::cc3d::color_connectivity_graph<uint32_t>(
+				vcg2, sx, sy, 1, ccl2.data(), N2
+			);
+
+			std::vector<uint64_t> label_map1 = decode_label_map<uint64_t>(
+				header1, binary1, ccl1.data(), N1, z, z+1
+			);
+			std::vector<uint64_t> label_map2 = decode_label_map<uint64_t>(
+				header2, binary2, ccl2.data(), N2, z, z+1
+			);
+
+			std::unordered_map<uint64_t, uint64_t> submap;
+
+			uint64_t last_label = label_map1[ccl1[0]];
+			submap[last_label] = label_map2[ccl2[0]];
+			for (size_t y = 0; y < sy; y++) {
+				for (size_t x = 0; x < sx; x++) {
+					const int64_t loc = x + sx * y;
+					const uint64_t child_label = label_map1[ccl1[loc]];
+					const uint64_t parent_label = label_map1[ccl2[loc]];
+
+					if (last_label == child_label) {
+						continue;
+					}
+					else {
+						submap[child_label] = parent_label;
+						last_label = child_label;
+					}
+				}
+			}
+
+			std::unique_lock<std::mutex> lock(mtx);
+			mapping.merge(submap);
+		});
+	}
+
+	pool.join();
+
+	return mapping;
+}
+
+auto component_map(
+	const std::span<const unsigned char>& buffer1,
+	const std::span<const unsigned char>& buffer2,
+	const int parallel = 1
+) {
+	return component_map(
+		buffer1.data(),
+		buffer1.size(),
+		buffer2.data(),
+		buffer2.size(),
+		parallel
+	);
+}
 
 template <typename LABEL>
 std::vector<std::vector<unsigned char>>
@@ -1350,6 +1501,9 @@ auto mode_pooling_2x2x1(
 		z_start, z_end, parallel
 	);
 }
+
+
+
 
 };
 };
