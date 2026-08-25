@@ -860,7 +860,7 @@ def connected_components(
   binary:bytes, 
   connectivity:Literal[6,26] = 26,
   binary_image:bool = False,
-  memory_target:int = int(100e6),
+  memory_target:int = int(3.5e9),
   progress:bool = False,
   return_mapping:bool = False,
 ) -> Union["CrackleArray", tuple["CrackleArray", dict[int,int]]]:
