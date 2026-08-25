@@ -43,7 +43,7 @@ from .codec import (
 	nbytes, components, component_lengths,
 	header, contains, contains_range, crack_codes, num_labels,
 	point_cloud, voxel_counts, centroids, bounding_boxes,
-	each, cache_meta,
+	each, cache_meta, reencode,
 )
 from .operations import (
 	astype, ascontiguousarray, asfortranarray,
@@ -66,7 +66,15 @@ from .util import save, load, aload, bload, save_numpy
 
 def compressa(*args, **kwargs) -> CrackleArray:
   """compress but return the result as a CrackleArray."""
-  binary = compress(*args, **kwargs)
+  if len(args) and isinstance(args[0], CrackleArray):
+  	binary = reencode(
+  		args[0].binary,
+  		markov_model_order=kwargs.get("markov_model_order", 0),
+  		parallel=kwargs.get("parallel", 0),
+  	)
+  else:
+  	binary = compress(*args, **kwargs)
+
   return CrackleArray(binary, parallel=kwargs.get("parallel", 0))
 
 
