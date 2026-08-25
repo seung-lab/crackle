@@ -1503,7 +1503,143 @@ auto mode_pooling_2x2x1(
 }
 
 
+template <typename LABEL>
+robin_hood::unordered_flat_set<uint64_t>
+edge_labels(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	const CrackleHeader header = get_header(buffer, num_bytes);
+	const uint64_t voxels = get_voxels(header, z_start, z_end);
+	const int64_t szr = get_szr(header, z_start, z_end);
 
+	if (voxels == 0) {
+		return {};
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+	uint64_t num_labels = crackle::labels::num_labels(binary);
+	robin_hood::unordered_flat_set<uint64_t> boundary_labels;
+	boundary_labels.reserve(num_labels / (header.sz / szr));
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+	const uint64_t sz = header.sz;
+	const uint64_t sxy = header.sx * header.sy;
+
+	std::mutex mtx;
+
+	for_each_z_parallel<LABEL>(
+		buffer, num_bytes,
+		z_start, z_end, parallel,
+		[&](
+			std::vector<uint8_t>& vcg, 
+			std::vector<uint32_t>& ccl, 
+			uint64_t N,
+			std::vector<LABEL>& label_map,
+			int64_t z
+		){
+			robin_hood::unordered_flat_set<uint64_t> boundary_labels_subset;
+
+			if (z == 0 || z == sz - 1) {
+				uint64_t last = ccl[0];
+				boundary_labels_subset.emplace(label_map[last]);
+				for (uint64_t i = 1; i < sx * sy; i++) {
+					if (ccl[i] != last) {
+						boundary_labels_subset.emplace(label_map[ccl[i]]);
+						last = ccl[i];
+					}
+				}
+			}
+			else {
+				uint64_t last_a = ccl[0];
+				uint64_t last_b = ccl[sx * (sy-1)];
+				boundary_labels_subset.emplace(label_map[last_a]);
+				boundary_labels_subset.emplace(label_map[last_b]);
+				for (uint64_t x = 0; x < sx; x++) {
+					if (ccl[x] != last_a) {
+						boundary_labels_subset.emplace(label_map[ccl[x]]);
+						last_a = ccl[x];
+					}
+					if (ccl[x + sx * (sy-1)] != last_b) {
+						boundary_labels_subset.emplace(label_map[ccl[x + sx * (sy-1)]]);
+						last_b = ccl[x + sx * (sy-1)];
+					}
+				}
+				last_a = ccl[0];
+				last_b = ccl[(sx-1)];
+				for (uint64_t y = 1; y < sy - 1; y++) {
+					if (ccl[sx * y] != last_a) {
+						boundary_labels_subset.emplace(label_map[ccl[sx * y]]);
+						last_a = ccl[sx * y];
+					}
+					if (ccl[(sx - 1) + sx * y] != last_b) {
+						boundary_labels_subset.emplace(label_map[ccl[(sx-1) + sx * y]]);
+						last_b = ccl[(sx - 1) + sx * y];
+					}
+				}
+			}
+
+			std::unique_lock<std::mutex> lock(mtx);
+			boundary_labels.insert(
+				boundary_labels_subset.begin(), boundary_labels_subset.end()
+			);
+		}
+	);
+
+	return boundary_labels;
+}
+
+auto edge_labels(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.data_width == 1) {
+		return edge_labels<uint8_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else if (header.data_width == 2) {
+		return edge_labels<uint16_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else if (header.data_width == 4) {
+		return edge_labels<uint32_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else {
+		return edge_labels<uint64_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+}
+
+auto edge_labels(
+	const std::span<const unsigned char>& buffer,
+	const int64_t z_start = -1, 
+	const int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	return edge_labels(
+		buffer.data(),
+		buffer.size(),
+		z_start, z_end, parallel
+	);
+}
 
 };
 };

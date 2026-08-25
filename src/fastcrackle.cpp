@@ -667,6 +667,31 @@ py::dict component_map(
 	return py_dict;
 }
 
+py::set edge_labels(
+	const py::buffer buffer,
+	const size_t parallel = 1
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+
+	auto cpp_set = crackle::operations::edge_labels(
+		data, info.size,
+		parallel
+	);
+
+	py::set py_set;
+	for (const uint64_t val : cpp_set) {
+		py_set.add(py::int_(val));
+	}
+
+	return py_set;
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
