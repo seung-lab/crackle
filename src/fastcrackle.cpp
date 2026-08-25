@@ -90,7 +90,7 @@ py::array decompress(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -216,7 +216,7 @@ py::bytes reencode_markov(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -323,7 +323,7 @@ py::dict point_cloud(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -352,7 +352,7 @@ py::dict voxel_counts(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -375,7 +375,7 @@ py::dict centroids(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -403,7 +403,7 @@ py::dict bounding_boxes(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -455,7 +455,7 @@ void remap(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -518,7 +518,7 @@ py::array index_range(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	if (info.itemsize == 1) {
@@ -544,7 +544,7 @@ py::array voxel_connectivity_graph(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -572,7 +572,7 @@ py::dict contacts(
 	py::buffer_info info = buffer.request();
 
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
@@ -600,7 +600,7 @@ bool array_equal(
 	py::buffer_info info2 = buffer2.request();
 
 	if (info1.ndim != 1 || info2.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data1 = static_cast<uint8_t*>(info1.ptr);
@@ -624,7 +624,7 @@ py::list mode_pooling_2x2x1(
 ) {
 	py::buffer_info info = buffer.request();
 	if (info.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
 
@@ -647,7 +647,7 @@ py::dict component_map(
 	py::buffer_info info2 = buffer2.request();
 
 	if (info1.ndim != 1 || info2.ndim != 1) {
-		throw std::runtime_error("Expected a 1D buffer");
+		throw std::invalid_argument("Expected a 1D buffer");
 	}
 
 	uint8_t* data1 = static_cast<uint8_t*>(info1.ptr);
