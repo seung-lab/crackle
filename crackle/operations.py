@@ -1026,8 +1026,8 @@ def mode_pooling_2x2x1(binary:bytes, parallel:int = 0) -> bytes:
   return zstack(binaries)
 
 def component_map(
-  component_binary:bytes,
-  parent_binary:bytes,
+  component_binary:Union[bytes, "CrackleArray"],
+  parent_binary:Union[bytes, "CrackleArray"],
   parallel:int = 0,
 ) -> dict[int,int]:
   """
@@ -1042,5 +1042,12 @@ def component_map(
 
   Returns: { $COMPONENT_LABEL: $PARENT_LABEL }
   """
+  from .array import CrackleArray
+
+  if isinstance(component_binary, CrackleArray):
+    component_binary = component_binary.binary
+  if isinstance(parent_binary, CrackleArray):
+    parent_binary = parent_binary.binary
+
   return fastcrackle.component_map(component_binary, parent_binary, parallel)
 
