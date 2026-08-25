@@ -687,7 +687,7 @@ def decompress_range(
   return labels
 
 def compress(
-  labels:np.ndarray, 
+  labels:npt.NDArray[np.integer], 
   allow_pins:int = 0,
   markov_model_order:int = 0,
   bgcolor:Optional[int] = None,
