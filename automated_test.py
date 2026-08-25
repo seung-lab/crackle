@@ -1039,7 +1039,31 @@ def test_array_equal_real_data():
   assert not crackle.array_equal(binary, binary2)
 
 
-  
+def test_edge_labels():  
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  arr = crackle.compressa(labels, markov_model_order=0)
+
+  ckl_uniq = arr.edge_labels()
+  slices = [
+    np.s_[:,:,0],
+    np.s_[:,:,-1],
+    np.s_[0,:,:],
+    np.s_[-1,:,:],
+    np.s_[:,0,:],
+    np.s_[:,-1,:],
+  ]
+
+  uniq = set()
+  for slc in slices:
+    slice_labels = labels[slc]
+    uniq.update(np.unique(slice_labels))
+
+  assert ckl_uniq == uniq
+
+
+
+
+
 
 
 
