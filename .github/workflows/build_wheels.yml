@@ -19,7 +19,7 @@ jobs:
           - os: ubuntu-24.04-arm
             arch: aarch64
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Build wheels
         uses: joerick/cibuildwheel@v4.2.0
