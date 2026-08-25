@@ -59,6 +59,7 @@ from .operations import (
 	contacts,
 	array_equal,
 	mode_pooling_2x2x1,
+	component_map,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload, bload, save_numpy
