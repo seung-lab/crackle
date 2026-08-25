@@ -284,7 +284,7 @@ def stack_dir(src:str):
 	fused_binary = crackle.zstack(binaries)
 	del binaries
 
-	with open(os.path.join(source, "merged.ckl"), "wb") as f:
+	with open(os.path.join(src, "merged.ckl"), "wb") as f:
 		f.write(fused_binary)
 
 
