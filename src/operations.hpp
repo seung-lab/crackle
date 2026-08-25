@@ -1528,7 +1528,6 @@ edge_labels(
 	const uint64_t sx = header.sx;
 	const uint64_t sy = header.sy;
 	const uint64_t sz = header.sz;
-	const uint64_t sxy = header.sx * header.sy;
 
 	std::mutex mtx;
 

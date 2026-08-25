@@ -875,7 +875,6 @@ def connected_components(
     The larger the target, the faster this will go.
   return_mapping: if true, also return a dictionary mapping
     cc label -> original label
-
   
   Returns: 
     if return_mapping:
@@ -1050,4 +1049,7 @@ def component_map(
     parent_binary = parent_binary.binary
 
   return fastcrackle.component_map(component_binary, parent_binary, parallel)
+
+def edge_labels(binary:bytes, parallel:int = 0) -> set[int]:
+  return fastcrackle.edge_labels(binary, parallel)
 

@@ -715,6 +715,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("array_equal", &array_equal, "Check if two crackle arrays are equal regardless of encoding.");
 	m.def("mode_pooling_2x2x1", &mode_pooling_2x2x1, "Return an array of downsampled crackle binaries in z order.");
 	m.def("component_map", &component_map, "Map child components to parent components (analogue of fastremap.component_map).");
+	m.def("edge_labels", &edge_labels, "Get the unique labels on the border of this volume.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())
