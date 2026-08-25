@@ -38,13 +38,15 @@ def normalize_extension(path):
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
 @click.option('-M', '--cache-meta', default=False, is_flag=True, help="Create a sidecar parquet file with voxel counts, bounding boxes with extension .meta.parquet.", show_default=True)
 @click.option('-S', '--skip-empty', default=False, is_flag=True, help="Skip sidecar generation for empty (background only) crackle files.", show_default=True)
+@click.option('--stack', default=False, is_flag=True, help="zstack all crackle files in the directory in alphabetical order.", show_default=True)
 @click.option('-t', '--to', 'to_format', default="ckl", type=str, help="Specify destination format. Supports: npy, nii, nrrd, ckl", show_default=True)
 @click.argument("source", nargs=-1)
 def main(
 	decompress, info, test, labels, 
 	allow_pins, markov, source, 
 	keep, gzip, cache_meta, 
-	skip_empty, to_format
+	skip_empty, to_format,
+	stack
 ):
 	"""
 	Compress and decompress crackle (.ckl) files 
@@ -61,6 +63,11 @@ def main(
 		if source[i] == "-":
 			source = source[:i] + sys.stdin.readlines() + source[i+1:]
 	
+	if stack:
+		for src in source:
+			stack_dir(src)
+		return
+
 	if to_format != "ckl" and not keep and cache_meta:
 		print("Warning: -M/--cache-meta has no effect when decompressing without --keep", file=sys.stderr)
 
@@ -260,3 +267,25 @@ def removesuffix(x:str, suffix:str) -> str:
   if x.endswith(suffix):
     x = x[:-len(suffix)]
   return x
+
+def stack_dir(src:str):
+	filenames = [ 
+		filename 
+		for filename in os.listdir(src)
+		if filename.endswith(".ckl") 
+	]
+	filenames.sort()
+
+	binaries = [ 
+		crackle.bload(filename)
+		for filename in filenames 
+	]
+
+	fused_binary = crackle.zstack(binaries)
+	del binaries
+
+	with open(os.path.join(source, "merged.ckl"), "wb") as f:
+		f.write(fused_binary)
+
+
+
