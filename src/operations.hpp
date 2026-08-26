@@ -1484,25 +1484,25 @@ auto mode_pooling_2x2x1(
 	if (header.data_width == 1) {
 		return mode_pooling_2x2x1<uint8_t>(
 			buffer, num_bytes,
-			z_start, z_end, parallel
+			z_start, z_end, sparse, parallel
 		);
 	}
 	else if (header.data_width == 2) {
 		return mode_pooling_2x2x1<uint16_t>(
 			buffer, num_bytes,
-			z_start, z_end, parallel
+			z_start, z_end, sparse, parallel
 		);
 	}
 	else if (header.data_width == 4) {
 		return mode_pooling_2x2x1<uint32_t>(
 			buffer, num_bytes,
-			z_start, z_end, parallel
+			z_start, z_end, sparse, parallel
 		);
 	}
 	else {
 		return mode_pooling_2x2x1<uint64_t>(
 			buffer, num_bytes,
-			z_start, z_end, parallel
+			z_start, z_end, sparse, parallel
 		);
 	}
 }
