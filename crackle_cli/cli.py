@@ -28,11 +28,63 @@ def normalize_extension(path):
 	return path
 
 @click.command()
+@click.option('--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
+@click.option('-m', '--markov', default=0, help="If >0, use this order of markov compression for the crack code.", show_default=True)
+@click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
+@click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
+@click.option('-p', '--parallel', default=0, help="Number of threads to use. 0 = num cpu", show_default=True)
+@click.argument("source", nargs=-1)
+def cckl(
+	allow_pins, markov, source, 
+	keep, gzip, parallel,
+):
+	"""
+	Compress and decompress crackle (.ckl) files 
+	to and from other lossless segmentation file types.
+
+	Supports: ckl, cpso, npy, nrrd, tiff
+
+	Compatible with crackle format version 0 and 1 streams.
+	"""
+	for i in range(len(source)):
+		if source[i] == "-":
+			source = source[:i] + sys.stdin.readlines() + source[i+1:]
+
+	for src in source:
+		ckl_path = convert_file(src, allow_pins, markov, gzip, keep, "ckl", parallel)
+
+@click.command()
+@click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
+@click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
+@click.option('--to', 'to_format', default="npy", type=str, help="Specify destination format. Supports: npy, nii, nrrd", show_default=True)
+@click.option('-p', '--parallel', default=0, help="Number of threads to use. 0 = num cpu", show_default=True)
+@click.argument("source", nargs=-1)
+def dckl(
+	source, 
+	keep, gzip, parallel,
+	to_format,
+):
+	"""
+	Compress and decompress crackle (.ckl) files 
+	to and from other lossless segmentation file types.
+
+	Supports: ckl, cpso, npy, nrrd, tiff
+
+	Compatible with crackle format version 0 and 1 streams.
+	"""
+	for i in range(len(source)):
+		if source[i] == "-":
+			source = source[:i] + sys.stdin.readlines() + source[i+1:]
+
+	for src in source:
+		ckl_path = convert_file(src, False, 0, gzip, keep, to_format, parallel)
+
+@click.command()
 @click.option('-d', "--decompress", default=False, is_flag=True, help="Decompress to a npy file. Shorthand for -t npy", show_default=True)
 @click.option('-i', "--info", default=False, is_flag=True, help="Print the header for the file.", show_default=True)
 @click.option('-l', "--labels", default=False, is_flag=True, help="Print unique labels contained in the image.", show_default=True)
 @click.option('-T', "--test", default=False, is_flag=True, help="Check for file corruption and report damaged areas.", show_default=True)
-@click.option('-p', '--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
+@click.option('--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
 @click.option('-m', '--markov', default=None, help="If >0, use this order of markov compression for the crack code.", show_default=True)
 @click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
@@ -183,7 +235,15 @@ def create_sidecar_file(src, skip_empty):
 	meta_path += ".meta.parquet"
 	arr.cache_meta(meta_path)
 
-def convert_file(src, allow_pins, markov, gzip, keep, to_format):
+def convert_file(
+	src,
+	allow_pins:bool,
+	markov:int,
+	gzip:bool,
+	keep:bool,
+	to_format:str,
+	parallel:int = 0,
+):
 	nsrc = normalize_extension(src)
 	ckl_path = None
 
@@ -218,10 +278,19 @@ def convert_file(src, allow_pins, markov, gzip, keep, to_format):
 				print("Reencoding format version 0 is not currently supported.")
 				return
 
-			arr.binary = crackle.codec.reencode(arr.binary, markov_model_order=int(markov))
+			arr.binary = crackle.codec.reencode(
+				arr.binary,
+				markov_model_order=int(markov),
+				parallel=parallel,
+			)
 			arr.save(dest)
 		else:
-			crackle.save(arr, dest, allow_pins=allow_pins, markov_model_order=int(markov))
+			crackle.save(
+				arr, dest, 
+				allow_pins=allow_pins, 
+				markov_model_order=int(markov),
+				parallel=parallel,
+			)
 		ckl_path = dest
 	elif to_format == "npy":
 		if not dest.endswith(".npy"):

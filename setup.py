@@ -69,7 +69,9 @@ setuptools.setup(
   ],
   entry_points={
     "console_scripts": [
-      "crackle=crackle_cli:main"
+      "crackle=crackle_cli:main",
+      "cckl=crackle_cli:cckl",
+      "dckl=crackle_cli:dckl",
     ],
   },
   pbr=True
