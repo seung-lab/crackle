@@ -27,6 +27,12 @@ def normalize_extension(path):
 	path = removesuffix(path, ".zstd")
 	return path
 
+def normalize_source(source):
+	for i in range(len(source)):
+		if source[i] == "-":
+			source = source[:i] + sys.stdin.readlines() + source[i+1:]
+	return source
+
 @click.command()
 @click.option('--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
 @click.option('-m', '--markov', default=0, help="If >0, use this order of markov compression for the crack code.", show_default=True)
@@ -39,16 +45,16 @@ def cckl(
 	keep, gzip, parallel,
 ):
 	"""
-	Compress and decompress crackle (.ckl) files 
-	to and from other lossless segmentation file types.
+	Compress to crackle (.ckl) files 
+	from other lossless segmentation file types.
 
 	Supports: ckl, cpso, npy, nrrd, tiff
 
 	Compatible with crackle format version 0 and 1 streams.
+
+	See also dckl (decompress), crackle (all operations)
 	"""
-	for i in range(len(source)):
-		if source[i] == "-":
-			source = source[:i] + sys.stdin.readlines() + source[i+1:]
+	source = normalize_source(source)
 
 	for src in source:
 		ckl_path = convert_file(src, allow_pins, markov, gzip, keep, "ckl", parallel)
@@ -65,87 +71,106 @@ def dckl(
 	to_format,
 ):
 	"""
-	Compress and decompress crackle (.ckl) files 
-	to and from other lossless segmentation file types.
+	Decompress crackle (.ckl) files 
+	to other lossless segmentation file types.
 
-	Supports: ckl, cpso, npy, nrrd, tiff
+	Supports: cpso, npy, nrrd, tiff
 
 	Compatible with crackle format version 0 and 1 streams.
+
+	See also cckl (compress), crackle (all operations)
 	"""
-	for i in range(len(source)):
-		if source[i] == "-":
-			source = source[:i] + sys.stdin.readlines() + source[i+1:]
+	source = normalize_source(source)
 
 	for src in source:
 		ckl_path = convert_file(src, False, 0, gzip, keep, to_format, parallel)
 
-@click.command()
-@click.option('-d', "--decompress", default=False, is_flag=True, help="Decompress to a npy file. Shorthand for -t npy", show_default=True)
-@click.option('-i', "--info", default=False, is_flag=True, help="Print the header for the file.", show_default=True)
-@click.option('-l', "--labels", default=False, is_flag=True, help="Print unique labels contained in the image.", show_default=True)
-@click.option('-T', "--test", default=False, is_flag=True, help="Check for file corruption and report damaged areas.", show_default=True)
+@click.group()
+def main():
+	"""Perform operations on crackle files.
+
+	Crackle files are a lossless compression format
+	for multilabel 2D or 3D image segmentations. 
+
+	See also: cckl (compress), dckl (decompress)
+	"""
+	pass
+
+@main.command("info")
+@click.argument("source", nargs=-1)
+def infocmd(source):
+	"""Print the header for the file."""
+
+	source = normalize_source(source)
+
+	for src in source:
+		print_header(src)
+
+@main.command("labels")
+@click.argument("source", nargs=-1)
+def labelscmd(source):
+	"""Print unique labels contained in the image."""
+
+	source = normalize_source(source)
+
+	for src in source:
+		print_labels(src)
+
+@main.command("convert")
 @click.option('--allow-pins', default=False, is_flag=True, help="Allow pin encoding.", show_default=True)
 @click.option('-m', '--markov', default=None, help="If >0, use this order of markov compression for the crack code.", show_default=True)
 @click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
-@click.option('-M', '--cache-meta', default=False, is_flag=True, help="Create a sidecar parquet file with voxel counts, bounding boxes with extension .meta.parquet.", show_default=True)
-@click.option('-S', '--skip-empty', default=False, is_flag=True, help="Skip sidecar generation for empty (background only) crackle files.", show_default=True)
-@click.option('--stack', default=False, is_flag=True, help="zstack all crackle files in the directory in alphabetical order.", show_default=True)
 @click.option('-t', '--to', 'to_format', default="ckl", type=str, help="Specify destination format. Supports: npy, nii, nrrd, ckl", show_default=True)
+@click.option('-p', '--parallel', default=0, help="Number of threads to use. 0 = num cpu", show_default=True)
 @click.argument("source", nargs=-1)
-def main(
-	decompress, info, test, labels, 
-	allow_pins, markov, source, 
-	keep, gzip, cache_meta, 
-	skip_empty, to_format,
-	stack
+def convertcmd(
+	source, 
+	markov, keep, gzip, to_format,
+	parallel,
 ):
 	"""
-	Compress and decompress crackle (.ckl) files 
-	to and from other lossless segmentation file types.
+	Convert between crackle (.ckl) files and other file types.
 
 	Supports: ckl, cpso, npy, nrrd, tiff
 
 	Compatible with crackle format version 0 and 1 streams.
 	"""
-	orig_markov = markov
-	markov = markov or 0
-
-	for i in range(len(source)):
-		if source[i] == "-":
-			source = source[:i] + sys.stdin.readlines() + source[i+1:]
-	
-	if stack:
-		for src in source:
-			stack_dir(src)
-		return
-
-	if to_format != "ckl" and not keep and cache_meta:
-		print("Warning: -M/--cache-meta has no effect when decompressing without --keep", file=sys.stderr)
-
-	if decompress:
-		to_format = "npy"
+	source = normalize_source(source)
 
 	for src in source:
-		if info:
-			print_header(src)
-			continue
-		elif test:
-			check_binary(src)
-			continue
-		elif labels:
-			print_labels(src)
-			continue
+		convert_file(src, allow_pins, markov, gzip, keep, to_format, parallel)
 
-		if cache_meta and to_format == "ckl" and orig_markov is None and normalize_extension(src).endswith('.ckl'):
-			create_sidecar_file(src, skip_empty)
-			continue
 
-		ckl_path = convert_file(src, allow_pins, markov, gzip, keep, to_format)
-	
-		if cache_meta:
-			if ckl_path:
-				create_sidecar_file(ckl_path, skip_empty)
+@main.command("test")
+@click.argument("source", nargs=-1)
+def testcmd(source):
+	"""Check for file corruption and report damaged areas."""
+	source = normalize_source(source)
+
+	for src in source:
+		check_binary(src)
+
+@main.command("meta")
+@click.argument("source", nargs=-1)
+@click.option('-s', '--skip-empty', default=False, is_flag=True, help="Skip sidecar generation for empty (background only) crackle files.", show_default=True)
+def metacmd(source, skip_empty):
+	"""Create sidecar parquet files.
+
+Creates .meta.parquet files with voxel counts, bounding boxes.
+These files can be manually used for faster operations but are entirely optional.
+"""
+	source = normalize_source(source)
+
+	for src in source:
+		create_sidecar_file(src, skip_empty)
+
+@main.command("stack")
+@click.argument("source")
+@click.option('-o', '--output', default="merged.ckl", help="File path to output to.", show_default=True)
+def stackcmd(source, output):
+	"""zstack all crackle files in the directory in alphabetical order."""
+	stack_dir(source, output)
 
 def check_binary(src):
 	try:
@@ -195,6 +220,18 @@ def print_labels(src):
 	labels = arr.labels()
 	print("\n".join(( str(l) for l in labels )))
 
+def toSI(value) -> str:
+	if value > 1e12:
+		return f"{value / 1e12:.2f} tera"
+	elif value > 1e9:
+		return f"{value / 1e9:.2f} giga"
+	elif value > 1e6:
+		return f"{value / 1e6:.2f} mega"
+	elif value > 1e3:
+		return f"{value / 1e3:.2f} kilo"
+	else:
+		return f"{value} "
+
 def print_header(src):
 	try:
 		head = crackle.util.load_header(src, ignore_crc_check=True)
@@ -206,20 +243,13 @@ def print_header(src):
 		return
 
 	num_labels = crackle.util.load_num_labels(src)
-	voxels = head.voxels()
-	if voxels > 1e12:
-		magnitude = f"{voxels / 1e12:.2f} teravoxels"
-	elif voxels > 1e9:
-		magnitude = f"{voxels / 1e9:.2f} gigavoxels"
-	elif voxels > 1e6:
-		magnitude = f"{voxels / 1e6:.2f} megavoxels"
-	elif voxels > 1e3:
-		magnitude = f"{voxels / 1e3:.2f} kilovoxels"
-	else:
-		magnitude = f"{voxels} voxels"
+	magnitude = toSI(head.voxels()) + "voxels"
+
+	num_total_bytes = toSI(os.path.getsize(src)) + "bytes"
 
 	print(f"Filename: {src}")
 	print(f"size: {magnitude}")
+	print(f"bytes: {num_total_bytes}")
 	for key,val in head.__dict__.items():
 		print(f"{key}: {val}")
 	print(f"num_labels: {num_labels}")
@@ -337,7 +367,7 @@ def removesuffix(x:str, suffix:str) -> str:
     x = x[:-len(suffix)]
   return x
 
-def stack_dir(src:str):
+def stack_dir(src:str, output:str):
 	filenames = [ 
 		filename 
 		for filename in os.listdir(src)
@@ -353,7 +383,7 @@ def stack_dir(src:str):
 	fused_binary = crackle.zstack(binaries)
 	del binaries
 
-	with open(os.path.join(src, "merged.ckl"), "wb") as f:
+	with open(os.path.join(src, output), "wb") as f:
 		f.write(fused_binary)
 
 
