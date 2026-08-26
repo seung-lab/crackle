@@ -177,7 +177,7 @@ def stackcmd(source, output):
 @click.option('-o', '--output', default="downsampled.ckl", help="File path to output to.", show_default=True)
 @click.option('-s', '--sparse', is_flag=True, default=False, help="Don't count background in the mode.", show_default=True)
 @click.option('-p', '--parallel', default=0, help="Number of threads to use. 0 = num cpu", show_default=True)
-@click.option('-N', default=1, help="Number of times to serially downsample.", show_default=True)
+@click.option('-n', 'N', default=1, help="Number of times to serially downsample.", show_default=True)
 def downsamplecmd(source, output, sparse, parallel, N):
 	"""Use 2x2x1 mode pooling to downsample this image."""
 	arr = crackle.aload(source, allow_mmap=True)
