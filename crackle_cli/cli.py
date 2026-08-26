@@ -190,6 +190,30 @@ def downsamplecmd(source, output, sparse, parallel, N):
 
 	arr_ds.save(output)
 
+@main.command("view")
+@click.argument("source")
+@click.option('-z', default=None, type=str, help="Which z-slices to visualize.", show_default=True)
+def viewcmd(source, z):
+	"""View this image."""
+	slc = (slice(None), slice(None), slice(None))
+	if z is not None:
+		if ',' in z:
+			zstart, zend = z.split(',')
+			zstart = int(zstart)
+			zend = int(zend)
+		else:
+			zstart = int(z)
+			zend = zstart + 1
+
+		slc = (slice(None), slice(None), slice(zstart, zend))
+
+	import microviewer
+	arr = crackle.aload(source, allow_mmap=True)
+
+	labels = arr[slc]
+
+	microviewer.view(labels, seg=True)
+	
 def check_binary(src):
 	try:
 		arr = crackle.aload(src, allow_mmap=True)
