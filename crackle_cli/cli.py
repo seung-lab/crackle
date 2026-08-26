@@ -172,6 +172,18 @@ def stackcmd(source, output):
 	"""zstack all crackle files in the directory in alphabetical order."""
 	stack_dir(source, output)
 
+@main.command("downsample")
+@click.argument("source")
+@click.option('-o', '--output', default="downsampled.ckl", help="File path to output to.", show_default=True)
+@click.option('-s', '--sparse', is_flag=True, default=False, help="Don't count background in the mode.", show_default=True)
+@click.option('-p', '--parallel', default=0, help="Number of threads to use. 0 = num cpu", show_default=True)
+def downsamplecmd(source, output, sparse, parallel):
+	"""Use 2x2x1 mode pooling to downsample this image."""
+	arr = crackle.aload(source, allow_mmap=True)
+	arr.parallel = parallel
+	arr_ds = arr.mode_pooling_2x2x1(sparse=sparse)
+	arr_ds.save(output)
+
 def check_binary(src):
 	try:
 		arr = crackle.aload(src, allow_mmap=True)
