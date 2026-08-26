@@ -1356,6 +1356,7 @@ mode_pooling_2x2x1(
 	const size_t num_bytes,
 	int64_t z_start = -1,
 	int64_t z_end = -1,
+	const bool sparse = false,
 	size_t parallel = 1
 ) {
 	const CrackleHeader header = get_header(buffer, num_bytes);
@@ -1406,27 +1407,43 @@ mode_pooling_2x2x1(
 			  uint64_t ox = 0;
 
 			  for (uint64_t x = 0; x < sx - xodd; x += 2) {
-			    const LABEL a = label_map[ccl[idx(x,y)]];
-			    const LABEL b = label_map[ccl[idx(x+1,y)]];
-			    const LABEL c = label_map[ccl[idx(x,y+1)]];
-			    const LABEL d = label_map[ccl[idx(x+1,y+1)]];
+				const LABEL a = label_map[ccl[idx(x,y)]];
+				const LABEL b = label_map[ccl[idx(x+1,y)]];
+				const LABEL c = label_map[ccl[idx(x,y+1)]];
+				const LABEL d = label_map[ccl[idx(x+1,y+1)]];
 
-			    uint64_t out = oidx(ox, oy);
+				uint64_t out = oidx(ox, oy);
 
-			    if (a == b) {
-			      oimg[out] = a;
-			    }
-			    else if (a == c) {
-			      oimg[out] = a;
-			    }
-			    else if (b == c) {
-			      oimg[out] = b;
-			    }
-			    else {
-			      oimg[out] = d;
-			    }
+				if (sparse) {
+					if (a > 0 && a == b) {
+						oimg[out] = a;
+					}
+					else if (a > 0 && a == c) {
+						oimg[out] = a;
+					}
+					else if (b > 0 && b == c) {
+						oimg[out] = b;
+					}
+					else {
+						oimg[out] = d ? d : (a ? a : (b ? b : c));
+					}					
+				}
+				else {
+					if (a == b) {
+						oimg[out] = a;
+					}
+					else if (a == c) {
+						oimg[out] = a;
+					}
+					else if (b == c) {
+						oimg[out] = b;
+					}
+					else {
+						oimg[out] = d;
+					}
+				}
 
-			    ox++;
+				ox++;
 			  }
 			  if (xodd) {
 			    uint64_t out = oidx(osx - 1, oy);
@@ -1459,6 +1476,7 @@ auto mode_pooling_2x2x1(
 	const size_t num_bytes,
 	int64_t z_start = -1,
 	int64_t z_end = -1,
+	const bool sparse = false,
 	size_t parallel = 1
 ) {
 	CrackleHeader header(buffer);
@@ -1493,6 +1511,7 @@ auto mode_pooling_2x2x1(
 	const std::span<const unsigned char>& buffer,
 	const int64_t z_start = -1, 
 	const int64_t z_end = -1,
+	const bool sparse = false,
 	size_t parallel = 1
 ) {
 	return mode_pooling_2x2x1(

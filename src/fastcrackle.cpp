@@ -620,6 +620,7 @@ bool array_equal(
 py::list mode_pooling_2x2x1(
 	const py::buffer buffer,
 	const int64_t z_start = 0, int64_t z_end = -1,
+	const bool sparse = false,
 	const size_t parallel = 1
 ) {
 	py::buffer_info info = buffer.request();
@@ -629,7 +630,11 @@ py::list mode_pooling_2x2x1(
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
 
 	std::vector<std::vector<unsigned char>> ds_binaries = crackle::operations::mode_pooling_2x2x1(
-		data, info.size, z_start, z_end, parallel
+		data, 
+		info.size, 
+		z_start, z_end,
+		sparse,
+		parallel
 	);
 	py::list result;
 	for (const auto& bin : ds_binaries) {

@@ -1019,9 +1019,9 @@ def structure_equal(
   vcg2 = voxel_connectivity_graph(binary2, connectivity=4, parallel=parallel)
   return np.all(vcg1 == vcg2)
 
-def mode_pooling_2x2x1(binary:bytes, parallel:int = 0) -> bytes:
+def mode_pooling_2x2x1(binary:bytes, sparse:bool = False, parallel:int = 0) -> bytes:
   """Downsample a crackle segmentation 2x2x1 using mode pooling."""
-  binaries = fastcrackle.mode_pooling_2x2x1(binary, 0, -1, parallel)
+  binaries = fastcrackle.mode_pooling_2x2x1(binary, 0, -1, sparse, parallel)
   return zstack(binaries)
 
 def component_map(
