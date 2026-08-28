@@ -4,17 +4,37 @@
 
 ```bash
 # Command Line Interface
-crackle data.npy # creates data.ckl
-crackle -m 5 data.npy # use a 5th order context model
-crackle -p data.npy # use pin encoding for labels
-crackle -p -m 5 data.npy # use pins and markov model
-crackle -d data.ckl # recovers data.npy
-crackle -m 0 data.ckl # change markov model order
-crackle --test data.ckl # check for file corruption
+# cckl (compress) and dckl (decompress) are single purpose command line
+# utilities like gzip and gunzip 
+cckl data.npy # creates data.ckl
+cckl -m 5 data.npy # use a 5th order context model
+cckl --allow-pins data.npy # use pin encoding for labels
+cckl --allow-pins -m 5 data.npy # use pins and markov model
+cckl -m 0 data.ckl # change markov model order
+
+dckl data.ckl # recovers data.npy
+
+# crackle is a fully featured utility with a command tree
+
+crackle test data.ckl # check for file corruption
 
 # convert between file types if you have the libraries installed
-crackle -z --to tiff -k data.ckl # data.ckl -> zlib compressed data.tiff
-crackle --to nrrd data.ckl # data.ckl -> data.nrrd
+crackle convert -z --to tiff -k data.ckl # data.ckl -> zlib compressed data.tiff
+crackle convert --to nrrd data.ckl # data.ckl -> data.nrrd
+
+crackle info data.ckl # print basic info about the file
+crackle labels data.ckl # print labels
+crackle view data.ckl # visualize the file
+
+crackle downsample data.ckl -o data_downsampled.ckl # perform 2x2x1 mode pooling and write the output
+crackle meta data.ckl # generate data.ckl.meta.parquet
+
+# if you have a directory of 0000.ckl, 0001.ckl, ... etc
+# where each incremental number is a z-slice
+# you can combine them into a single file
+# filenames are sorted in alphabetical order, ensure they 
+# are padded
+crackle stack ./  # outputs merged.ckl
 ```
 
 ```python
