@@ -556,7 +556,7 @@ OUT* decompress(
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
 	if (output == NULL) {
-		output = new OUT[voxels]();
+		output = new OUT[voxels];
 	}
 
 	const uint64_t sxy = header.sx * header.sy;
