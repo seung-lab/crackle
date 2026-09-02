@@ -430,7 +430,7 @@ CCL* crack_codes_to_cc_labels(
   const uint64_t sx, const uint64_t sy,
   const bool permissible, uint64_t &N,
   const std::vector<std::vector<uint8_t>>& markov_model,
-  std::vector<uint8_t>& vcg,
+  std::span<uint8_t>& vcg,
   CCL* out = NULL
 ) {
 	crack_code_to_vcg(
@@ -574,17 +574,17 @@ OUT* decompress(
 
 	ThreadPool pool(parallel);
 
-	std::vector<std::vector<uint8_t>> vcg_scratch(parallel);
-	std::vector<std::vector<uint32_t>> cc_labels_scratch(parallel);
+	std::vector<std::unique_ptr<uint8_t[]>> vcg_scratch(parallel);
+	std::vector<std::unique_ptr<uint32_t[]>> cc_labels_scratch(parallel);
 	for (size_t t = 0; t < parallel; t++) {
-		vcg_scratch[t].resize(sxy);
-		cc_labels_scratch[t].resize(sxy);
+		vcg_scratch[t] = std::unique_ptr<uint8_t[]>(new uint8_t[sxy]);
+		cc_labels_scratch[t] = std::unique_ptr<uint32_t[]>(new uint32_t[sxy]);
 	}
 
 	for (uint64_t z = 0; z < static_cast<uint64_t>(szr); z++) {
 		pool.enqueue([&,z](size_t t) {
-			std::vector<uint8_t>& vcg = vcg_scratch[t];
-			std::vector<uint32_t>& cc_labels = cc_labels_scratch[t];
+			auto vcg = std::span<uint8_t>(vcg_scratch[t].get(), sxy);
+			auto cc_labels = std::span<uint32_t>(cc_labels_scratch[t].get(), sxy);
 
 			uint64_t N = 0;
 			crack_codes_to_cc_labels<uint32_t>(
