@@ -2,6 +2,7 @@ from typing import List, Optional
 from enum import IntEnum
 
 import numpy as np
+import numpy.typing as npt
 
 from .lib import (
   compute_byte_width, width2dtype,
@@ -35,13 +36,29 @@ def crc8(data:List[int]) -> int:
 
   return int(crc & 0xFF)
 
+def crc16(data:List[int]) -> int:
+  # use implicit +1 representation for right shift, LSB first
+  # use explicit +1 representation for left shit, MSB first
+  polynomial = 0xd175 # implicit
+  crc = 0xFFFF # detects zeroed data better than 0x0000
+  for i in range(len(data)):
+    crc ^= data[i]
+    for k in range(16):
+      if crc & 1:
+        crc = (crc >> 1) ^ polynomial
+      else:
+        crc = crc >> 1
+
+  return int(crc & 0xFFFF)
+
 
 class CrackleHeader:
   MAGIC = b'crkl'
-  FORMAT_VERSION = 1
-  HEADER_BYTES = 29
+  FORMAT_VERSION = 2
+  HEADER_BYTES = 94
   HEADER_BYTES_V0 = 24
   HEADER_BYTES_V1 = 29
+  HEADER_BYTES_V2 = 94
 
   def __init__(
     self, 
@@ -55,8 +72,9 @@ class CrackleHeader:
     signed:bool,
     markov_model_order:int,
     is_sorted:bool,
-    format_version:int = 1,
+    format_version:int = 2,
     crc:Optional[int] = None,
+    affine:npt.NDArray[np.float32] = np.eye(4, dtype=np.float32),
   ):
     self.label_format = label_format
     self.crack_format = crack_format
@@ -73,6 +91,7 @@ class CrackleHeader:
     self.is_sorted = bool(is_sorted)
     self.format_version = format_version
     self.crc = crc
+    self.affine = affine
 
   @classmethod
   def frombytes(kls, buffer:bytes, ignore_crc_check:bool = False):
@@ -82,7 +101,7 @@ class CrackleHeader:
       raise FormatError(f"Incorrect magic number. Got: {buffer[:4]} Expected: {CrackleHeader.MAGIC}")
 
     format_version = buffer[4]
-    if format_version not in [0,1]:
+    if format_version not in [0,1,2]:
       raise FormatError(f"Wrong format version. Got: {format_version} Expected: <{CrackleHeader.FORMAT_VERSION}")
 
     values = unpack_bits(
@@ -96,7 +115,8 @@ class CrackleHeader:
     if format_version == 0:
       nlabel_width = 4
       stored_crc = None
-    else:
+      affine = np.eye(4, dtype=np.float32)
+    elif format_version == 1:
       stored_crc = int.from_bytes(buffer[28:29], 'little')
       computed_crc = crc8(buffer[5:28])
       if not ignore_crc_check and stored_crc != computed_crc:
@@ -104,6 +124,17 @@ class CrackleHeader:
           f"The header appears to be corrupted. CRC check failed. "
           f"Computed: {computed_crc} Stored: {stored_crc}"
         )
+      affine = np.eye(4, dtype=np.float32)
+    elif format_version == 2:
+      stored_crc = int.from_bytes(buffer[kls.HEADER_BYTES_V2-2:kls.HEADER_BYTES_V2], 'little')
+      computed_crc = crc16(buffer[5:kls.HEADER_BYTES_V2-2])
+      print(stored_crc, computed_crc)
+      if not ignore_crc_check and stored_crc != computed_crc:
+        raise FormatError(
+          f"The header appears to be corrupted. CRC check failed. "
+          f"Computed: {computed_crc} Stored: {stored_crc}"
+        )
+      affine = np.frombuffer(buffer[28:kls.HEADER_BYTES_V2-2], dtype=np.float32).reshape((4,4), order="F")
 
     return CrackleHeader(
       label_format=values[3],
@@ -121,17 +152,22 @@ class CrackleHeader:
       is_sorted=(not bool(values[7])),
       format_version=format_version,
       crc=stored_crc,
+      affine=affine,
     )
 
   @property
-  def header_bytes(self):
+  def header_bytes(self) -> int:
     if self.format_version == 0:
       return CrackleHeader.HEADER_BYTES_V0
-    else:
+    elif self.format_version == 1:
       return CrackleHeader.HEADER_BYTES_V1
+    elif self.format_version == 2:
+      return CrackleHeader.HEADER_BYTES_V2
+    else:
+      raise ValueError(f"Version not supported: {self.format_version}")
 
   @property
-  def grid_index_bytes(self):
+  def grid_index_bytes(self) -> int:
     if self.format_version == 0:
       return 4 * self.sz
     else:
@@ -156,14 +192,14 @@ class CrackleHeader:
 
     fmt_ver = self.format_version
     if fmt_ver == 0 and self.num_label_bytes > np.iinfo(np.uint32).max:
-      fmt_ver = 1
+      fmt_ver = 2
 
     if fmt_ver == 0:
       label_bytes_width = 4
     else:
       label_bytes_width = 8
 
-    interpretable_data = b''.join([
+    interpretable_data = [
       fmt_byte.to_bytes(1, 'little'),
       fmt_byte2.to_bytes(1, 'little'),
       self.sx.to_bytes(4, 'little'),
@@ -171,14 +207,24 @@ class CrackleHeader:
       self.sz.to_bytes(4, 'little'),
       log_grid_size.to_bytes(1, 'little'),
       self.num_label_bytes.to_bytes(label_bytes_width, 'little'),
-    ])
+    ]
+
+    if fmt_ver == 2:
+      interpretable_data.append(
+        self.affine.tobytes("F")
+      )
+
+    interpretable_data = b''.join(interpretable_data)
 
     if fmt_ver == 0:
       label_bytes_width = 4
       crc = b''
-    else:
+    elif fmt_ver == 1:
       label_bytes_width = 8
       crc = crc8(interpretable_data).to_bytes(1, 'little')
+    else:
+      label_bytes_width = 8
+      crc = crc16(interpretable_data).to_bytes(2, 'little')
 
     return b''.join([
       self.MAGIC,
@@ -224,9 +270,6 @@ class CrackleHeader:
 
   def voxels(self) -> int:
     return self.sx * self.sy * self.sz
-
-  def compute_crc(self) -> int:
-    return int.from_bytes(self.tobytes()[-2:], 'little')
 
   @property
   def num_markov_model_bytes(self) -> int:
