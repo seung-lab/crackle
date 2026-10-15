@@ -185,7 +185,7 @@ def downsamplecmd(source, output, sparse, parallel, N):
 
 	arr_ds = arr
 	for i in range(N):
-		arr_ds = arr.mode_pooling_2x2x1(sparse=sparse)
+		arr_ds = arr_ds.mode_pooling_2x2x1(sparse=sparse)
 		arr_ds.parallel = parallel
 
 	arr_ds.save(output)
