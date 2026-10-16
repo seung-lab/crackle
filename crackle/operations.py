@@ -245,14 +245,6 @@ def renumber(binary:bytes, start:int = 0, parallel:int = 0) -> Tuple[bytes, dict
   uniq = fastremap.unique(labels(binary))
   mapping = { u: start+i for i,u in enumerate(uniq) }
   binary = refit(remap(binary, mapping, parallel=parallel))
-
-  if not head.is_sorted:
-    head.is_sorted = True
-    binary = b''.join([
-      head.tobytes(),
-      binary[head.header_bytes:]
-    ])
-
   return (binary, mapping)
 
 def _zstack_flat_labels(
