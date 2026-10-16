@@ -1161,11 +1161,16 @@ def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.Table":
   # the bboxes converted to python slices, just as 6 integers
   bbxs = bounding_boxes(binary, parallel=parallel, no_slice_conversion=True)
 
-  labels = np.asarray(sorted(list(cts.keys())), dtype=np.uint64)
-  cts = np.asarray([ cts[label] for label in labels ], dtype=np.uint32)
-
   head = header(binary)
   max_dim = max(head.sx, head.sy, head.sz)
+
+  if head.voxels() > np.iinfo(np.uint32).max:
+    ct_dtype = np.uint64
+  else:
+    ct_dtype = np.uint32
+
+  labels = np.asarray(sorted(list(cts.keys())), dtype=head.dtype)
+  cts = np.asarray([ cts[label] for label in labels ], dtype=ct_dtype)
 
   if max_dim <= np.iinfo(np.uint16).max:
     bbox_type = pa.uint16()
@@ -1182,8 +1187,8 @@ def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.Table":
   max_z = np.asarray([ bbxs[label][5] for label in labels ], dtype=bbox_dtype)
 
   schema = [
-    pa.field('label', pa.uint64()),
-    pa.field('voxel_count', pa.uint32()),
+    pa.field('label', pa.from_numpy_dtype(head.dtype)),
+    pa.field('voxel_count', pa.from_numpy_dtype(ct_dtype)),
     pa.field('min_x', bbox_type),
     pa.field('max_x', bbox_type),
     pa.field('min_y', bbox_type),
