@@ -154,7 +154,8 @@ def testcmd(source):
 @main.command("meta")
 @click.argument("source", nargs=-1)
 @click.option('-s', '--skip-empty', default=False, is_flag=True, help="Skip sidecar generation for empty (background only) crackle files.", show_default=True)
-def metacmd(source, skip_empty):
+@click.option('--print', 'print_data', default=False, is_flag=True, help="Skip sidecar generation and print the results to the terminal.", show_default=True)
+def metacmd(source, skip_empty, print_data):
 	"""Create sidecar parquet files.
 
 Creates .meta.parquet files with voxel counts, bounding boxes.
@@ -163,7 +164,7 @@ These files can be manually used for faster operations but are entirely optional
 	source = normalize_source(source)
 
 	for src in source:
-		create_sidecar_file(src, skip_empty)
+		create_sidecar_file(src, skip_empty, print_data)
 
 @main.command("stack")
 @click.argument("source")
@@ -297,7 +298,7 @@ def print_header(src):
 	print(f"num_labels: {num_labels}")
 	print()
 
-def create_sidecar_file(src, skip_empty):
+def create_sidecar_file(src, skip_empty, print_data):
 	arr = crackle.aload(src, allow_mmap=True)
 
 	if skip_empty and (arr.num_labels() <= 1) and (0 in arr):
@@ -305,7 +306,17 @@ def create_sidecar_file(src, skip_empty):
 
 	meta_path = normalize_extension(src)
 	meta_path += ".meta.parquet"
-	arr.cache_meta(meta_path)
+	table = arr.to_parquet()
+
+	if print_data:
+		try:
+			print(table.to_pandas())
+		except (ImportError, ModuleNotFoundError):
+			print(table)
+	else:
+		import pyarrow.parquet as pq
+		pq.write_table(table, meta_path, compression="zstd")
+
 
 def convert_file(
 	src,

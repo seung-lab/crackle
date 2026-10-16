@@ -186,9 +186,11 @@ crackle -M myfile.ckl # generates myfile.ckl.meta.parquet
 
 ```python
 import crackle
+import pyarrow.parquet as pq
 
 arr = crackle.aload("myfile.ckl")
-arr.cache_meta("myfile.ckl.meta.parquet") # generate the sidecar file
+table = arr.to_parquet() # get metadata
+pq.write_table(table, "myfile.ckl.meta.parquet", compression="zstd")
 ```
 
 You can then read the parquet files using your favorite parquet reader. Sometimes it is faster to use crackle methods on single files, but when tested on hundreds of thousands of files, reading voxel counts out of parquet was 100x faster (20 files per second versus 2000 on a Macbook M3).

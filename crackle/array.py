@@ -7,7 +7,7 @@ from .codec import (
   contains, contains_range,
   header, crack_codes, num_labels,
   components, point_cloud, voxel_counts,
-  centroids, bounding_boxes, each, cache_meta,
+  centroids, bounding_boxes, each, to_parquet,
 )
 from .operations import (
   astype,
@@ -187,8 +187,8 @@ class CrackleArray:
   ) -> dict[tuple[int,int],float]:
     return contacts(self.binary, anisotropy=anisotropy)
 
-  def cache_meta(self, filelike):
-    return cache_meta(self.binary, filelike, parallel=self.parallel)
+  def to_parquet(self):
+    return to_parquet(self.binary, parallel=self.parallel)
 
   def save(self, filelike):
     import crackle.util

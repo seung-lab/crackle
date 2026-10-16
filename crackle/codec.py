@@ -1148,7 +1148,7 @@ def each(
   else:
     return BinaryImageIterator()
 
-def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.Table":
+def to_parquet(binary:bytes, parallel:int = 0) -> "pyarrow.Table":
   """
   Compute object voxel counts, bounding boxes and save
   them into a parquet file at path.
@@ -1214,10 +1214,5 @@ def cache_meta(binary:bytes, path:str, parallel:int = 0) -> "pyarrow.Table":
     rows['min_z'] = min_z
     rows['max_z'] = max_z
 
-  table = pa.table(rows, schema=schema)
-
-  pq.write_table(table, path, compression="zstd")
-
-  return table
-
+  return pa.table(rows, schema=schema)
 
