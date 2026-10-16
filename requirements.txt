@@ -1,4 +1,4 @@
-fastremap
+fastremap>=1.21.0
 google_crc32c
 numpy
 pybind11
