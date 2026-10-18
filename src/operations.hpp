@@ -1313,7 +1313,7 @@ component_map(
 				for (size_t x = 0; x < sx; x++) {
 					const int64_t loc = x + sx * y;
 					const uint64_t child_label = label_map1[ccl1[loc]];
-					const uint64_t parent_label = label_map1[ccl2[loc]];
+					const uint64_t parent_label = label_map2[ccl2[loc]];
 
 					if (last_label == child_label) {
 						continue;
