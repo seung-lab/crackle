@@ -94,6 +94,12 @@ class CrackleArray:
     else:
       return labels(self.binary)
 
+  def any(self) -> bool:
+    return np.any(self.labels())
+
+  def all(self) -> bool:
+    return 0 not in self
+
   def num_labels(self) -> int:
     return num_labels(self.binary)
 
