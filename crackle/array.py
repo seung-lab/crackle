@@ -254,7 +254,8 @@ class CrackleArray:
     if isinstance(other, int):
       return CrackleArray(eq_scalar(self.binary, other))
     elif isinstance(other, CrackleArray):
-      return voxelwise_comparison(self.binary, other, "=", self.parallel)
+      binary = voxelwise_comparison(self.binary, other.binary, "=", self.parallel)
+      return CrackleArray(binary)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
@@ -262,7 +263,8 @@ class CrackleArray:
     if isinstance(other, int):
       return CrackleArray(neq_scalar(self.binary, other))
     elif isinstance(other, CrackleArray):
-      return voxelwise_comparison(self.binary, other, "!=", self.parallel)
+      binary = voxelwise_comparison(self.binary, other.binary, "!=", self.parallel)
+      return CrackleArray(binary)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
@@ -270,7 +272,8 @@ class CrackleArray:
     if isinstance(other, int):
       return CrackleArray(gt_scalar(self.binary, other))
     elif isinstance(other, CrackleArray):
-      return voxelwise_comparison(self.binary, other, ">", self.parallel)
+      binary = voxelwise_comparison(self.binary, other.binary, ">", self.parallel)
+      return CrackleArray(binary)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
@@ -278,7 +281,8 @@ class CrackleArray:
     if isinstance(other, int):
       return CrackleArray(gte_scalar(self.binary, other))
     elif isinstance(other, CrackleArray):
-      return voxelwise_comparison(self.binary, other, ">=", self.parallel)
+      binary = voxelwise_comparison(self.binary, other.binary, ">=", self.parallel)
+      return CrackleArray(binary)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
@@ -286,7 +290,8 @@ class CrackleArray:
     if isinstance(other, int):
       return CrackleArray(lt_scalar(self.binary, other))
     elif isinstance(other, CrackleArray):
-      return voxelwise_comparison(self.binary, other, "<", self.parallel)
+      binary = voxelwise_comparison(self.binary, other.binary, "<", self.parallel)
+      return CrackleArray(binary)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
@@ -294,7 +299,8 @@ class CrackleArray:
     if isinstance(other, int):
       return CrackleArray(lte_scalar(self.binary, other))
     elif isinstance(other, CrackleArray):
-      return voxelwise_comparison(self.binary, other, "<=", self.parallel)
+      binary = voxelwise_comparison(self.binary, other.binary, "<=", self.parallel)
+      return CrackleArray(binary)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
