@@ -1544,9 +1544,9 @@ edge_labels(
 	robin_hood::unordered_flat_set<uint64_t> boundary_labels;
 	boundary_labels.reserve(num_labels / (header.sz / szr));
 
-	const uint64_t sx = header.sx;
-	const uint64_t sy = header.sy;
-	const uint64_t sz = header.sz;
+	const int64_t sx = (int64_t)header.sx;
+	const int64_t sy = (int64_t)header.sy;
+	const int64_t sz = (int64_t)header.sz;
 
 	std::mutex mtx;
 
@@ -1565,7 +1565,7 @@ edge_labels(
 			if (z == 0 || z == sz - 1) {
 				uint64_t last = ccl[0];
 				boundary_labels_subset.emplace(label_map[last]);
-				for (uint64_t i = 1; i < sx * sy; i++) {
+				for (int64_t i = 1; i < sx * sy; i++) {
 					if (ccl[i] != last) {
 						boundary_labels_subset.emplace(label_map[ccl[i]]);
 						last = ccl[i];
@@ -1577,7 +1577,7 @@ edge_labels(
 				uint64_t last_b = ccl[sx * (sy-1)];
 				boundary_labels_subset.emplace(label_map[last_a]);
 				boundary_labels_subset.emplace(label_map[last_b]);
-				for (uint64_t x = 0; x < sx; x++) {
+				for (int64_t x = 0; x < sx; x++) {
 					if (ccl[x] != last_a) {
 						boundary_labels_subset.emplace(label_map[ccl[x]]);
 						last_a = ccl[x];
@@ -1589,7 +1589,7 @@ edge_labels(
 				}
 				last_a = ccl[0];
 				last_b = ccl[(sx-1)];
-				for (uint64_t y = 1; y < sy - 1; y++) {
+				for (int64_t y = 1; y < sy - 1; y++) {
 					if (ccl[sx * y] != last_a) {
 						boundary_labels_subset.emplace(label_map[ccl[sx * y]]);
 						last_a = ccl[sx * y];
