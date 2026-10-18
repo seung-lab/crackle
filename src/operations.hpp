@@ -1167,7 +1167,7 @@ bool array_equal(
 				for (size_t x = 0; x < sx; x++) {
 					const int64_t loc = x + sx * y;
 					const uint64_t a = label_map1[ccl1[loc]];
-					const uint64_t b = label_map1[ccl2[loc]];
+					const uint64_t b = label_map2[ccl2[loc]];
 
 					if (a != b) {
 						is_equal.store(false, std::memory_order_relaxed);
