@@ -1060,6 +1060,22 @@ def test_edge_labels():
 
   assert ckl_uniq == uniq
 
+def test_apply_binary_mask():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  mask = labels == 32068811
+  ckl_mask = crackle.compressa(mask, markov_model_order=0)
+
+  data = np.random.randint(0,10,size=labels.shape, dtype=np.uint8)
+  ckl_data = crackle.compressa(data, markov_model_order=0)
+
+  masked_data = ckl_data.apply_binary_mask(ckl_mask).numpy()
+  gt = np.where(mask, data, 0)
+
+  assert np.all(masked_data == gt)
+
+  
+
+
 
 
 
