@@ -94,13 +94,17 @@ class CrackleArray:
     else:
       return labels(self.binary)
 
-  def any(self) -> bool:
+  def any(self, axis=None, out=None, keepdims=False, *, where=True) -> Union[bool,np.ndarray]:
     """Returns True if any elements evaluate to True."""
-    return np.any(self.labels())
-
-  def all(self) -> bool:
+    if axis is None and out is None and not keepdims and where is True:
+      return np.bool_(self.max() != 0 or self.min() != 0)
+    return np.any(self.numpy(), axis=axis, out=out, keepdims=keepdims, where=where)
+  
+  def all(self, axis=None, out=None, keepdims=False, *, where=True) -> Union[bool,np.ndarray]:
     """Returns True if all elements evaluate to True."""
-    return 0 not in self
+    if axis is None and out is None and not keepdims and where is True:
+      return np.bool_(0 not in self)
+    return np.all(self.numpy(), axis=axis, out=out, keepdims=keepdims, where=where)
 
   def num_labels(self) -> int:
     return num_labels(self.binary)
