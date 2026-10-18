@@ -255,6 +255,11 @@ class CrackleArray:
     return CrackleArray(binary, parallel=self.parallel)
 
   def viewer(self):
+    """
+    Display the image in microviewer. 
+    Works for up to 2.1GB volumes.
+    Requires a web browser.
+    """
     import microviewer
     microviewer.view(self.numpy(), seg=True)
 
