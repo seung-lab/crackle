@@ -1072,3 +1072,8 @@ def edge_labels(binary:Union[bytes, "CrackleArray"], parallel:int = 0) -> set[in
 
   return fastcrackle.edge_labels(binary, parallel)
 
+def apply_binary_mask(input_binary:bytes, mask_binary:bytes, parallel:int = 0) -> bytes:
+  """Apply a binary mask to this image."""
+  binaries = fastcrackle.apply_binary_mask(input_binary, mask_binary, parallel)
+  return zstack(binaries)
+
