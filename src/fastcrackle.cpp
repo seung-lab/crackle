@@ -697,6 +697,37 @@ py::set edge_labels(
 	return py_set;
 }
 
+py::set apply_binary_mask(
+	const py::buffer buffer,
+	const py::buffer mask_buffer,
+	const size_t parallel = 1
+) {
+	py::buffer_info info = buffer.request();
+	py::buffer_info mask_info = mask_buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+	if (mask_info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	uint8_t* mask_data = static_cast<uint8_t*>(mask_info.ptr);
+
+	std::vector<std::vector<unsigned char>> binaries = crackle::operations::apply_binary_mask(
+		data, info.size,
+		mask_data, mask_info.size,
+		parallel
+	);
+
+	py::list result;
+	for (const auto& bin : binaries) {
+		result.append(py::bytes(reinterpret_cast<const char*>(bin.data()), bin.size()));
+	}
+	return result;
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -721,6 +752,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("mode_pooling_2x2x1", &mode_pooling_2x2x1, "Return an array of downsampled crackle binaries in z order.");
 	m.def("component_map", &component_map, "Map child components to parent components (analogue of fastremap.component_map).");
 	m.def("edge_labels", &edge_labels, "Get the unique labels on the border of this volume.");
+	m.def("apply_binary_mask", &apply_binary_mask, "Apply a mask using logical AND from a binary image of the same size.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())

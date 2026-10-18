@@ -1659,6 +1659,194 @@ auto edge_labels(
 	);
 }
 
+
+template <typename LABEL>
+std::vector<std::vector<unsigned char>>
+apply_binary_mask(
+	const unsigned char* buffer1, // input image
+	const size_t num_bytes1,
+	const unsigned char* buffer2,
+	const size_t num_bytes2, // mask buffer
+	size_t parallel = 1
+) {
+	const CrackleHeader header1 = get_header(buffer1, num_bytes1);
+	const CrackleHeader header2 = get_header(buffer2, num_bytes2);
+
+	const uint64_t voxels1 = get_voxels(header1, 0, -1);
+	const uint64_t voxels2 = get_voxels(header2, 0, -1);
+
+	if (voxels1 == 0 || voxels2 == 0) {
+		return std::vector<std::vector<unsigned char>>();
+	}
+
+	if (
+		header1.sx != header2.sx 
+		|| header1.sy != header2.sy 
+		|| header1.sz != header2.sz
+	) {
+		return std::vector<std::vector<unsigned char>>();
+	}
+
+	const size_t sx = header1.sx;
+	const size_t sy = header1.sy;
+	const size_t sz = header1.sz;
+
+	std::span<const unsigned char> binary1(buffer1, num_bytes1);
+	std::span<const unsigned char> binary2(buffer2, num_bytes2);
+
+	std::vector<std::vector<unsigned char>> masked_binaries(sz);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model1 = decode_markov_model(header1, binary1);
+	std::vector<std::vector<uint8_t>> markov_model2 = decode_markov_model(header2, binary2);
+	
+	auto crack_codes1 = get_crack_codes(header1, binary1, 0, sz);
+	auto crack_codes2 = get_crack_codes(header2, binary2, 0, sz);
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, sz);
+
+	ThreadPool pool(parallel);
+
+	std::vector<std::vector<uint8_t>> vcgs(parallel * 2);
+	std::vector<std::vector<uint32_t>> ccls(parallel * 2);
+	std::vector<std::vector<LABEL>> new_slices(parallel);
+
+	for (size_t t = 0; t < parallel * 2; t++) {
+		vcgs[t].resize(header1.sx * header1.sy);
+		ccls[t].resize(header1.sx * header1.sy);
+	}
+
+	for (size_t t = 0; t < parallel; t++) {
+		new_slices[t].resize(header1.sx * header1.sy);
+	}
+	
+	for (size_t z = 0; z < sz; z++) {
+		pool.enqueue([&,z](size_t t){
+			const size_t tt = t * 2;
+
+			std::vector<uint8_t>& vcg1 = vcgs[tt];
+			std::vector<uint8_t>& vcg2 = vcgs[tt+1];
+			
+			std::vector<uint32_t>& ccl1 = ccls[tt];
+			std::vector<uint32_t>& ccl2 = ccls[tt+1];
+
+			std::vector<LABEL>& ablated = new_slices[t];
+			std::fill(ablated.begin(), ablated.end(), static_cast<LABEL>(0));
+
+			auto& crack_code1 = crack_codes1[z];
+			auto& crack_code2 = crack_codes2[z];
+
+			crack_code_to_vcg(
+				/*code=*/crack_code1,
+				/*sx=*/sx, /*sy=*/sy,
+				/*permissible=*/(header1.crack_format == CrackFormat::PERMISSIBLE),
+				/*markov_model=*/markov_model1,
+				/*slice_edges=*/vcg1.data()
+			);
+
+			crack_code_to_vcg(
+				/*code=*/crack_code2,
+				/*sx=*/sx, /*sy=*/sy,
+				/*permissible=*/(header2.crack_format == CrackFormat::PERMISSIBLE),
+				/*markov_model=*/markov_model2,
+				/*slice_edges=*/vcg2.data()
+			);
+
+			uint64_t N1 = 0;
+			crackle::cc3d::color_connectivity_graph<uint32_t>(
+				vcg1, sx, sy, 1, ccl1.data(), N1
+			);
+
+			uint64_t N2 = 0;
+			crackle::cc3d::color_connectivity_graph<uint32_t>(
+				vcg2, sx, sy, 1, ccl2.data(), N2
+			);
+
+			std::vector<uint64_t> label_map1 = decode_label_map<uint64_t>(
+				header1, binary1, ccl1.data(), N1, z, z+1
+			);
+			std::vector<uint64_t> label_map2 = decode_label_map<uint64_t>(
+				header2, binary2, ccl2.data(), N2, z, z+1
+			);
+
+			for (size_t y = 0; y < sy; y++) {
+				for (size_t x = 0; x < sx; x++) {
+					const int64_t loc = x + sx * y;
+					const uint64_t mask_value = label_map2[ccl2[loc]];
+
+					if (mask_value) {
+						ablated[loc] = label_map1[ccl1[loc]];
+					}
+				}
+			}
+
+			masked_binaries[z] = crackle::compress<LABEL>(
+				ablated.data(),
+				sx, sy, 1
+			);
+		});
+	}
+
+	pool.join();
+
+	return masked_binaries;
+}
+
+auto apply_binary_mask(
+	const unsigned char* buffer1, // input image
+	const size_t num_bytes1,
+	const unsigned char* buffer2,
+	const size_t num_bytes2, // mask buffer
+	size_t parallel = 1
+) {
+	const CrackleHeader header1 = get_header(buffer1, num_bytes1);
+
+	if (header1.data_width == 1) {
+		return apply_binary_mask<uint8_t>(
+			buffer1, num_bytes1,
+			buffer2, num_bytes2,
+			parallel
+		);
+	}
+	else if (header1.data_width == 2) {
+		return apply_binary_mask<uint16_t>(
+			buffer1, num_bytes1,
+			buffer2, num_bytes2,
+			parallel
+		);
+	}
+	else if (header1.data_width == 4) {
+		return apply_binary_mask<uint32_t>(
+			buffer1, num_bytes1,
+			buffer2, num_bytes2,
+			parallel
+		);
+	}
+	else {
+		return apply_binary_mask<uint64_t>(
+			buffer1, num_bytes1,
+			buffer2, num_bytes2,
+			parallel
+		);
+	}
+}
+
+auto apply_binary_mask(
+	const std::span<const unsigned char>& buffer1,
+	const std::span<const unsigned char>& buffer2,
+	size_t parallel = 1
+) {
+	return apply_binary_mask(
+		buffer1.data(), buffer1.size(),
+		buffer2.data(), buffer2.size(),
+		parallel
+	);
+}
+
+
 };
 };
 
