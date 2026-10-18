@@ -1073,6 +1073,18 @@ def test_apply_binary_mask():
 
   assert np.all(masked_data == gt)
 
+def test_array_equality():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  ckl_labels = crackle.compressa(labels, markov_model_order=0)
+  result = ckl_labels == ckl_labels.copy()
+
+  assert np.all(result[:] == 1)
+  assert np.all(result == 1)
+  result = ckl_labels != ckl_labels.copy()
+  assert np.all(result[:] == 0)
+  assert np.all(result == 0)
+  
+
   
 
 
