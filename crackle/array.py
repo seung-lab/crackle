@@ -416,6 +416,13 @@ class CrackleArray:
       after_1,
     ])
 
+  # For universal numpy compatibility
+  def __array__(self, dtype=None, copy=None):
+    arr = self
+    if dtype is not None:
+      arr = arr.astype(dtype)
+    return arr.numpy()
+
 class CrackleRemoteArray(CrackleArray):
   """EXPERIMENTAL DO NOT RELY ON THIS INTERFACE."""
   def __init__(self, cloudpath:str, ignore_header_crc_check:bool = False):
