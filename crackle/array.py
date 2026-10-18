@@ -15,6 +15,7 @@ from .operations import (
   renumber,
   zstack, zsplit,
   remap,
+  gt, gte, lt, lte,
   add_scalar, subtract_scalar,
   multiply_scalar, floordiv_scalar,
   connected_components, 
@@ -238,6 +239,18 @@ class CrackleArray:
       return self.array_equal(other)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
+
+  def __gt__(self, other:int) -> bytes:
+    return CrackleArray(gt(self.binary, other))
+
+  def __ge__(self, other:int) -> bytes:
+    return CrackleArray(gte(self.binary, other))
+
+  def __lt__(self, other:int) -> bytes:
+    return CrackleArray(lt(self.binary, other))
+
+  def __le__(self, other:int) -> bytes:
+    return CrackleArray(lte(self.binary, other))
 
   def __add__(self, other:int) -> bytes:
     return CrackleArray(add_scalar(self.binary, other))
