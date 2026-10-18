@@ -14,7 +14,7 @@ if sys.platform == 'win32':
   ]
 else:
   extra_compile_args += [
-    '-std=c++2a', '-O3',
+    '-std=c++20', '-O3',
   ]
 
   cibw_archs = os.environ.get("CIBW_ARCHS", "").lower()
