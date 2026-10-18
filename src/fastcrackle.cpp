@@ -697,7 +697,7 @@ py::set edge_labels(
 	return py_set;
 }
 
-py::set apply_binary_mask(
+py::list apply_binary_mask(
 	const py::buffer buffer,
 	const py::buffer mask_buffer,
 	const size_t parallel = 1
