@@ -65,8 +65,13 @@ class CrackleArray:
   def nbytes(self) -> int:
     return nbytes(self.binary)
 
-  def copy(self) -> "CrackleArray":
-    return CrackleArray(self.binary)
+  def copy(self, order:Literal['C', 'F', 'K'] = 'K') -> "CrackleArray":
+    if order == 'K':
+      return CrackleArray(self.binary)
+    elif order == 'F':
+      return self.asfortranarray()
+    else:
+      return self.ascontiguousarray()
 
   def asfortranarray(self) -> "CrackleArray":
     return CrackleArray(asfortranarray(self.binary))
