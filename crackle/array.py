@@ -26,6 +26,7 @@ from .operations import (
   asfortranarray,
   ascontiguousarray,
   edge_labels,
+  apply_binary_mask,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -231,6 +232,16 @@ class CrackleArray:
 
   def edge_labels(self) -> set[int]:
     return edge_labels(self.binary, parallel=self.parallel)
+
+  def apply_binary_mask(self, other:"CrackleArray") -> "CrackleArray":
+    binary = apply_binary_mask(
+      self.binary, other.binary, parallel=self.parallel
+    )
+    return CrackleArray(binary, parallel=self.parallel)
+
+  def viewer(self):
+    import microviewer
+    microviewer.view(self.numpy(), seg=True)
 
   def __eq__(self, other:Union[int, Any]) -> bool:
     if isinstance(other, int):
