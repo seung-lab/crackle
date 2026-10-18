@@ -28,6 +28,7 @@ from .operations import (
   ascontiguousarray,
   edge_labels,
   apply_binary_mask,
+  voxelwise_comparison,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -249,25 +250,53 @@ class CrackleArray:
     import microviewer
     microviewer.view(self.numpy(), seg=True)
 
-  def __eq__(self, other:Union[int, Any]) -> bool:
+  def __eq__(self, other:Union[int, Any]) -> bytes:
     if isinstance(other, int):
-      return self.min() == other and self.max() == other
+      return CrackleArray(eq_scalar(self.binary, other))
     elif isinstance(other, CrackleArray):
-      return self.array_equal(other)
+      return voxelwise_comparison(self.binary, other, "=", self.parallel)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
-  def __gt__(self, other:int) -> bytes:
-    return CrackleArray(gt(self.binary, other))
+  def __ne__(self, other:Union[int, Any]) -> bytes:
+    if isinstance(other, int):
+      return CrackleArray(neq_scalar(self.binary, other))
+    elif isinstance(other, CrackleArray):
+      return voxelwise_comparison(self.binary, other, "!=", self.parallel)
+    else:
+      raise TypeError(f"Type {type(other)} is not supported.")
 
-  def __ge__(self, other:int) -> bytes:
-    return CrackleArray(gte(self.binary, other))
+  def __gt__(self, other:Union[int, Any]) -> bytes:
+    if isinstance(other, int):
+      return CrackleArray(gt_scalar(self.binary, other))
+    elif isinstance(other, CrackleArray):
+      return voxelwise_comparison(self.binary, other, ">", self.parallel)
+    else:
+      raise TypeError(f"Type {type(other)} is not supported.")
 
-  def __lt__(self, other:int) -> bytes:
-    return CrackleArray(lt(self.binary, other))
+  def __ge__(self, other:Union[int, Any]) -> bytes:
+    if isinstance(other, int):
+      return CrackleArray(gte_scalar(self.binary, other))
+    elif isinstance(other, CrackleArray):
+      return voxelwise_comparison(self.binary, other, ">=", self.parallel)
+    else:
+      raise TypeError(f"Type {type(other)} is not supported.")
 
-  def __le__(self, other:int) -> bytes:
-    return CrackleArray(lte(self.binary, other))
+  def __lt__(self, other:Union[int, Any]) -> bytes:
+    if isinstance(other, int):
+      return CrackleArray(lt_scalar(self.binary, other))
+    elif isinstance(other, CrackleArray):
+      return voxelwise_comparison(self.binary, other, "<", self.parallel)
+    else:
+      raise TypeError(f"Type {type(other)} is not supported.")
+
+  def __le__(self, other:Union[int, Any]) -> bytes:
+    if isinstance(other, int):
+      return CrackleArray(lte_scalar(self.binary, other))
+    elif isinstance(other, CrackleArray):
+      return voxelwise_comparison(self.binary, other, "<=", self.parallel)
+    else:
+      raise TypeError(f"Type {type(other)} is not supported.")
 
   def __add__(self, other:int) -> bytes:
     return CrackleArray(add_scalar(self.binary, other))

@@ -757,6 +757,65 @@ py::list recompress(
 	return result;
 }
 
+py::list voxelwise_comparison(
+	const py::buffer lvalue_buffer,
+	const py::buffer rvalue_buffer,
+	const char oper,
+	const size_t parallel = 1
+) {
+	py::buffer_info lval_info = lvalue_buffer.request();
+	py::buffer_info rval_info = rvalue_buffer.request();
+
+	if (lval_info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+	if (rval_info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+
+	uint8_t* lval_ptr = static_cast<uint8_t*>(lval_info.ptr);
+	uint8_t* rval_ptr = static_cast<uint8_t*>(rval_info.ptr);
+
+	std::vector<std::vector<unsigned char>> binaries;
+
+	auto fn = [&](crackle::operations::ComparisonOperator operatr) {
+		return crackle::operations::voxelwise_comparison(
+			lval_ptr, lval_info.size,
+			rval_ptr, rval_info.size,
+			operatr,
+			parallel
+		);
+	};
+
+	if (oper == 'e') {
+		binaries = fn(crackle::operations::ComparisonOperator::EQ);
+	}
+	else if (oper == 'n') {
+		binaries = fn(crackle::operations::ComparisonOperator::NEQ);
+	}
+	else if (oper == 'g') {
+		binaries = fn(crackle::operations::ComparisonOperator::GT);
+	}
+	else if (oper == 'G') {
+		binaries = fn(crackle::operations::ComparisonOperator::GTE);
+	}
+	else if (oper == 'l') {
+		binaries = fn(crackle::operations::ComparisonOperator::LT);
+	}
+	else if (oper == 'L') {
+		binaries = fn(crackle::operations::ComparisonOperator::LTE);
+	}
+	else {
+		throw std::invalid_argument("oper must be one of e, n, g, G, l, L meaning =, !=, >, >=, <, <= respectively.");
+	}
+
+	py::list result;
+	for (const auto& bin : binaries) {
+		result.append(py::bytes(reinterpret_cast<const char*>(bin.data()), bin.size()));
+	}
+	return result;
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -783,6 +842,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("edge_labels", &edge_labels, "Get the unique labels on the border of this volume.");
 	m.def("apply_binary_mask", &apply_binary_mask, "Apply a mask using logical AND from a binary image of the same size.");
 	m.def("recompress", &recompress, "Perform a complete decompress and compress cycle.");
+	m.def("voxelwise_comparison", &voxelwise_comparison, "Perform a voxelwise comparison like =, !=, <, <=, >, >=.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())
