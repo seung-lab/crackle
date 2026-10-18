@@ -824,9 +824,8 @@ def truediv_scalar(binary:bytes, scalar:int) -> bytes:
   return operator(binary, lambda uniq: uniq / scalar)
 
 def recompress(
-  binary:bytes, 
-  memory_target:int = int(4e9), 
-  allow_pins:bool = False,
+  binary:bytes,
+  parallel:int = 0,
 ) -> bytes:
   """
   After e.g. remapping a volume, you might want to recompress it
@@ -836,6 +835,12 @@ def recompress(
   You can also use this function to toggle between pin and flat label
   encoding. However, you must have sufficient memory for at least 3-4 
   uncompressed sections (ideally more) at once for this to be "profitable".
+
+  For example, in the case of a 15 GVx 64-bit L2 PyChunkGraph
+  segmentation, which compressed to 6GB, only a small masked
+  fraction (~1MB) was needed after remapping. Performing a 
+  full decompression/recompression cycle would have required
+  120 GB.
   """
   head = header(binary)
   # approximate RAM needed to encode/decode a full z-section
@@ -854,20 +859,10 @@ def recompress(
       f"requested: {min_memory_request} bytes"
     )
 
-  parallel = __builtins__["max"](memory_target - len(binary), 0) // section_bytes
-  parallel = __builtins__["max"](parallel, 1)
-  parallel = __builtins__["min"](parallel, mp.cpu_count())
-
-  bgcolor = min(binary) # TODO: could be properly calculated from cc keys
-
-  binaries = []
-  for z in range(0, head.sz, parallel):
-    z_end = __builtins__["min"](z+parallel, head.sz)
-    labels = decompress_range(binary, z_start=z, z_end=z_end, parallel=parallel)
-    binaries.append(
-      compress(labels, allow_pins=allow_pins, bgcolor=bgcolor)
-    )
-
+  binaries = fastcrackle.recompress(
+    binary,
+    z_start, z_end, parallel, 
+  )
   return zstack(binaries)
 
 def connected_components(

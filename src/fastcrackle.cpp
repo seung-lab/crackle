@@ -728,6 +728,35 @@ py::list apply_binary_mask(
 	return result;
 }
 
+// This is useful for reducing the size of remapped images
+// e.g. say you extract 1 label from a huge volume
+// In one case, I had a 6 GB file of L2 pychunkgraph labels from which 
+// I needed ~1MB of data. Performing a full decompression would have 
+// (in that case) required 120 GB on disk.
+py::list recompress(
+	const py::buffer buffer,
+	const int64_t z_start = 0, int64_t z_end = -1,
+	const size_t parallel = 1
+) {
+	py::buffer_info info = buffer.request();
+	if (info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+
+	std::vector<std::vector<unsigned char>> binaries = crackle::operations::recompress(
+		data, 
+		info.size, 
+		z_start, z_end,
+		parallel
+	);
+	py::list result;
+	for (const auto& bin : binaries) {
+		result.append(py::bytes(reinterpret_cast<const char*>(bin.data()), bin.size()));
+	}
+	return result;
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -753,6 +782,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("component_map", &component_map, "Map child components to parent components (analogue of fastremap.component_map).");
 	m.def("edge_labels", &edge_labels, "Get the unique labels on the border of this volume.");
 	m.def("apply_binary_mask", &apply_binary_mask, "Apply a mask using logical AND from a binary image of the same size.");
+	m.def("recompress", &recompress, "Perform a complete decompress and compress cycle.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())

@@ -39,10 +39,11 @@ def normalize_source(source):
 @click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
 @click.option('-p', '--parallel', default=0, help="Number of threads to use. 0 = num cpu", show_default=True)
+@click.option('--recompress', is_flag=True, default=False, help="Perform a full recompression cycle. Helpful for reducing the size of remapped volumes.", show_default=True)
 @click.argument("source", nargs=-1)
 def cckl(
 	allow_pins, markov, source, 
-	keep, gzip, parallel,
+	keep, gzip, parallel, recompress,
 ):
 	"""
 	Compress to crackle (.ckl) files 
@@ -57,7 +58,7 @@ def cckl(
 	source = normalize_source(source)
 
 	for src in source:
-		ckl_path = convert_file(src, allow_pins, markov, gzip, keep, "ckl", parallel)
+		ckl_path = convert_file(src, allow_pins, markov, gzip, keep, "ckl", parallel, recompress)
 
 @click.command()
 @click.option('-k', '--keep', default=False, is_flag=True, help="Keep the original file.", show_default=True)
@@ -123,11 +124,12 @@ def labelscmd(source):
 @click.option('-z', 'gzip', default=False, is_flag=True, help="Apply gzip compression after encoding.", show_default=True)
 @click.option('-t', '--to', 'to_format', default="ckl", type=str, help="Specify destination format. Supports: npy, nii, nrrd, ckl", show_default=True)
 @click.option('-p', '--parallel', default=0, help="Number of threads to use. 0 = num cpu", show_default=True)
+@click.option('--recompress', is_flag=True, default=False, help="Perform a full recompression cycle. Helpful for reducing the size of remapped volumes.", show_default=True)
 @click.argument("source", nargs=-1)
 def convertcmd(
 	source, 
 	markov, keep, gzip, to_format,
-	parallel,
+	parallel, recompress,
 ):
 	"""
 	Convert between crackle (.ckl) files and other file types.
@@ -139,8 +141,7 @@ def convertcmd(
 	source = normalize_source(source)
 
 	for src in source:
-		convert_file(src, allow_pins, markov, gzip, keep, to_format, parallel)
-
+		convert_file(src, allow_pins, markov, gzip, keep, to_format, parallel, recompress)
 
 @main.command("test")
 @click.argument("source", nargs=-1)
@@ -326,6 +327,7 @@ def convert_file(
 	keep:bool,
 	to_format:str,
 	parallel:int = 0,
+	recompress:bool = False,
 ):
 	nsrc = normalize_extension(src)
 	ckl_path = None
@@ -361,6 +363,14 @@ def convert_file(
 				print("Reencoding format version 0 is not currently supported.")
 				return
 
+			if recompress:
+				arr.binary = crackle.recompress(
+					arr.binary,
+					parallel=parallel,
+				)
+			
+			# recompress doesn't handle markov order
+			# if the orders match, this will be a no-op
 			arr.binary = crackle.codec.reencode(
 				arr.binary,
 				markov_model_order=int(markov),
