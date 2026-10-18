@@ -786,16 +786,22 @@ def operator(binary:bytes, fn) -> bytes:
     crack_crcs_binary,
   ])
 
-def gt(binary:bytes, scalar:int) -> bytes:
+def eq_scalar(binary:bytes, scalar:int) -> bytes:
+  return operator(binary, lambda uniq: uniq == scalar)
+
+def neq_scalar(binary:bytes, scalar:int) -> bytes:
+  return operator(binary, lambda uniq: uniq != scalar)
+
+def gt_scalar(binary:bytes, scalar:int) -> bytes:
   return operator(binary, lambda uniq: uniq > scalar)
 
-def gte(binary:bytes, scalar:int) -> bytes:
+def gte_scalar(binary:bytes, scalar:int) -> bytes:
   return operator(binary, lambda uniq: uniq >= scalar)
 
-def lt(binary:bytes, scalar:int) -> bytes:
+def lt_scalar(binary:bytes, scalar:int) -> bytes:
   return operator(binary, lambda uniq: uniq < scalar)
 
-def lte(binary:bytes, scalar:int) -> bytes:
+def lte_scalar(binary:bytes, scalar:int) -> bytes:
   return operator(binary, lambda uniq: uniq <= scalar)
 
 def add_scalar(binary:bytes, scalar:int) -> bytes:
