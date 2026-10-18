@@ -1080,7 +1080,7 @@ def apply_binary_mask(input_binary:bytes, mask_binary:bytes, parallel:int = 0) -
 
 OPERATOR_MAP = {
   "=": "e",
-  "!=": "m",
+  "!=": "n",
   ">": "g",
   ">=": "G",
   "<": "l",
@@ -1089,6 +1089,6 @@ OPERATOR_MAP = {
 
 def voxelwise_comparison(lvalue:bytes, rvalue:bytes, operator:str, parallel:int = 0) -> bytes:
   oper = OPERATOR_MAP[operator]
-  binaries = voxelwise_comparison(lvalue, rvalue, oper, parallel)
-
+  binaries = fastcrackle.voxelwise_comparison(lvalue, rvalue, oper, parallel)
+  return zstack(binaries)
 
