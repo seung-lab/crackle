@@ -874,7 +874,11 @@ def point_cloud(
 
   return ptc
 
-def reencode(binary:bytes, markov_model_order:int, parallel:int = 0):
+def reencode(binary:bytes, markov_model_order:int, parallel:int = 0) -> bytes:
+  """
+  Without decompressing, reencode the crack codes using 
+  a different markov model.
+  """
   head = header(binary)
   if head.markov_model_order == markov_model_order:
     return binary
