@@ -95,9 +95,11 @@ class CrackleArray:
       return labels(self.binary)
 
   def any(self) -> bool:
+    """Returns True if any elements evaluate to True."""
     return np.any(self.labels())
 
   def all(self) -> bool:
+    """Returns True if all elements evaluate to True."""
     return 0 not in self
 
   def num_labels(self) -> int:
