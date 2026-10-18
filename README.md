@@ -11,6 +11,7 @@ cckl -m 5 data.npy # use a 5th order context model
 cckl --allow-pins data.npy # use pin encoding for labels
 cckl --allow-pins -m 5 data.npy # use pins and markov model
 cckl -m 0 data.ckl # change markov model order
+cckl --recompress remapped.ckl # save space if you masked out most of the volume
 
 dckl data.ckl # recovers data.npy
 
@@ -87,9 +88,21 @@ remapped = crackle.refit(binary)
 # renumber array and change dtype to smallest possible
 remapped = crackle.renumber(binary, start=0)
 
+# efficiently stops at the first sign that the two
+# are not equal
 is_equal = crackle.array_equal(binary1, binary2)
-arr == arr2 # syntactic sugar for CrackleArrays
 arr.array_equal(arr2) # method call for CrackleArrays
+
+# perform voxelwise comparisons
+result = arr == arr2
+result = arr != arr2
+result = arr > arr2
+result = arr >= arr2
+result = arr < arr2
+result = arr <= arr2
+
+# efficient impl. of np.where(mask, arr, 0)
+result = arr.apply_binary_mask(mask)
 
 # for working with files
 # if .gz is appended to the filename, the file will be
