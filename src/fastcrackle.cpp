@@ -757,7 +757,7 @@ py::list recompress(
 	return result;
 }
 
-py::list voxelwise_comparison(
+py::list binary_operator(
 	const py::buffer lvalue_buffer,
 	const py::buffer rvalue_buffer,
 	const char oper,
@@ -772,14 +772,18 @@ py::list voxelwise_comparison(
 	if (rval_info.ndim != 1) {
 		throw std::invalid_argument("Expected a 1D buffer");
 	}
+	if (lval_info.itemsize != 1 || rval_info.itemsize != 1) {
+		throw std::invalid_argument("Expected itemsize == 1 (byte buffers)");
+	}
 
 	uint8_t* lval_ptr = static_cast<uint8_t*>(lval_info.ptr);
 	uint8_t* rval_ptr = static_cast<uint8_t*>(rval_info.ptr);
 
 	std::vector<std::vector<unsigned char>> binaries;
 
-	auto fn = [&](crackle::operations::ComparisonOperator operatr) {
-		return crackle::operations::voxelwise_comparison(
+	auto fn = [&](crackle::operations::BinaryOperator operatr) {
+		py::gil_scoped_release release;
+		return crackle::operations::binary_operator(
 			lval_ptr, lval_info.size,
 			rval_ptr, rval_info.size,
 			operatr,
@@ -788,25 +792,58 @@ py::list voxelwise_comparison(
 	};
 
 	if (oper == 'e') {
-		binaries = fn(crackle::operations::ComparisonOperator::EQ);
+		binaries = fn(crackle::operations::BinaryOperator::EQ);
 	}
 	else if (oper == 'n') {
-		binaries = fn(crackle::operations::ComparisonOperator::NEQ);
+		binaries = fn(crackle::operations::BinaryOperator::NEQ);
 	}
 	else if (oper == 'g') {
-		binaries = fn(crackle::operations::ComparisonOperator::GT);
+		binaries = fn(crackle::operations::BinaryOperator::GT);
 	}
 	else if (oper == 'G') {
-		binaries = fn(crackle::operations::ComparisonOperator::GTE);
+		binaries = fn(crackle::operations::BinaryOperator::GTE);
 	}
 	else if (oper == 'l') {
-		binaries = fn(crackle::operations::ComparisonOperator::LT);
+		binaries = fn(crackle::operations::BinaryOperator::LT);
 	}
 	else if (oper == 'L') {
-		binaries = fn(crackle::operations::ComparisonOperator::LTE);
+		binaries = fn(crackle::operations::BinaryOperator::LTE);
+	}
+	else if (oper == '+') {
+		binaries = fn(crackle::operations::BinaryOperator::ADD);
+	}
+	else if (oper == '-') {
+		binaries = fn(crackle::operations::BinaryOperator::SUB);
+	}
+	else if (oper == '*') {
+		binaries = fn(crackle::operations::BinaryOperator::MUL);
+	}
+	else if (oper == '/') {
+		binaries = fn(crackle::operations::BinaryOperator::DIV);
+	}
+	else if (oper == '%') {
+		binaries = fn(crackle::operations::BinaryOperator::MOD);
+	}
+	else if (oper == 's') {
+		binaries = fn(crackle::operations::BinaryOperator::LSHIFT);
+	}
+	else if (oper == 'S') {
+		binaries = fn(crackle::operations::BinaryOperator::RSHIFT);
+	}
+	else if (oper == '|') {
+		binaries = fn(crackle::operations::BinaryOperator::BITWISE_OR);
+	}
+	else if (oper == '&') {
+		binaries = fn(crackle::operations::BinaryOperator::BITWISE_AND);
+	}
+	else if (oper == '^') {
+		binaries = fn(crackle::operations::BinaryOperator::XOR);
 	}
 	else {
-		throw std::invalid_argument("oper must be one of e, n, g, G, l, L meaning =, !=, >, >=, <, <= respectively.");
+		throw std::invalid_argument(
+			"oper must be one of e, n, g, G, l, L, +, -, *, /, %, s, S, |, &, ^ "
+			"meaning =, !=, >, >=, <, <=, +, -, *, /, %, <<, >>, |, &, ^ respectively."
+		);
 	}
 
 	py::list result;
@@ -842,7 +879,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("edge_labels", &edge_labels, "Get the unique labels on the border of this volume.");
 	m.def("apply_binary_mask", &apply_binary_mask, "Apply a mask using logical AND from a binary image of the same size.");
 	m.def("recompress", &recompress, "Perform a complete decompress and compress cycle.");
-	m.def("voxelwise_comparison", &voxelwise_comparison, "Perform a voxelwise comparison like =, !=, <, <=, >, >=.");
+	m.def("binary_operator", &binary_operator, "Perform a voxelwise comparison like =, !=, <, <=, >, >=.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())

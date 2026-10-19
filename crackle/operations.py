@@ -1085,10 +1085,20 @@ OPERATOR_MAP = {
   ">=": "G",
   "<": "l",
   "<=": "L",
+  "+": "+",
+  "-": "-",
+  "*": "*",
+  "/": "/",
+  "%": "%",
+  "<<": "s",
+  ">>": "S",
+  "|": "|",
+  "&": "&",
+  "^": "^",
 }
 
-def voxelwise_comparison(lvalue:bytes, rvalue:bytes, operator:str, parallel:int = 0) -> bytes:
+def binary_operator(lvalue:bytes, rvalue:bytes, operator:str, parallel:int = 0) -> bytes:
   oper = OPERATOR_MAP[operator]
-  binaries = fastcrackle.voxelwise_comparison(lvalue, rvalue, oper, parallel)
+  binaries = fastcrackle.binary_operator(lvalue, rvalue, oper, parallel)
   return zstack(binaries)
 

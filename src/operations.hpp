@@ -1943,23 +1943,33 @@ auto recompress(
 	);
 }
 
-enum ComparisonOperator {
-	EQ,
-	NEQ,
-	GT,
-	GTE,
-	LT,
-	LTE
+enum BinaryOperator : uint8_t {
+	EQ = 0,
+	NEQ = 1,
+	GT = 2,
+	GTE = 3,
+	LT = 4,
+	LTE = 5,
+	ADD = 6,
+	SUB = 7,
+	MUL = 8,
+	DIV = 9,
+	MOD = 10,
+	XOR = 11,
+	LSHIFT = 12,
+	RSHIFT = 13,
+	BITWISE_OR = 14,
+	BITWISE_AND = 15
 };
 
 template <typename LABEL>
 std::vector<std::vector<unsigned char>>
-voxelwise_comparison(
+binary_operator(
 	const unsigned char* buffer1, // input image
 	const size_t num_bytes1,
 	const unsigned char* buffer2,
 	const size_t num_bytes2, // mask buffer,
-	ComparisonOperator oper,
+	const BinaryOperator oper,
 	size_t parallel = 1
 ) {
 	const CrackleHeader header1 = get_header(buffer1, num_bytes1);
@@ -2067,26 +2077,59 @@ voxelwise_comparison(
 			for (size_t y = 0; y < sy; y++) {
 				for (size_t x = 0; x < sx; x++) {
 					const int64_t loc = x + sx * y;
-					const LABEL lvalue = label_map1[ccl1[loc]];
-					const LABEL rvalue = label_map2[ccl2[loc]];
+					const uint64_t lvalue = label_map1[ccl1[loc]];
+					const uint64_t rvalue = label_map2[ccl2[loc]];
 
-					if (oper == ComparisonOperator::EQ) {
+					if (oper == BinaryOperator::EQ) {
 						result_map[loc] = lvalue == rvalue;
 					}
-					else if (oper == ComparisonOperator::NEQ) {
+					else if (oper == BinaryOperator::NEQ) {
 						result_map[loc] = lvalue != rvalue;
 					}
-					else if (oper == ComparisonOperator::GT) {
+					else if (oper == BinaryOperator::GT) {
 						result_map[loc] = lvalue > rvalue;
 					}
-					else if (oper == ComparisonOperator::GTE) {
+					else if (oper == BinaryOperator::GTE) {
 						result_map[loc] = lvalue >= rvalue;
 					}
-					else if (oper == ComparisonOperator::LT) {
+					else if (oper == BinaryOperator::LT) {
 						result_map[loc] = lvalue < rvalue;
 					}
-					else { // LTE
+					else if (oper == BinaryOperator::LTE) {
 						result_map[loc] = lvalue <= rvalue;
+					}
+					else if (oper == BinaryOperator::ADD) {
+						result_map[loc] = lvalue + rvalue;
+					}
+					else if (oper == BinaryOperator::SUB) {
+						result_map[loc] = lvalue - rvalue;
+					}
+					else if (oper == BinaryOperator::MUL) {
+						result_map[loc] = lvalue * rvalue;
+					}
+					else if (oper == BinaryOperator::DIV) {
+						result_map[loc] = lvalue / rvalue;
+					}
+					else if (oper == BinaryOperator::MOD) {
+						result_map[loc] = lvalue % rvalue;
+					}
+					else if (oper == BinaryOperator::LSHIFT) {
+						result_map[loc] = lvalue << rvalue;
+					}
+					else if (oper == BinaryOperator::RSHIFT) {
+						result_map[loc] = lvalue >> rvalue;
+					}
+					else if (oper == BinaryOperator::BITWISE_OR) {
+						result_map[loc] = lvalue | rvalue;
+					}
+					else if (oper == BinaryOperator::BITWISE_AND) {
+						result_map[loc] = lvalue & rvalue;
+					}
+					else if (oper == BinaryOperator::XOR) {
+						result_map[loc] = lvalue ^ rvalue;
+					}
+					else {
+						throw std::invalid_argument("Invalid operator.");
 					}
 				}
 			}
@@ -2103,39 +2146,54 @@ voxelwise_comparison(
 	return result_binaries;
 }
 
-auto voxelwise_comparison(
+auto binary_operator(
 	const unsigned char* buffer1, // lvalue buf
 	const size_t num_bytes1,
 	const unsigned char* buffer2, // rvalue buf
 	const size_t num_bytes2, 
-	const ComparisonOperator oper,
+	const BinaryOperator oper,
 	size_t parallel = 1
 ) {
 	const CrackleHeader header1 = get_header(buffer1, num_bytes1);
+	const CrackleHeader header2 = get_header(buffer2, num_bytes2);
 
-	if (header1.data_width == 1) {
-		return voxelwise_comparison<uint8_t>(
+	bool is_boolean_operator = (
+		oper == BinaryOperator::EQ
+		|| oper == BinaryOperator::NEQ
+		|| oper == BinaryOperator::GT
+		|| oper == BinaryOperator::GTE
+		|| oper == BinaryOperator::LT
+		|| oper == BinaryOperator::LTE
+	);
+
+	const int data_width = std::max(
+		header1.data_width,
+		header2.data_width
+	);
+
+	if (is_boolean_operator || data_width == 1) {
+		return binary_operator<uint8_t>(
 			buffer1, num_bytes1,
 			buffer2, num_bytes2, oper,
 			parallel
 		);
 	}
-	else if (header1.data_width == 2) {
-		return voxelwise_comparison<uint16_t>(
+	else if (data_width == 2) {
+		return binary_operator<uint16_t>(
 			buffer1, num_bytes1,
 			buffer2, num_bytes2, oper,
 			parallel
 		);
 	}
-	else if (header1.data_width == 4) {
-		return voxelwise_comparison<uint32_t>(
+	else if (data_width == 4) {
+		return binary_operator<uint32_t>(
 			buffer1, num_bytes1,
 			buffer2, num_bytes2, oper,
 			parallel
 		);
 	}
 	else {
-		return voxelwise_comparison<uint64_t>(
+		return binary_operator<uint64_t>(
 			buffer1, num_bytes1,
 			buffer2, num_bytes2, oper,
 			parallel
@@ -2143,13 +2201,13 @@ auto voxelwise_comparison(
 	}
 }
 
-auto voxelwise_comparison(
+auto binary_operator(
 	const std::span<const unsigned char>& buffer1,
 	const std::span<const unsigned char>& buffer2,
-	const ComparisonOperator oper,
+	const BinaryOperator oper,
 	size_t parallel = 1
 ) {
-	return voxelwise_comparison(
+	return binary_operator(
 		buffer1.data(), buffer1.size(),
 		buffer2.data(), buffer2.size(),
 		oper,
