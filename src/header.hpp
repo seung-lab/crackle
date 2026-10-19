@@ -9,13 +9,13 @@
 
 namespace crackle {
 
-enum LabelFormat {
+enum LabelFormat : uint8_t {
 	FLAT = 0,
 	PINS_FIXED_WIDTH = 1,
 	PINS_VARIABLE_WIDTH = 2
 };
 
-enum CrackFormat {
+enum CrackFormat : uint8_t {
 	IMPERMISSIBLE = 0,
 	PERMISSIBLE = 1
 };
