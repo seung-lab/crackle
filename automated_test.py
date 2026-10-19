@@ -1085,6 +1085,44 @@ def test_array_equality():
   assert np.all(result == 0)
   
 
+def test_binary_operations():
+  arr_a = np.random.randint(5,16, size=[107,101,103], dtype=np.uint32)
+  arr_b = np.random.randint(5,16, size=[107,101,103], dtype=np.uint32)
+
+  ckl_a = crackle.compressa(arr_a)
+  ckl_b = crackle.compressa(arr_b)
+
+  assert np.all((arr_a + arr_b) == (ckl_a + ckl_b).numpy())
+  assert np.all((arr_a - arr_b) == (ckl_a - ckl_b).numpy())
+  assert np.all((arr_a * arr_b) == (ckl_a * ckl_b).numpy())
+  assert np.all((arr_a // arr_b) == (ckl_a // ckl_b).numpy())
+  assert np.all((arr_a % arr_b) == (ckl_a % ckl_b).numpy())
+  assert np.all((arr_a | arr_b) == (ckl_a | ckl_b).numpy())
+  assert np.all((arr_a & arr_b) == (ckl_a & ckl_b).numpy())
+  assert np.all((arr_a ^ arr_b) == (ckl_a ^ ckl_b).numpy())
+  assert np.all((arr_a << arr_b) == (ckl_a << ckl_b).numpy())
+  assert np.all((arr_a >> arr_b) == (ckl_a >> ckl_b).numpy())
+
+  assert np.all((arr_a + 3) == (ckl_a + 3).numpy())
+  assert np.all((arr_a - 3) == (ckl_a - 3).numpy())
+  assert np.all((arr_a * 3) == (ckl_a * 3).numpy())
+  assert np.all((arr_a // 3) == (ckl_a // 3).numpy())
+  assert np.all((arr_a % 3) == (ckl_a % 3).numpy())
+  assert np.all((arr_a | 3) == (ckl_a | 3).numpy())
+  assert np.all((arr_a & 3) == (ckl_a & 3).numpy())
+  assert np.all((arr_a ^ 3) == (ckl_a ^ 3).numpy())
+  assert np.all((arr_a << 3) == (ckl_a << 3).numpy())
+  assert np.all((arr_a >> 3) == (ckl_a >> 3).numpy())
+
+
+
+
+
+
+
+
+
+
   
 
 
