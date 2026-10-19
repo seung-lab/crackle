@@ -820,12 +820,16 @@ def multiply_scalar(binary:bytes, scalar:int) -> bytes:
   return operator(binary, lambda uniq: uniq * scalar)
 
 def floordiv_scalar(binary:bytes, scalar:int) -> bytes:
-  if scalar == 1:
+  if scalar == 0:
+    raise ZeroDivisionError("Cannot divide by zero.")
+  elif scalar == 1:
     return binary
   return operator(binary, lambda uniq: uniq // scalar)
 
 def mod_scalar(binary:bytes, scalar:int) -> bytes:
-  if scalar > max(binary):
+  if scalar == 0:
+    raise ZeroDivisionError("Cannot divide by zero.")
+  elif scalar > max(binary):
     return binary
   return operator(binary, lambda uniq: uniq % scalar)
 
