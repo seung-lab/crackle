@@ -1,4 +1,5 @@
 from typing import Optional, Union, Any, Dict, Literal, Iterator
+from collections.abc import Callable
 
 from .headers import CrackleHeader, LabelFormat
 from .codec import (
@@ -19,6 +20,9 @@ from .operations import (
   gt_scalar, gte_scalar, lt_scalar, lte_scalar,
   add_scalar, subtract_scalar,
   multiply_scalar, floordiv_scalar,
+  mod_scalar, 
+  bitwise_or_scalar, bitwise_and_scalar, xor_scalar,
+  lshift_scalar, rshift_scalar,
   connected_components, 
   voxel_connectivity_graph,
   contacts,
@@ -28,7 +32,7 @@ from .operations import (
   ascontiguousarray,
   edge_labels,
   apply_binary_mask,
-  voxelwise_comparison,
+  binary_operator,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -267,83 +271,74 @@ class CrackleArray:
     import microviewer
     microviewer.view(self.numpy(), seg=True)
 
-  def __eq__(self, other:Union[int, Any]) -> bytes:
+  def _dispatch_binary_operator(self, other:Union[int, Any], scalarfn:Callable, oper:str) -> bytes:
     if isinstance(other, int):
-      return CrackleArray(eq_scalar(self.binary, other))
+      return CrackleArray(scalarfn(self.binary, other))
     elif isinstance(other, CrackleArray):
-      binary = voxelwise_comparison(self.binary, other.binary, "=", self.parallel)
+      binary = binary_operator(self.binary, other.binary, oper, self.parallel)
       return CrackleArray(binary)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
+
+  def __eq__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, eq_scalar, "=")
 
   def __ne__(self, other:Union[int, Any]) -> bytes:
-    if isinstance(other, int):
-      return CrackleArray(neq_scalar(self.binary, other))
-    elif isinstance(other, CrackleArray):
-      binary = voxelwise_comparison(self.binary, other.binary, "!=", self.parallel)
-      return CrackleArray(binary)
-    else:
-      raise TypeError(f"Type {type(other)} is not supported.")
+    return self._dispatch_binary_operator(other, neq_scalar, "!=")
 
   def __gt__(self, other:Union[int, Any]) -> bytes:
-    if isinstance(other, int):
-      return CrackleArray(gt_scalar(self.binary, other))
-    elif isinstance(other, CrackleArray):
-      binary = voxelwise_comparison(self.binary, other.binary, ">", self.parallel)
-      return CrackleArray(binary)
-    else:
-      raise TypeError(f"Type {type(other)} is not supported.")
+    return self._dispatch_binary_operator(other, gt_scalar, ">")
 
   def __ge__(self, other:Union[int, Any]) -> bytes:
-    if isinstance(other, int):
-      return CrackleArray(gte_scalar(self.binary, other))
-    elif isinstance(other, CrackleArray):
-      binary = voxelwise_comparison(self.binary, other.binary, ">=", self.parallel)
-      return CrackleArray(binary)
-    else:
-      raise TypeError(f"Type {type(other)} is not supported.")
+    return self._dispatch_binary_operator(other, gte_scalar, ">=")
 
   def __lt__(self, other:Union[int, Any]) -> bytes:
-    if isinstance(other, int):
-      return CrackleArray(lt_scalar(self.binary, other))
-    elif isinstance(other, CrackleArray):
-      binary = voxelwise_comparison(self.binary, other.binary, "<", self.parallel)
-      return CrackleArray(binary)
-    else:
-      raise TypeError(f"Type {type(other)} is not supported.")
+    return self._dispatch_binary_operator(other, lt_scalar, "<")
 
   def __le__(self, other:Union[int, Any]) -> bytes:
-    if isinstance(other, int):
-      return CrackleArray(lte_scalar(self.binary, other))
-    elif isinstance(other, CrackleArray):
-      binary = voxelwise_comparison(self.binary, other.binary, "<=", self.parallel)
-      return CrackleArray(binary)
-    else:
-      raise TypeError(f"Type {type(other)} is not supported.")
+    return self._dispatch_binary_operator(other, lte_scalar, "<=")
 
-  def __add__(self, other:int) -> bytes:
-    return CrackleArray(add_scalar(self.binary, other))
+  def __add__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, add_scalar, "+")
 
   def __radd__(self, other:int) -> bytes:
     return self.__add__(other)
 
-  def __sub__(self, other:int) -> bytes:
-    return CrackleArray(subtract_scalar(self.binary, other))
+  def __sub__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, subtract_scalar, "-")
 
   def __rsub__(self, other:int) -> bytes:
     return self.__sub__(other)
 
-  def __mul__(self, other:int) -> bytes:
-    return CrackleArray(multiply_scalar(self.binary, other))
+  def __mul__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, multiply_scalar, "*")
 
   def __rmul__(self, other:int) -> bytes:
     return self.__mul__(other)
 
-  def __floordiv__(self, other:int) -> bytes:
-    return CrackleArray(floordiv_scalar(self.binary, other))
+  def __floordiv__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, floordiv_scalar, "/")
 
   def __rfloordiv__(self, other:int) -> bytes:
     return self.__floordiv__(other)
+
+  def __mod__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, mod_scalar, "%")
+
+  def __xor__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, xor_scalar, "^")
+
+  def __lshift__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, lshift_scalar, "<<")
+
+  def __rshift__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, rshift_scalar, ">>")
+
+  def __and__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, bitwise_and_scalar, "&")
+
+  def __or__(self, other:Union[int, Any]) -> bytes:
+    return self._dispatch_binary_operator(other, bitwise_or_scalar, "|")
 
   def __contains__(self, elem:int) -> bool:
     return contains(self.binary, elem)

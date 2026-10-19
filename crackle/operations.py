@@ -824,10 +824,38 @@ def floordiv_scalar(binary:bytes, scalar:int) -> bytes:
     return binary
   return operator(binary, lambda uniq: uniq // scalar)
 
+def mod_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar > max(binary):
+    return binary
+  return operator(binary, lambda uniq: uniq % scalar)
+
 def truediv_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 1:
     return binary
   return operator(binary, lambda uniq: uniq / scalar)
+
+def xor_scalar(binary:bytes, scalar:int) -> bytes:
+  return operator(binary, lambda uniq: uniq ^ scalar)
+
+def bitwise_and_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == np.iinfo(header(binary).dtype).max:
+    return binary
+  return operator(binary, lambda uniq: uniq & scalar)
+
+def bitwise_or_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 0:
+    return binary
+  return operator(binary, lambda uniq: uniq | scalar)
+
+def lshift_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 0:
+    return binary
+  return operator(binary, lambda uniq: uniq << scalar)
+
+def rshift_scalar(binary:bytes, scalar:int) -> bytes:
+  if scalar == 0:
+    return binary
+  return operator(binary, lambda uniq: uniq >> scalar)
 
 def recompress(
   binary:bytes,
