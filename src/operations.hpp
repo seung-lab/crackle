@@ -1463,7 +1463,15 @@ mode_pooling_2x2x1(
 
 			ds_binaries[z-z_start] = crackle::compress<LABEL>(
 				oimg.data(),
-				osx, osy, 1
+				osx, osy, 1,
+				/*allow_pins=*/false,
+				/*fortran_order=*/true,
+				/*markov_model_order=*/0,
+				/*optimize_pins=*/false,
+				/*auto_bgcolor=*/false,
+				/*manual_bgcolor=*/0,
+				/*parallel=*/1,
+				/*crack_format=*/crackle::CrackFormat::IMPERMISSIBLE
 			);
 		}
 	);
@@ -1784,7 +1792,15 @@ apply_binary_mask(
 
 			masked_binaries[z] = crackle::compress<LABEL>(
 				ablated.data(),
-				sx, sy, 1
+				sx, sy, 1,
+				/*allow_pins=*/false,
+				/*fortran_order=*/true,
+				/*markov_model_order=*/0,
+				/*optimize_pins=*/false,
+				/*auto_bgcolor=*/false,
+				/*manual_bgcolor=*/0,
+				/*parallel=*/1,
+				/*crack_format=*/crackle::CrackFormat::IMPERMISSIBLE
 			);
 		});
 	}
@@ -1885,9 +1901,17 @@ recompress(
 				rendered[i] = label_map[ccl[i]];
 			}
 
-			recompressed_binaries[z-z_start] = crackle::compress(
+			recompressed_binaries[z-z_start] = crackle::compress<LABEL>(
 				rendered.get(),
-				sx, sy, 1
+				sx, sy, 1,
+				/*allow_pins=*/false,
+				/*fortran_order=*/true,
+				/*markov_model_order=*/0,
+				/*optimize_pins=*/false,
+				/*auto_bgcolor=*/false,
+				/*manual_bgcolor=*/0,
+				/*parallel=*/1,
+				/*crack_format=*/crackle::CrackFormat::IMPERMISSIBLE
 			);
 		}
 	);
