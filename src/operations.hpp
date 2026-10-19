@@ -2136,7 +2136,15 @@ binary_operator(
 
 			result_binaries[z] = crackle::compress<LABEL>(
 				result_map.data(),
-				sx, sy, 1
+				sx, sy, 1,
+				/*allow_pins=*/false,
+				/*fortran_order=*/true,
+				/*markov_model_order=*/0,
+				/*optimize_pins=*/false,
+				/*auto_bgcolor=*/false,
+				/*manual_bgcolor=*/0,
+				/*parallel=*/1,
+				/*crack_format=*/crackle::CrackFormat::IMPERMISSIBLE
 			);
 		});
 	}

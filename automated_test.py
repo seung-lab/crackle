@@ -1092,6 +1092,13 @@ def test_binary_operations():
   ckl_a = crackle.compressa(arr_a)
   ckl_b = crackle.compressa(arr_b)
 
+  assert (ckl_a < ckl_b).dtype == np.uint8
+  assert (ckl_a <= ckl_b).dtype == np.uint8
+  assert (ckl_a > ckl_b).dtype == np.uint8
+  assert (ckl_a >= ckl_b).dtype == np.uint8
+  assert (ckl_a == ckl_b).dtype == np.uint8
+  assert (ckl_a != ckl_b).dtype == np.uint8
+
   assert np.all((arr_a + arr_b) == (ckl_a + ckl_b).numpy())
   assert np.all((arr_a - arr_b) == (ckl_a - ckl_b).numpy())
   assert np.all((arr_a * arr_b) == (ckl_a * ckl_b).numpy())
