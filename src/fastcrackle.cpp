@@ -879,7 +879,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("edge_labels", &edge_labels, "Get the unique labels on the border of this volume.");
 	m.def("apply_binary_mask", &apply_binary_mask, "Apply a mask using logical AND from a binary image of the same size.");
 	m.def("recompress", &recompress, "Perform a complete decompress and compress cycle.");
-	m.def("binary_operator", &binary_operator, "Perform a voxelwise comparison like =, !=, <, <=, >, >=.");
+	m.def("binary_operator", &binary_operator, "Perform a voxelwise comparison like =, !=, <, <=, >, >=, +, -, *, /, %, |, &, ^.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())
