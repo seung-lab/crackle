@@ -17,7 +17,8 @@ enum LabelFormat : uint8_t {
 
 enum CrackFormat : uint8_t {
 	IMPERMISSIBLE = 0,
-	PERMISSIBLE = 1
+	PERMISSIBLE = 1,
+	AUTO = 255
 };
 
 /* Header: 

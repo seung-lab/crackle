@@ -41,27 +41,31 @@ std::vector<unsigned char> compress_helper(
 	const bool optimize_pins = false,
 	const bool auto_bgcolor = true,
 	const bool manual_bgcolor = 0,
-	size_t parallel = 1
+	size_t parallel = 1,
+	CrackFormat crack_format = CrackFormat::AUTO
 ) {
 	const int64_t voxels = sx * sy * sz;
-
-	int64_t num_pairs = crackle::lib::pixel_pairs(labels, voxels);
-
-	CrackFormat crack_format = CrackFormat::IMPERMISSIBLE;
-	LabelFormat label_format = LabelFormat::PINS_VARIABLE_WIDTH;
-	if (num_pairs < voxels / 2) {
-		crack_format = CrackFormat::PERMISSIBLE;
-		label_format = LabelFormat::FLAT;
-	}
-
 	constexpr bool is_signed = std::numeric_limits<LABEL>::is_signed;
 
 	// Full support for signed integers in pins is not yet implemented
 	// but is not impossible. The is_signed condition can be removed
 	// at that point.
-	if (sz == 1 || !allow_pins || is_signed) {
-		label_format = LabelFormat::FLAT;
+	const bool pins_possible = (sz > 1 && allow_pins && !is_signed);
+
+	int64_t num_pairs = 0;
+	if (pins_possible || crack_format == CrackFormat::AUTO) {
+		num_pairs = crackle::lib::pixel_pairs(labels, voxels);
 	}
+
+	if (crack_format == CrackFormat::AUTO) {
+		crack_format = (num_pairs < voxels / 2) 
+			? CrackFormat::IMPERMISSIBLE
+			: CrackFormat::PERMISSIBLE;
+	}
+
+	LabelFormat label_format = (pins_possible && (num_pairs >= voxels / 2))
+		? LabelFormat::PINS_VARIABLE_WIDTH
+		: LabelFormat::FLAT;
 
 	if (parallel == 0) {
 		parallel = std::thread::hardware_concurrency();
@@ -227,7 +231,8 @@ std::vector<unsigned char> compress(
 	const bool optimize_pins = false,
 	const bool auto_bgcolor = true,
 	const int64_t manual_bgcolor = 0,
-	size_t parallel = 1
+	size_t parallel = 1,
+	CrackFormat crack_format = CrackFormat::AUTO
 ) {
 	const int64_t voxels = sx * sy * sz;
 	uint8_t stored_data_width = crackle::lib::compute_byte_width(
@@ -237,7 +242,8 @@ std::vector<unsigned char> compress(
 #define CALL_COMPRESS_HELPER(STORED_T) compress_helper<LABEL, STORED_T>(\
 		labels, sx, sy, sz,\
 		allow_pins, fortran_order, markov_model_order,\
-		optimize_pins, auto_bgcolor, manual_bgcolor, parallel\
+		optimize_pins, auto_bgcolor, manual_bgcolor, parallel,\
+		crack_format\
 	)
 
 	if (stored_data_width == 1) {
