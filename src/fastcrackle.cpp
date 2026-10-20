@@ -736,11 +736,19 @@ py::list apply_binary_mask(
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
 	uint8_t* mask_data = static_cast<uint8_t*>(mask_info.ptr);
 
-	std::vector<std::vector<unsigned char>> binaries = crackle::operations::apply_binary_mask(
-		data, info.size,
-		mask_data, mask_info.size,
-		parallel
-	);
+	const size_t data_size = info.size;
+	const size_t mask_data_size = mask_info.size;
+
+	std::vector<std::vector<unsigned char>> binaries;
+
+	{
+		py::gil_scoped_release release;
+		binaries = crackle::operations::apply_binary_mask(
+			data, data_size,
+			mask_data, mask_info_size,
+			parallel
+		);
+	}
 
 	py::list result;
 	for (const auto& bin : binaries) {
@@ -764,13 +772,20 @@ py::list recompress(
 		throw std::invalid_argument("Expected a 1D buffer");
 	}
 	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	const size_t num_bytes = info.size;
 
-	std::vector<std::vector<unsigned char>> binaries = crackle::operations::recompress(
-		data, 
-		info.size, 
-		z_start, z_end,
-		parallel
-	);
+	std::vector<std::vector<unsigned char>> binaries;
+
+	{
+		py::gil_scoped_release release;
+		binaries = crackle::operations::recompress(
+			data, 
+			num_bytes, 
+			z_start, z_end,
+			parallel
+		);
+	}
+
 	py::list result;
 	for (const auto& bin : binaries) {
 		result.append(py::bytes(reinterpret_cast<const char*>(bin.data()), bin.size()));
