@@ -61,21 +61,31 @@ py::array decompress_helper(
 	py::array arr;
 	if (label.has_value()) {
 		arr = py::array_t<uint8_t>(voxels);
-		crackle::decompress<LABEL, uint8_t>(
-			buffer, num_bytes,
-			reinterpret_cast<uint8_t*>(const_cast<void*>(arr.data())),
-			z_start, z_end, 
-			parallel, label
-		);
+		uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<void*>(arr.data()));
+
+		{
+			py::gil_scoped_release release;
+			crackle::decompress<LABEL, uint8_t>(
+				buffer, num_bytes,
+				data,
+				z_start, z_end, 
+				parallel, label
+			);
+		}
 	}
 	else {
 		arr = py::array_t<LABEL>(voxels);
-		crackle::decompress<LABEL, LABEL>(
-			buffer, num_bytes,
-			reinterpret_cast<LABEL*>(const_cast<void*>(arr.data())),
-			z_start, z_end, 
-			parallel, label
-		);
+		LABEL* data = reinterpret_cast<LABEL*>(const_cast<void*>(arr.data()));
+		
+		{
+			py::gil_scoped_release release;
+			crackle::decompress<LABEL, LABEL>(
+				buffer, num_bytes,
+				data,
+				z_start, z_end, 
+				parallel, label
+			);
+		}
 	}
 
 	return arr;
@@ -146,17 +156,24 @@ py::bytes compress_helper(
 		? 1 
 		: labels.shape()[2];
 
-	std::vector<unsigned char> buf = crackle::compress<LABEL>(
-		reinterpret_cast<LABEL*>(const_cast<void*>(labels.data())),
-		sx, sy, sz,
-		allow_pins,
-		fortran_order,
-		markov_model_order,
-		optimize_pins,
-		auto_bgcolor,
-		manual_bgcolor,
-		parallel
-	);
+	LABEL* data = reinterpret_cast<LABEL*>(const_cast<void*>(labels.data()));
+	std::vector<unsigned char> buf;
+
+	{
+		py::gil_scoped_release release;
+		buf = crackle::compress<LABEL>(
+			data,
+			sx, sy, sz,
+			allow_pins,
+			fortran_order,
+			markov_model_order,
+			optimize_pins,
+			auto_bgcolor,
+			manual_bgcolor,
+			parallel
+		);
+	}
+
 	return py::bytes(reinterpret_cast<char*>(buf.data()), buf.size());
 }
 
@@ -469,15 +486,19 @@ void remap(
 	crackle::CrackleHeader header(data);
 
 	if (header.stored_data_width == 1) {
+		py::gil_scoped_release release;
 		crackle::remap<uint8_t>(data, num_bytes, mapping, preserve_missing_labels, parallel);
 	}
 	else if (header.stored_data_width == 2) {
+		py::gil_scoped_release release;
 		crackle::remap<uint16_t>(data, num_bytes, mapping, preserve_missing_labels, parallel);
 	}
 	else if (header.stored_data_width == 4) {
+		py::gil_scoped_release release;
 		crackle::remap<uint32_t>(data, num_bytes, mapping, preserve_missing_labels, parallel);
 	}
 	else {
+		py::gil_scoped_release release;
 		crackle::remap<uint64_t>(data, num_bytes, mapping, preserve_missing_labels, parallel);
 	}
 }
