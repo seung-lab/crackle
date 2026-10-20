@@ -272,7 +272,7 @@ class CrackleArray:
     microviewer.view(self.numpy(), seg=True)
 
   def _dispatch_binary_operator(self, other:Union[int, Any], scalarfn:Callable, oper:str) -> bytes:
-    if isinstance(other, int):
+    if isinstance(other, (int, np.integer)):
       return CrackleArray(scalarfn(self.binary, other))
     elif isinstance(other, CrackleArray):
       binary = binary_operator(self.binary, other.binary, oper, self.parallel)
