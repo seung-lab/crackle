@@ -745,7 +745,7 @@ py::list apply_binary_mask(
 		py::gil_scoped_release release;
 		binaries = crackle::operations::apply_binary_mask(
 			data, data_size,
-			mask_data, mask_info_size,
+			mask_data, mask_data_size,
 			parallel
 		);
 	}
