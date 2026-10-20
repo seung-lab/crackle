@@ -58,7 +58,7 @@ std::vector<unsigned char> compress_helper(
 	}
 
 	if (crack_format == CrackFormat::AUTO) {
-		crack_format = (num_pairs < voxels / 2) 
+		crack_format = (num_pairs >= voxels / 2) 
 			? CrackFormat::IMPERMISSIBLE
 			: CrackFormat::PERMISSIBLE;
 	}
