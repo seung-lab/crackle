@@ -93,13 +93,12 @@ remapped = crackle.renumber(binary, start=0)
 is_equal = crackle.array_equal(binary1, binary2)
 arr.array_equal(arr2) # method call for CrackleArrays
 
-# perform voxelwise comparisons
+# perform voxelwise operations
+# decompressing only one or a few slices
+# at a time, supporting larger than ram operations
+# supports: +, -, *, //, &, |, ^
+#           >, >=, <, <=, ==, !=
 result = arr == arr2
-result = arr != arr2
-result = arr > arr2
-result = arr >= arr2
-result = arr < arr2
-result = arr <= arr2
 
 # efficient impl. of np.where(mask, arr, 0)
 result = arr.apply_binary_mask(mask)
@@ -150,7 +149,7 @@ ccl_binary = crackle.connected_components(
 downsampled_binary = crackle.mode_pooling_2x2x1(binary)
 
 # building big arrays with low memory
-binary = crackle.zeros([5000,5000,5000], dtype=np.uint64, order='F')
+arr = crackle.zeros([5000,5000,5000], dtype=np.uint64, order='F')
 
 part1 = np.zeros([1000, 1000, 1000], dtype=np.uint32)
 part2 = crackle.ones([1000, 1000, 1000], dtype=np.uint32)

@@ -583,30 +583,24 @@ def test_edit_array():
 
 def test_full():
   shape = [100,200,50]
-  binary = crackle.full(shape, 0, dtype=np.uint16, order="F")
+  arr = crackle.full(shape, 0, dtype=np.uint16, order="F")
   ans = np.full(shape, 0, dtype=np.uint16, order="F")
 
-  binary2 = crackle.compress(ans)
+  gt_compressed = crackle.compressa(ans)
 
-  assert binary == binary2
-
-  arr = crackle.decompress(binary)
-
-  assert np.all(arr == ans)
+  assert gt_compressed.binary == arr.binary
+  assert np.all(gt_compressed.numpy() == ans)
 
 def test_zeros():
-  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
-  arr = crackle.decompress(binary)
+  arr = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
   ans = np.zeros([10,10,10], dtype=np.uint64, order="F")
-  assert crackle.labels(binary) == [ 0 ]
-  assert np.all(arr == ans)
+  assert arr.labels() == [ 0 ]
+  assert np.all(arr.numpy() == ans)
 
 @pytest.mark.parametrize("scalar", [0, 1, 5, 255, 70000])
 def test_add(scalar):
-  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
-  print(crackle.components(binary))
-
-  arr = crackle.CrackleArray(binary)
+  arr = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
+  
   assert arr.labels() == [ 0 ]
   arr = arr + scalar
   assert arr.labels() == [ scalar ]
@@ -617,14 +611,12 @@ def test_add(scalar):
 
 
 def test_refit():
-  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
-  arr = crackle.CrackleArray(binary)
+  arr = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
   arr = arr.refit()
   assert arr.dtype == np.uint8
 
 def test_astype():
-  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
-  arr = crackle.CrackleArray(binary)
+  arr = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
 
   assert arr.astype(np.uint8).dtype == np.uint8
   assert arr.astype(np.uint16).dtype == np.uint16
