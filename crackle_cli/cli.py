@@ -192,6 +192,17 @@ def downsamplecmd(source, output, sparse, parallel, N):
 
 	arr_ds.save(output)
 
+@main.command("renumber")
+@click.argument("source")
+@click.argument("output")
+@click.option('-p', '--parallel', default=0, help="Number of threads to use. 0 = num cpu", show_default=True)
+def renumber_cmd(source, output, parallel):
+	"""Renumber and refit."""
+	arr = crackle.aload(source, allow_mmap=True)
+	arr.parallel = parallel
+	arr, _ = arr.renumber()
+	arr.refit().save(output)
+	
 @main.command("view")
 @click.argument("source")
 @click.option('-z', default=None, type=str, help="Which z-slices to visualize.", show_default=True)
