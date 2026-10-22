@@ -633,6 +633,13 @@ def zsplit(binary:bytes, z:int) -> Tuple[bytes, bytes, bytes]:
   Combined with zstack, this gives you a way to start editing
   binaries without full decompression.
   """
+  from .array import CrackleArray
+
+  if isinstance(binary, np.ndarray):
+    binary = compress(binary)
+  elif isinstance(binary, CrackleArray):
+    binary = binary.binary
+
   head = header(binary)
 
   if z < 0 or z >= head.sz:
@@ -695,6 +702,8 @@ def full(shape, fill_value, dtype=None, order='C') -> bytes:
   filled with a single value. Arguments are identical
   to np.full.
   """
+  from .array import CrackleArray
+
   if dtype is None:
     dtype = np.array(fill_value).dtype
 
@@ -733,14 +742,14 @@ def full(shape, fill_value, dtype=None, order='C') -> bytes:
   crack_crc_single = crc32c(np.zeros(shape[:2], dtype=np.uint32))
   crack_crcs_binary = np.array([crack_crc_single] * shape[2], dtype=np.uint32).tobytes()
 
-  return b''.join([
+  return CrackleArray(b''.join([
     head.tobytes(),
     grid_index,
     labels_binary,
     empty_slice_crack_code * head.sz,
     labels_crc_binary,
     crack_crcs_binary,
-  ])
+  ]))
 
 def zeros(shape, dtype=None, order="C"):
   """

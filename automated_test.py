@@ -648,23 +648,24 @@ def test_astype():
   assert arr.astype(arr.dtype, order="F").header().fortran_order == True
 
 def test_contiguous_fortran():
-  binary = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
+  arr = crackle.zeros([10,10,10], dtype=np.uint64, order="F")
   
-  binary2 = crackle.asfortranarray(binary)
-  assert binary == binary2
+  arr2 = arr.asfortranarray()
+  assert arr.binary == arr2.binary
 
-  binary2 = crackle.ascontiguousarray(binary)
-  assert binary != binary2
+  arr2 = arr.ascontiguousarray()
+  assert arr.binary != arr2.binary
 
-  head = crackle.header(binary2)
+  head = arr2.header()
   assert head.fortran_order == False
 
-  arr = crackle.decompress(binary2)
+  binary = arr.binary
+  arr = arr2.decompress()
   assert arr.flags.f_contiguous == False
   assert arr.flags.c_contiguous == True
 
-  binary2 = crackle.asfortranarray(binary2)
-  assert binary2 == binary
+  arr2 = arr2.asfortranarray()
+  assert np.all(arr2.binary == binary)
 
 def test_point_cloud():
   input_arr = np.array([
