@@ -73,17 +73,17 @@ class CrackleArray:
 
   def copy(self, order:Literal['C', 'F', 'K'] = 'K') -> "CrackleArray":
     if order == 'K':
-      return CrackleArray(self.binary)
+      return CrackleArray(self.binary, parallel=self.parallel)
     elif order == 'F':
       return self.asfortranarray()
     else:
       return self.ascontiguousarray()
 
   def asfortranarray(self) -> "CrackleArray":
-    return CrackleArray(asfortranarray(self.binary))
+    return CrackleArray(asfortranarray(self.binary), parallel=self.parallel)
 
   def ascontiguousarray(self) -> "CrackleArray":
-    return CrackleArray(ascontiguousarray(self.binary))
+    return CrackleArray(ascontiguousarray(self.binary), parallel=self.parallel)
 
   @property
   def dtype(self):
@@ -148,11 +148,11 @@ class CrackleArray:
     order:Literal['C', 'F', 'K', 'A'] = 'K',
     casting:Literal['no','equiv','safe','same_kind','unsafe'] = "unsafe",
   ) -> "CrackleArray":
-    return CrackleArray(astype(self.binary, dtype, order, casting))
+    return CrackleArray(astype(self.binary, dtype, order, casting), parallel=self.parallel)
 
   def renumber(self, start:int = 0) -> tuple["CrackleArray", dict[int,int]]:
     binary, mapping = renumber(self.binary, start)
-    return CrackleArray(binary), mapping
+    return CrackleArray(binary, parallel=self.parallel), mapping
 
   def numpy(self, *args, **kwargs) -> np.ndarray:
     return self.decompress(*args, **kwargs)
@@ -161,7 +161,7 @@ class CrackleArray:
     return decompress(self.binary, label=label, parallel=self.parallel, crop=crop)
 
   def condense(self) -> "CrackleArray":
-    return CrackleArray(codec.condense_unique(self.binary))
+    return CrackleArray(codec.condense_unique(self.binary), parallel=self.parallel)
 
   def point_cloud(
     self, 
