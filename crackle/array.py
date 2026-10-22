@@ -138,10 +138,10 @@ class CrackleArray:
     return operations.max(self.binary)
 
   def remap(self, mapping:Dict[int,int], preserve_missing_labels:bool = False):
-    return CrackleArray(remap(self.binary, mapping, preserve_missing_labels))
+    return CrackleArray(remap(self.binary, mapping, preserve_missing_labels), parallel=self.parallel)
 
   def refit(self):
-    return CrackleArray(refit(self.binary))
+    return CrackleArray(refit(self.binary), parallel=self.parallel)
 
   def astype(self,   
     dtype:npt.DTypeLike,
@@ -235,7 +235,7 @@ class CrackleArray:
       in_place=in_place,
       parallel=self.parallel,
     )
-    return CrackleArray(binary)
+    return CrackleArray(binary, parallel=self.parallel)
 
   def mask_except(self, labels:list[int], value:int = 0, in_place:bool = False) -> "CrackleArray":
     binary = operations.mask_except(
@@ -245,7 +245,7 @@ class CrackleArray:
       in_place=in_place,
       parallel=self.parallel,
     )
-    return CrackleArray(binary)
+    return CrackleArray(binary, parallel=self.parallel)
 
   def array_equal(self, other:"CrackleArray") -> bool:
     return array_equal(self.binary, other.binary)
@@ -273,10 +273,10 @@ class CrackleArray:
 
   def _dispatch_binary_operator(self, other:Union[int, Any], scalarfn:Callable, oper:str) -> bytes:
     if isinstance(other, (int, np.integer)):
-      return CrackleArray(scalarfn(self.binary, other))
+      return CrackleArray(scalarfn(self.binary, other), parallel=self.parallel)
     elif isinstance(other, CrackleArray):
       binary = binary_operator(self.binary, other.binary, oper, self.parallel)
-      return CrackleArray(binary)
+      return CrackleArray(binary, parallel=self.parallel)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
