@@ -25,6 +25,7 @@ crackle convert --to nrrd data.ckl # data.ckl -> data.nrrd
 
 crackle info data.ckl # print basic info about the file
 crackle labels data.ckl # print labels
+crackle renumber data.ckl data_renumbered.ckl # number labels from 1 and refit
 crackle view data.ckl # visualize the file
 
 crackle downsample data.ckl -o data_downsampled.ckl # perform 2x2x1 mode pooling and write the output
