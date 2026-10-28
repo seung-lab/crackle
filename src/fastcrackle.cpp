@@ -889,6 +889,39 @@ py::list binary_operator(
 	return result;
 }
 
+py::list bitwise_invert(
+	const py::buffer buffer,
+	const size_t parallel = 1
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+	if (info.itemsize != 1) {
+		throw std::invalid_argument("Expected itemsize == 1 (byte buffers)");
+	}
+
+	uint8_t* ptr = static_cast<uint8_t*>(info.ptr);
+
+	std::vector<std::vector<unsigned char>> binaries;
+
+	{
+		py::gil_scoped_release release;
+		binaries = crackle::operations::bitwise_invert(
+			ptr, info.size,
+			0, -1,
+			parallel
+		);
+	}
+
+	py::list result;
+	for (const auto& bin : binaries) {
+		result.append(py::bytes(reinterpret_cast<const char*>(bin.data()), bin.size()));
+	}
+	return result;
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -916,6 +949,7 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("apply_binary_mask", &apply_binary_mask, "Apply a mask using logical AND from a binary image of the same size.");
 	m.def("recompress", &recompress, "Perform a complete decompress and compress cycle.");
 	m.def("binary_operator", &binary_operator, "Perform a voxelwise comparison like =, !=, <, <=, >, >=, +, -, *, /, %, |, &, ^.");
+	m.def("bitwise_invert", &bitwise_invert, "Perform a bitwise inversion (unary ~) operation.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())

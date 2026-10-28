@@ -2247,6 +2247,114 @@ auto binary_operator(
 	);
 }
 
+template <typename LABEL>
+std::vector<std::vector<unsigned char>>
+bitwise_invert(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	const CrackleHeader header = get_header(buffer, num_bytes);
+	const uint64_t voxels = get_voxels(header, z_start, z_end);
+	const int64_t szr = get_szr(header, z_start, z_end);
+
+	if (voxels == 0) {
+		return std::vector<std::vector<unsigned char>>();
+	}
+
+	std::vector<std::vector<unsigned char>> result_binaries(szr);
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+	const uint64_t sxy = sx * sy;
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+
+	for_each_z_parallel<LABEL>(
+		buffer, num_bytes,
+		z_start, z_end, parallel,
+		[&](
+			std::vector<uint8_t>& vcg, 
+			std::vector<uint32_t>& ccl, 
+			uint64_t N,
+			std::vector<LABEL>& label_map,
+			int64_t z
+		){
+			std::unique_ptr<LABEL[]> rendered(new LABEL[sx*sy]);
+			for (uint64_t i = 0; i < sxy; i++) {
+				rendered[i] = ~label_map[ccl[i]];
+			}
+
+			result_binaries[z-z_start] = crackle::compress<LABEL>(
+				rendered.get(),
+				sx, sy, 1,
+				/*allow_pins=*/false,
+				/*fortran_order=*/true,
+				/*markov_model_order=*/0,
+				/*optimize_pins=*/false,
+				/*auto_bgcolor=*/false,
+				/*manual_bgcolor=*/0,
+				/*parallel=*/1,
+				/*crack_format=*/crackle::CrackFormat::IMPERMISSIBLE
+			);
+		}
+	);
+
+	return result_binaries;
+}
+
+auto bitwise_invert(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.data_width == 1) {
+		return bitwise_invert<uint8_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else if (header.data_width == 2) {
+		return bitwise_invert<uint16_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else if (header.data_width == 4) {
+		return bitwise_invert<uint32_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+	else {
+		return bitwise_invert<uint64_t>(
+			buffer, num_bytes,
+			z_start, z_end, parallel
+		);
+	}
+}
+
+auto bitwise_invert(
+	const std::span<const unsigned char>& buffer,
+	const int64_t z_start = -1, 
+	const int64_t z_end = -1,
+	size_t parallel = 1
+) {
+	return bitwise_invert(
+		buffer.data(),
+		buffer.size(),
+		z_start, z_end, parallel
+	);
+}
+
+
+
 
 };
 };

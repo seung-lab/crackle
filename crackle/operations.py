@@ -1143,3 +1143,7 @@ def binary_operator(lvalue:bytes, rvalue:bytes, operator:str, parallel:int = 0) 
   binaries = fastcrackle.binary_operator(lvalue, rvalue, oper, parallel)
   return zstack(binaries)
 
+def invert_operator(binary:bytes, parallel:int = 0) -> bytes:
+  binaries = fastcrackle.bitwise_invert(binary, parallel)
+  return zstack(binaries)
+
