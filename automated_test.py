@@ -265,7 +265,7 @@ def test_num_labels():
 @pytest.mark.parametrize('sz', [0,17,31])
 @pytest.mark.parametrize('dtype', DTYPE)
 def test_nbytes(sx,sy,sz,dtype):
-  labels = np.random.randint(0,255, size=[sx,sy,sz], dtype=dtype)
+  labels = np.random.randint(np.iinfo(dtype).min, np.iinfo(dtype).max, size=[sx,sy,sz], dtype=dtype)
   binary = crackle.compress(labels)
   nbytes = crackle.nbytes(binary)
   assert nbytes == (sx*sy*sz*np.dtype(dtype).itemsize)
@@ -1114,22 +1114,18 @@ def test_binary_operations():
   assert np.all((arr_a << 3) == (ckl_a << 3).numpy())
   assert np.all((arr_a >> 3) == (ckl_a >> 3).numpy())
 
+@pytest.mark.parametrize('dtype', DTYPE)
+def test_unary_operations(dtype):
+  arr = np.random.randint(5,16, size=[107,101,103], dtype=dtype)
+  ckl = crackle.compressa(arr)
 
+  assert ckl.array_equal(+ckl)
+  assert ckl.array_equal(+ckl)
 
+  inverted = crackle.compressa(~arr)
+  assert np.all(inverted == (~ckl))
 
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
+  negated = crackle.compressa(-arr)
+  assert np.all(negated == (-ckl))
 
 

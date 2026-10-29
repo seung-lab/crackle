@@ -284,7 +284,8 @@ class CrackleArray:
     return self
 
   def __neg__(self) -> "CrackleArray":
-    raise NotImplementedError("Signed types are not yet supported.")
+    mapping = { v: -v for v in self.labels() }
+    return self.remap(mapping)
 
   def __invert__(self) -> "CrackleArray":
     mapping = { v: ~v for v in self.labels() }
