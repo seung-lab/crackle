@@ -280,64 +280,75 @@ class CrackleArray:
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
-  def __eq__(self, other:Union[int, Any]) -> bytes:
+  def __pos__(self) -> "CrackleArray":
+    return self
+
+  def __neg__(self) -> "CrackleArray":
+    mapping = { v: -v for v in self.labels() }
+    return self.remap(mapping)
+
+  def __invert__(self) -> "CrackleArray":
+    mapping = { v: ~v for v in self.labels() }
+    return self.remap(mapping)
+
+  def __eq__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, eq_scalar, "=")
 
-  def __ne__(self, other:Union[int, Any]) -> bytes:
+  def __ne__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, neq_scalar, "!=")
 
-  def __gt__(self, other:Union[int, Any]) -> bytes:
+  def __gt__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, gt_scalar, ">")
 
-  def __ge__(self, other:Union[int, Any]) -> bytes:
+  def __ge__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, gte_scalar, ">=")
 
-  def __lt__(self, other:Union[int, Any]) -> bytes:
+  def __lt__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, lt_scalar, "<")
 
-  def __le__(self, other:Union[int, Any]) -> bytes:
+  def __le__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, lte_scalar, "<=")
 
-  def __add__(self, other:Union[int, Any]) -> bytes:
+  def __add__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, add_scalar, "+")
 
-  def __radd__(self, other:int) -> bytes:
+  def __radd__(self, other:int) -> "CrackleArray":
     return self.__add__(other)
 
-  def __sub__(self, other:Union[int, Any]) -> bytes:
+  def __sub__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, subtract_scalar, "-")
 
-  def __rsub__(self, other:int) -> bytes:
+  def __rsub__(self, other:int) -> "CrackleArray":
     return self.__sub__(other)
 
-  def __mul__(self, other:Union[int, Any]) -> bytes:
+  def __mul__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, multiply_scalar, "*")
 
-  def __rmul__(self, other:int) -> bytes:
+  def __rmul__(self, other:int) -> "CrackleArray":
     return self.__mul__(other)
 
-  def __floordiv__(self, other:Union[int, Any]) -> bytes:
+  def __floordiv__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, floordiv_scalar, "/")
 
-  def __rfloordiv__(self, other:int) -> bytes:
+  def __rfloordiv__(self, other:int) -> "CrackleArray":
     return self.__floordiv__(other)
 
-  def __mod__(self, other:Union[int, Any]) -> bytes:
+  def __mod__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, mod_scalar, "%")
 
-  def __xor__(self, other:Union[int, Any]) -> bytes:
+  def __xor__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, xor_scalar, "^")
 
-  def __lshift__(self, other:Union[int, Any]) -> bytes:
+  def __lshift__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, lshift_scalar, "<<")
 
-  def __rshift__(self, other:Union[int, Any]) -> bytes:
+  def __rshift__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, rshift_scalar, ">>")
 
-  def __and__(self, other:Union[int, Any]) -> bytes:
+  def __and__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, bitwise_and_scalar, "&")
 
-  def __or__(self, other:Union[int, Any]) -> bytes:
+  def __or__(self, other:Union[int, Any]) -> "CrackleArray":
     return self._dispatch_binary_operator(other, bitwise_or_scalar, "|")
 
   def __contains__(self, elem:int) -> bool:
