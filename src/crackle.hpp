@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <concepts>
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -220,8 +221,7 @@ std::vector<unsigned char> compress_helper(
 	return final_binary;
 }
 
-// note: labels expected to be in fortran order
-template <typename LABEL>
+template <std::integral LABEL>
 std::vector<unsigned char> compress(
 	const LABEL* labels,
 	const int64_t sx, const int64_t sy, const int64_t sz,
@@ -235,8 +235,10 @@ std::vector<unsigned char> compress(
 	CrackFormat crack_format = CrackFormat::AUTO
 ) {
 	const int64_t voxels = sx * sy * sz;
-	uint8_t stored_data_width = crackle::lib::compute_byte_width(
-		crackle::lib::max_label(labels, voxels)
+	auto mn_mx = crackle::lib::minmax(labels, voxels);
+	uint8_t stored_data_width = std::max(
+		crackle::lib::compute_byte_width(mn_mx.first),
+		crackle::lib::compute_byte_width(mn_mx.second)
 	);
 
 #define CALL_COMPRESS_HELPER(STORED_T) compress_helper<LABEL, STORED_T>(\
@@ -246,17 +248,33 @@ std::vector<unsigned char> compress(
 		crack_format\
 	)
 
-	if (stored_data_width == 1) {
-		return CALL_COMPRESS_HELPER(uint8_t);
-	}
-	else if (stored_data_width == 2) {
-		return CALL_COMPRESS_HELPER(uint16_t);
-	}
-	else if (stored_data_width == 4) {
-		return CALL_COMPRESS_HELPER(uint32_t);
+	if constexpr (std::is_signed_v<LABEL>) {
+		if (stored_data_width == 1) {
+			return CALL_COMPRESS_HELPER(int8_t);
+		}
+		else if (stored_data_width == 2) {
+			return CALL_COMPRESS_HELPER(int16_t);
+		}
+		else if (stored_data_width == 4) {
+			return CALL_COMPRESS_HELPER(int32_t);
+		}
+		else {
+			return CALL_COMPRESS_HELPER(int64_t);
+		}
 	}
 	else {
-		return CALL_COMPRESS_HELPER(uint64_t);
+		if (stored_data_width == 1) {
+			return CALL_COMPRESS_HELPER(uint8_t);
+		}
+		else if (stored_data_width == 2) {
+			return CALL_COMPRESS_HELPER(uint16_t);
+		}
+		else if (stored_data_width == 4) {
+			return CALL_COMPRESS_HELPER(uint32_t);
+		}
+		else {
+			return CALL_COMPRESS_HELPER(uint64_t);
+		}
 	}
 
 #undef CALL_COMPRESS_HELPER

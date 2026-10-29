@@ -219,31 +219,47 @@ std::vector<uint8_t> read_packed_bitstream(
 	return output;
 }
 
-
-
 template <typename LABEL>
-LABEL max_label(const LABEL* labels, const uint64_t voxels) {
-	LABEL mx = 0;
+std::pair<LABEL, LABEL> minmax(const LABEL* labels, const uint64_t voxels) {
+	LABEL mx = std::numeric_limits<LABEL>::min();
+	LABEL mn = std::numeric_limits<LABEL>::max();
 	if (voxels > 0) {
 		mx = labels[0];
+		mn = labels[0];
 	}
 	for (uint64_t i = 1; i < voxels; i++) {
 		mx = std::max(mx, labels[i]);
+		mn = std::min(mn, labels[i]);
 	}
-	return mx;
+	return std::make_pair(mn,mx);
 }
 
-int compute_byte_width(const uint64_t x) {
-	if (x <= std::numeric_limits<uint8_t>::max()) {
-		return sizeof(uint8_t);
+template <std::integral T>
+int compute_byte_width(const T x) {
+	if constexpr (std::is_signed_v<T>) {
+		if (x <= std::numeric_limits<int8_t>::max() && x >= std::numeric_limits<int8_t>::min()) {
+			return sizeof(int8_t);
+		}
+		else if (x <= std::numeric_limits<int16_t>::max() && x >= std::numeric_limits<int16_t>::min()) {
+			return sizeof(int16_t);
+		}
+		else if (x <= std::numeric_limits<int32_t>::max() && x >= std::numeric_limits<int32_t>::min()) {
+			return sizeof(int32_t);
+		}
+		return sizeof(int64_t);
 	}
-	else if (x <= std::numeric_limits<uint16_t>::max()) {
-		return sizeof(uint16_t);
+	else {
+		if (x <= std::numeric_limits<uint8_t>::max()) {
+			return sizeof(uint8_t);
+		}
+		else if (x <= std::numeric_limits<uint16_t>::max()) {
+			return sizeof(uint16_t);
+		}
+		else if (x <= std::numeric_limits<uint32_t>::max()) {
+			return sizeof(uint32_t);
+		}
+		return sizeof(uint64_t);
 	}
-	else if (x <= std::numeric_limits<uint32_t>::max()) {
-		return sizeof(uint32_t);
-	}
-	return sizeof(uint64_t);
 }
 
 template <typename LABEL>
