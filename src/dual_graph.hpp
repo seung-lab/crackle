@@ -274,6 +274,78 @@ extract_contours(
 	return merge_contours_via_vcg_coloring(contours, vcg, cc_labels, N, sx, sy);
 }
 
+// specialization for images where we know there are only two colors
+// we don't need to do a full CCL computation and can write 0 and 1 to
+// the vcg as a pseduo-ccl
+std::vector<std::vector<uint32_t>> merge_contours_via_binary_vcg_coloring(
+	const std::vector<std::vector<uint32_t>>& contours,
+	std::vector<uint8_t>& vcg,
+	const uint64_t sx, const uint64_t sy
+) {
+	uint8_t cur = 0;
+	vcg[0] = cur;
+	uint64_t loc = 0;
+	for (uint64_t y = 0; y < sy; y++) {
+		if (y > 0) {
+			cur = (vcg[loc] & 0b1000)
+				? vcg[loc - sx]
+				: !vcg[loc - sx];
+		}
+		vcg[loc] = cur;
+		loc++;
+
+		// branchless is required because the
+		// simple branchy version was slower than
+		// the general cc3d version! This about matches it.
+		// probably some SIMD or uint64 cast magic could do
+		// even better.
+		// Thank you DeepSeek for the specific suggestion.
+
+		// cur | vcg | left_bit | lb^1 | cur ^ (lb^1)
+		//  0  |  1  |    1     |  0   |     0
+		//  0  |  0  |    0     |  1   |     1
+		//  1  |  1  |    1     |  0   |     1
+		//  1  |  0  |    0     |  1   |     0
+
+		for (uint64_t x = 1; x < sx; x++, loc++) {
+			uint8_t left_bit = (vcg[loc] >> 1) & 1;
+			cur ^= (left_bit ^ 1); 
+			vcg[loc] = cur;
+		}
+	}
+
+	std::vector<std::vector<uint32_t>> merged_contours(2);
+	for (uint64_t i = 0; i < contours.size(); i++) {
+		auto& contour = contours[i];
+		uint32_t cc_label = vcg[contour[0]];
+
+		auto insertion_point_it = merged_contours[cc_label].end();
+		if (
+			merged_contours[cc_label].size() > 0 
+			&& merged_contours[cc_label][0] > contour[0]
+		) {
+			insertion_point_it = merged_contours[cc_label].begin();
+		}
+
+		merged_contours[cc_label].insert(
+			insertion_point_it, 
+			contour.begin(), 
+			contour.end()
+		);
+	}
+
+	return merged_contours;
+}
+
+std::vector<std::vector<uint32_t>> 
+extract_contours_binary_image(
+	std::vector<uint8_t>& vcg,
+	const uint64_t sx, const uint64_t sy 
+) {
+	std::vector<std::vector<uint32_t>> contours = extract_contours_helper(vcg, sx, sy);
+	return merge_contours_via_binary_vcg_coloring(contours, vcg, sx, sy);
+}
+
 };
 };
 

@@ -71,7 +71,6 @@ int64_t get_szr(
 	return z_end - z_start;
 }
 
-
 uint64_t get_voxels(
 	const crackle::CrackleHeader& header,
 	int64_t z_start, 
@@ -181,6 +180,90 @@ void for_each_z_parallel(
 	return;
 }
 
+template <typename LABEL>
+void for_each_z_vcg_parallel(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start,
+	int64_t z_end,
+	size_t parallel,
+	const std::function<void(
+		std::vector<uint8_t>&, 
+		std::vector<LABEL>&,
+		int64_t
+	)>& fn
+) {
+	const CrackleHeader header = get_header(buffer, num_bytes);
+
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(header.sz - 1)), static_cast<int64_t>(0));
+	z_end = z_end < 0 ? static_cast<int64_t>(header.sz) : z_end;
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(header.sz)), static_cast<int64_t>(0));
+
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
+	}
+
+	const int64_t szr = z_end - z_start;
+
+	const uint64_t voxels = (
+		static_cast<uint64_t>(header.sx) 
+		* static_cast<uint64_t>(header.sy) 
+		* static_cast<uint64_t>(szr)
+	);
+
+	if (voxels == 0) {
+		return;
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, static_cast<size_t>(szr));
+
+	ThreadPool pool(parallel);
+
+	std::vector<std::vector<uint8_t>> vcgs(parallel);
+
+	for (size_t t = 0; t < parallel; t++) {
+		vcgs[t].resize(header.sx * header.sy);
+	}
+
+	for (size_t z = z_start, i = 0; i < crack_codes.size(); z++, i++) {
+		pool.enqueue([&,z,i](size_t t){
+			std::vector<uint8_t>& vcg = vcgs[t];
+			auto& crack_code = crack_codes[i];
+
+			crack_code_to_vcg(
+				/*code=*/crack_code,
+				/*sx=*/header.sx, /*sy=*/header.sy,
+				/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+				/*markov_model=*/markov_model,
+				/*slice_edges=*/vcg.data()
+			);
+
+			std::vector<LABEL> label_map = decode_label_map<LABEL>(
+				header, binary, nullptr, 0, z, z+1
+			);
+
+			fn(vcg, label_map, z);
+		});
+	}
+
+	pool.join();
+
+	return;
+}
 
 template <typename LABEL>
 std::unordered_map<uint64_t, std::vector<uint16_t>>
@@ -214,49 +297,101 @@ point_cloud(
 
 	std::mutex mtx;
 
-	for_each_z_parallel<LABEL>(
-		buffer, num_bytes,
-		z_start, z_end, parallel,
-		[&](
-			std::vector<uint8_t>& vcg, 
-			std::vector<uint32_t>& ccl, 
-			uint64_t N,
-			std::vector<LABEL>& label_map,
-			int64_t z
-		){
-			uint64_t label_i = 0;
+	// This is a lower memory pathway that reduces base memory usage by 80%
+	// by avoiding the use of a ccl buffer, instead it can work directly
+	// with the VCG. It should be possible to do this for the general case
+	// too, but it requires a more sophisticated strategy.
+	if (num_labels == 2) {
+		std::vector<uint64_t> uniq = crackle::labels::unique(binary);
+		for_each_z_vcg_parallel<LABEL>(
+			buffer, num_bytes,
+			z_start, z_end, parallel,
+			[&](
+				std::vector<uint8_t>& vcg, 
+				std::vector<LABEL>& label_map,
+				int64_t z
+			){
+				auto ptc_ccls = crackle::dual_graph::extract_contours_binary_image(vcg, header.sx, header.sy);
 
-			auto ptc_ccls = crackle::dual_graph::extract_contours(vcg, ccl, N, header.sx, header.sy);
+				uint64_t label_i = (label_map[0] == uniq[1])
+					? 1
+					: 0;
 
-			std::unique_lock<std::mutex> lock(mtx);
+				std::unique_lock<std::mutex> lock(mtx);
 
-			for (auto ptc_ccl : ptc_ccls) {
-				uint64_t current_label = label_map[label_i];
-				
-				if (skip_background && current_label == 0) {
-					label_i++;
-					continue;
+				for (auto ptc_ccl : ptc_ccls) {
+					uint64_t current_label = uniq[label_i];
+
+					if (skip_background && current_label == 0) {
+						label_i = !label_i;
+						continue;
+					}
+					else if (selective && !labels_set.contains(current_label)) {
+						label_i = !label_i;
+						continue;
+					}
+
+					std::vector<uint16_t>& label_points = ptc[current_label];
+
+					for (uint32_t loc : ptc_ccl) {
+						uint16_t y = loc / header.sx;
+						uint16_t x = loc - (header.sx * y);
+
+						label_points.push_back(x);
+						label_points.push_back(y);
+						label_points.push_back(static_cast<uint16_t>(z));
+					}
+
+					label_i = !label_i;
 				}
-				else if (selective && !labels_set.contains(current_label)) {
-					label_i++;
-					continue;
-				}
-
-				std::vector<uint16_t>& label_points = ptc[current_label];
-
-				for (uint32_t loc : ptc_ccl) {
-					uint16_t y = loc / header.sx;
-					uint16_t x = loc - (header.sx * y);
-
-					label_points.push_back(x);
-					label_points.push_back(y);
-					label_points.push_back(static_cast<uint16_t>(z));
-				}
-
-				label_i++;
 			}
-		}
-	);
+		);
+	}
+	else {
+		for_each_z_parallel<LABEL>(
+			buffer, num_bytes,
+			z_start, z_end, parallel,
+			[&](
+				std::vector<uint8_t>& vcg, 
+				std::vector<uint32_t>& ccl, 
+				uint64_t N,
+				std::vector<LABEL>& label_map,
+				int64_t z
+			){
+				uint64_t label_i = 0;
+
+				auto ptc_ccls = crackle::dual_graph::extract_contours(vcg, ccl, N, header.sx, header.sy);
+
+				std::unique_lock<std::mutex> lock(mtx);
+
+				for (auto ptc_ccl : ptc_ccls) {
+					uint64_t current_label = label_map[label_i];
+					
+					if (skip_background && current_label == 0) {
+						label_i++;
+						continue;
+					}
+					else if (selective && !labels_set.contains(current_label)) {
+						label_i++;
+						continue;
+					}
+
+					std::vector<uint16_t>& label_points = ptc[current_label];
+
+					for (uint32_t loc : ptc_ccl) {
+						uint16_t y = loc / header.sx;
+						uint16_t x = loc - (header.sx * y);
+
+						label_points.push_back(x);
+						label_points.push_back(y);
+						label_points.push_back(static_cast<uint16_t>(z));
+					}
+
+					label_i++;
+				}
+			}
+		);
+	}
 
 	return ptc;
 }
