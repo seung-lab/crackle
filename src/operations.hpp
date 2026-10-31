@@ -71,7 +71,6 @@ int64_t get_szr(
 	return z_end - z_start;
 }
 
-
 uint64_t get_voxels(
 	const crackle::CrackleHeader& header,
 	int64_t z_start, 
@@ -181,7 +180,6 @@ void for_each_z_parallel(
 	return;
 }
 
-
 template <typename LABEL>
 void for_each_z_vcg_parallel(
 	const unsigned char* buffer, 
@@ -267,8 +265,6 @@ void for_each_z_vcg_parallel(
 	return;
 }
 
-
-
 template <typename LABEL>
 std::unordered_map<uint64_t, std::vector<uint16_t>>
 point_cloud(
@@ -324,16 +320,18 @@ point_cloud(
 				std::unique_lock<std::mutex> lock(mtx);
 
 				for (auto ptc_ccl : ptc_ccls) {
-					if (skip_background && label_i == 0) {
+					uint64_t current_label = uniq[label_i];
+
+					if (skip_background && current_label == 0) {
 						label_i = !label_i;
 						continue;
 					}
-					else if (selective && !labels_set.contains(label_i)) {
+					else if (selective && !labels_set.contains(current_label)) {
 						label_i = !label_i;
 						continue;
 					}
 
-					std::vector<uint16_t>& label_points = ptc[label_i];
+					std::vector<uint16_t>& label_points = ptc[current_label];
 
 					for (uint32_t loc : ptc_ccl) {
 						uint16_t y = loc / header.sx;
