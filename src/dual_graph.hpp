@@ -294,10 +294,22 @@ std::vector<std::vector<uint32_t>> merge_contours_via_binary_vcg_coloring(
 		vcg[loc] = cur;
 		loc++;
 
+		// branchless is required because the
+		// simple branchy version was slower than
+		// the general cc3d version! This about matches it.
+		// probably some SIMD or uint64 cast magic could do
+		// even better.
+		// Thank you DeepSeek for the specific suggestion.
+
+		// cur | vcg | left_bit | lb^1 | cur ^ (lb^1)
+		//  0  |  1  |    1     |  0   |     0
+		//  0  |  0  |    0     |  1   |     1
+		//  1  |  1  |    1     |  0   |     1
+		//  1  |  0  |    0     |  1   |     0
+
 		for (uint64_t x = 1; x < sx; x++, loc++) {
-			if ((vcg[loc] & 0b0010) == 0) {
-				cur = !cur;
-			}
+			uint8_t left_bit = (vcg[loc] >> 1) & 1;
+			cur ^= (left_bit ^ 1); 
 			vcg[loc] = cur;
 		}
 	}
