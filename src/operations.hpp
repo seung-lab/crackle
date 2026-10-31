@@ -310,7 +310,6 @@ point_cloud(
 				std::vector<LABEL>& label_map,
 				int64_t z
 			){
-				printf("z %d\n", z);
 				auto ptc_ccls = crackle::dual_graph::extract_contours_binary_image(vcg, header.sx, header.sy);
 
 				uint64_t label_i = (label_map[0] == 1)

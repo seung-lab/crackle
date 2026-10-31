@@ -274,9 +274,9 @@ extract_contours(
 	return merge_contours_via_vcg_coloring(contours, vcg, cc_labels, N, sx, sy);
 }
 
-// an alternative is the complex computational geometry strategy above...
-// which is much lower memory but hairy to implement and much slower so
-// long as we have that dang quadratic loop.
+// specialization for images where we know there are only two colors
+// we don't need to do a full CCL computation and can write 0 and 1 to
+// the vcg as a pseduo-ccl
 std::vector<std::vector<uint32_t>> merge_contours_via_binary_vcg_coloring(
 	const std::vector<std::vector<uint32_t>>& contours,
 	std::vector<uint8_t>& vcg,
@@ -295,7 +295,7 @@ std::vector<std::vector<uint32_t>> merge_contours_via_binary_vcg_coloring(
 		loc++;
 
 		for (uint64_t x = 1; x < sx; x++, loc++) {
-			if (vcg[loc] & 0b0010) {
+			if ((vcg[loc] & 0b0010) == 0) {
 				cur = !cur;
 			}
 			vcg[loc] = cur;
