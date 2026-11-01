@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <algorithm>
 
+#include "cc3d.hpp"
+
 namespace crackle {
 namespace dual_graph {
 
@@ -282,37 +284,7 @@ std::vector<std::vector<uint32_t>> merge_contours_via_binary_vcg_coloring(
 	std::vector<uint8_t>& vcg,
 	const uint64_t sx, const uint64_t sy
 ) {
-	uint8_t cur = 0;
-	vcg[0] = cur;
-	uint64_t loc = 0;
-	for (uint64_t y = 0; y < sy; y++) {
-		if (y > 0) {
-			cur = (vcg[loc] & 0b1000)
-				? vcg[loc - sx]
-				: !vcg[loc - sx];
-		}
-		vcg[loc] = cur;
-		loc++;
-
-		// branchless is required because the
-		// simple branchy version was slower than
-		// the general cc3d version! This about matches it.
-		// probably some SIMD or uint64 cast magic could do
-		// even better.
-		// Thank you DeepSeek for the specific suggestion.
-
-		// cur | vcg | left_bit | lb^1 | cur ^ (lb^1)
-		//  0  |  1  |    1     |  0   |     0
-		//  0  |  0  |    0     |  1   |     1
-		//  1  |  1  |    1     |  0   |     1
-		//  1  |  0  |    0     |  1   |     0
-
-		for (uint64_t x = 1; x < sx; x++, loc++) {
-			uint8_t left_bit = (vcg[loc] >> 1) & 1;
-			cur ^= (left_bit ^ 1); 
-			vcg[loc] = cur;
-		}
-	}
+	cc3d::color_binary_connectivity_graph_2d(vcg, sx, sy);
 
 	std::vector<std::vector<uint32_t>> merged_contours(2);
 	for (uint64_t i = 0; i < contours.size(); i++) {

@@ -33,6 +33,7 @@ from .operations import (
   edge_labels,
   apply_binary_mask,
   binary_operator,
+  select_enclosed_points,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -175,6 +176,18 @@ class CrackleArray:
       skip_background=skip_background,
       z_start=z_start, z_end=z_end, 
       parallel=self.parallel,
+    )
+
+  def select_enclosed_points(
+    self,
+    label:int,
+    points:np.ndarray,
+  ) -> npt.NDArray[bool]:
+    return select_enclosed_points(
+      self.binary,
+      label,
+      points,
+      parallel=self.parallel
     )
 
   def connected_components(

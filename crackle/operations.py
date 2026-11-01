@@ -15,7 +15,7 @@ from .codec import (
   decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
   reencode, background_color, crack_crcs, labels_crc,
-  condense_unique,
+  condense_unique, z_range_for_label,
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c
@@ -1142,4 +1142,58 @@ def binary_operator(lvalue:bytes, rvalue:bytes, operator:str, parallel:int = 0) 
   oper = OPERATOR_MAP[operator]
   binaries = fastcrackle.binary_operator(lvalue, rvalue, oper, parallel)
   return zstack(binaries)
+
+def select_enclosed_points(
+  binary:bytes, 
+  label:int,
+  points:np.ndarray,
+  parallel:int = 0,
+) -> npt.NDArray[bool]:
+  """
+  Given a crackle array, a label, and a set of points,
+  return a 1D array of booleans marking whether those points
+  are inside (True) or outside the corresponding mask for that
+  label.
+  """
+  assert points.ndim == 2
+  assert points.shape[1] == 3
+
+  head = header(binary)
+
+  mask = np.ones(points.shape[0], dtype=bool)
+
+  mask &= points[:,0] >= 0
+  mask &= points[:,1] >= 0
+  mask &= points[:,2] >= 0
+
+  mask &= points[:,0] < head.sx
+  mask &= points[:,1] < head.sy
+  mask &= points[:,2] < head.sz
+
+  if not mask.any():
+    return mask
+
+  (z_start, z_end) = z_range_for_label(binary, label)
+  
+  mask &= points[:,2] >= z_start
+  mask &= points[:,2] < z_end
+
+  if not mask.any():
+    return mask
+
+  idx = np.flatnonzero(mask)
+  considered_points = points[idx].astype(np.uint16, copy=False)
+
+  mask[idx] = fastremap.select_enclosed_points(
+    binary, label, considered_points, parallel
+  )
+
+  return mask
+
+
+
+
+
+
+
 

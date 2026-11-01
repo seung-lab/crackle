@@ -1,6 +1,7 @@
 #ifndef __CRACKLE_OPERATIONS_HPP__
 #define __CRACKLE_OPERATIONS_HPP__
 
+#include <concepts>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -2382,6 +2383,170 @@ auto binary_operator(
 	);
 }
 
+template <std::integral LABEL, std::integral POINT_T>
+std::vector<uint8_t> select_enclosed_points(
+	const unsigned char* buffer,
+	const size_t num_bytes,
+	const LABEL label,
+	const std::span<const POINT_T> points,
+	size_t parallel = 1
+) {
+	const CrackleHeader header = get_header(buffer, num_bytes);
+
+	std::vector<uint8_t> mask(points.size() / 3);
+
+	if (header.voxels() == 0) {
+		return mask;
+	}
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+	const uint64_t sz = header.sz;
+
+	std::vector<std::vector<uint64_t>> clustered_by_z(header.sz);
+
+	for (uint64_t i = 0, j = 0; i < points.size(); i += 3, j++) {
+		clustered_by_z[points[i+2]].push_back(j);
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto crack_codes = get_crack_codes(header, binary, 0, sz);
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, static_cast<size_t>(sz));
+
+	ThreadPool pool(parallel);
+
+	std::vector<std::vector<uint8_t>> vcgs(parallel);
+	std::vector<std::vector<uint32_t>> ccls(parallel);
+
+	const uint64_t num_labels = crackle::labels::num_labels(binary);
+
+	const bool binary_image_optimization = (
+		num_labels == 2 
+		&& header.label_format == LabelFormat::FLAT
+	);
+
+	for (size_t t = 0; t < parallel; t++) {
+		vcgs[t].resize(header.sx * header.sy);
+		if (!binary_image_optimization) {
+			ccls[t].resize(header.sx * header.sy);
+		}
+	}
+
+	for (size_t z = 0; z < sz; z++) {
+		if (clustered_by_z[z].size() == 0) {
+			continue;
+		}
+
+		pool.enqueue([&,z](size_t t) {
+			std::vector<uint8_t>& vcg = vcgs[t];
+			std::vector<uint32_t>& ccl = ccls[t];
+			auto& crack_code = crack_codes[z];
+
+			crack_code_to_vcg(
+				/*code=*/crack_code,
+				/*sx=*/header.sx, /*sy=*/header.sy,
+				/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+				/*markov_model=*/markov_model,
+				/*slice_edges=*/vcg.data()
+			);
+
+			std::vector<LABEL> label_map;
+
+			if (binary_image_optimization) {
+				label_map = decode_label_map<LABEL>(
+					header, binary, nullptr, 0, z, z+1
+				);
+
+				cc3d::color_binary_connectivity_graph_2d(
+					vcg, sx, sy, 
+					/*start=*/(label_map[0] == label)
+				);
+			}
+			else {
+				uint64_t N = 0;
+				crackle::cc3d::color_connectivity_graph<uint32_t>(
+					vcg, header.sx, header.sy, 1, ccl.data(), N
+				);
+
+				label_map = decode_label_map<LABEL>(
+					header, binary, ccl.data(), N, z, z+1
+				);
+			}
+
+			for (uint64_t idx : clustered_by_z[z]) {
+				const POINT_T x = points[idx*3];
+				const POINT_T y = points[idx*3 + 1];
+				const uint64_t loc = (uint64_t)x + sx * (uint64_t)y;
+
+				mask[idx] = binary_image_optimization
+					? vcg[loc]
+					: label_map[ccl[loc]] == label;
+			}
+		});
+	}
+
+	pool.join();
+
+	return mask;
+}
+ 
+template <std::integral POINT_T>
+auto select_enclosed_points(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	const uint64_t label,
+	const std::span<const POINT_T> points,
+	size_t parallel = 1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.data_width == 1) {
+		return select_enclosed_points<uint8_t, POINT_T>(
+			buffer, num_bytes,
+			label, points, parallel
+		);
+	}
+	else if (header.data_width == 2) {
+		return select_enclosed_points<uint16_t, POINT_T>(
+			buffer, num_bytes,
+			label, points, parallel
+		);
+	}
+	else if (header.data_width == 4) {
+		return select_enclosed_points<uint32_t, POINT_T>(
+			buffer, num_bytes,
+			label, points, parallel
+		);
+	}
+	else {
+		return select_enclosed_points<uint64_t, POINT_T>(
+			buffer, num_bytes,
+			label, points, parallel
+		);
+	}
+}
+
+template <std::integral POINT_T>
+auto select_enclosed_points(
+	const std::span<const unsigned char>& buffer,
+	const uint64_t label,
+	const std::span<const POINT_T> points,
+	size_t parallel = 1
+) {
+	return select_enclosed_points<POINT_T>(
+		buffer.data(),
+		buffer.size(),
+		label, points, parallel
+	);
+}
 
 };
 };
