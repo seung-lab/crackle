@@ -46,6 +46,9 @@ setuptools.setup(
     "remote": [
       "cloud-files",
     ],
+    "sdf": [
+      "pykdtree",
+    ],
     "ccl": [ 
       "connected-components-3d",
     ],

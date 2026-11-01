@@ -1199,6 +1199,9 @@ def signed_distance_to_boundary(
   parallel:int = 0,
   z_chunk:int = 100,
 ) -> npt.NDArray[float]:
+  """
+  Compute the signed distance field for a sparse set of points.
+  """
   from pykdtree.kdtree import KDTree
 
   radii = np.full(points.shape[0], np.inf, dtype=np.float32)

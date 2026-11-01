@@ -34,6 +34,7 @@ from .operations import (
   apply_binary_mask,
   binary_operator,
   select_enclosed_points,
+  signed_distance_field,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -187,6 +188,18 @@ class CrackleArray:
       self.binary,
       label,
       points,
+      parallel=self.parallel
+    )
+
+  def signed_distance_field(
+    self,
+    label:int,
+    points:np.ndarray,
+  ) -> npt.NDArray[np.float32]:
+    return signed_distance_field(
+      self.binary,
+      label=label,
+      points=points,
       parallel=self.parallel
     )
 
