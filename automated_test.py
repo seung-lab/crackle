@@ -1129,3 +1129,37 @@ def test_unary_operations(dtype):
   assert np.all(negated == (-ckl))
 
 
+def test_select_enclosed_points():
+  labels = compresso.load("connectomics.npy.cpso.gz")
+  labels = crackle.compressa(labels)
+
+  soma = 25024949
+  mask = labels.select_enclosed_points(
+    points=[
+      [-1,-1,-1],
+      [-1,0,-1],
+      [999999,1,1],
+      [1,999999,1],
+      [1,1,999999],
+      [307,305,117], # actually in there
+      [63, 397, 197], # not in there
+      [451,  64, 197], # in there
+      [94,  39, 223], # not in there (cavity)
+    ],
+    label=soma,
+  )
+
+  gt = np.array([
+    False, False, False, False, 
+    False, True, False, True, False,
+  ])
+
+  assert np.all(mask == gt)
+
+  
+
+
+
+
+
+
