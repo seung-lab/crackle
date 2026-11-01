@@ -63,7 +63,7 @@ from .operations import (
 	edge_labels,
 	apply_binary_mask,
 	select_enclosed_points,
-	signed_distance_field,
+	signed_distance_to_boundary,
 )
 from .headers import FormatError, CrackleHeader
 from .util import save, load, aload, bload, save_numpy

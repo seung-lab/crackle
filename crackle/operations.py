@@ -1156,6 +1156,8 @@ def select_enclosed_points(
   are inside (True) or outside the corresponding mask for that
   label.
   """
+  points = np.asarray(points)
+
   assert points.ndim == 2
   assert points.shape[1] == 3
 
@@ -1185,7 +1187,7 @@ def select_enclosed_points(
   idx = np.flatnonzero(mask)
   considered_points = points[idx].astype(np.uint16, copy=False)
 
-  mask[idx] = fastremap.select_enclosed_points(
+  mask[idx] = fastcrackle.select_enclosed_points(
     binary, label, considered_points, parallel
   )
 
@@ -1204,6 +1206,7 @@ def signed_distance_to_boundary(
   """
   from pykdtree.kdtree import KDTree
 
+  points = np.asarray(points)
   radii = np.full(points.shape[0], np.inf, dtype=np.float32)
 
   if not contains(binary, label):
