@@ -769,7 +769,8 @@ def operator(binary:bytes, fn) -> bytes:
   parts = decode_flat_labels(head, binary)
   parts["unique"] = fn(parts["unique"])
 
-  head.stored_data_width = compute_byte_width(parts["unique"][-1])
+  head.is_sorted = fastremap.is_sorted(parts["unique"])
+  head.stored_data_width = compute_byte_width(parts["unique"].max())
 
   labels_binary = b''.join([
     len(parts["unique"]).to_bytes(8, 'little'),
