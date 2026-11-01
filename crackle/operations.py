@@ -722,6 +722,7 @@ def full(shape, fill_value, dtype=None, order='C') -> bytes:
     signed=(fill_value < 0),
     markov_model_order=0,
     is_sorted=True,
+    is_remapped=False,
   )
 
   labels_binary = b''.join([

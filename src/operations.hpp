@@ -298,11 +298,16 @@ point_cloud(
 
 	std::mutex mtx;
 
+	const bool binary_image_optimization = (
+		num_labels == 2
+		&& header.is_remapped == false
+	);
+
 	// This is a lower memory pathway that reduces base memory usage by 80%
 	// by avoiding the use of a ccl buffer, instead it can work directly
 	// with the VCG. It should be possible to do this for the general case
 	// too, but it requires a more sophisticated strategy.
-	if (num_labels == 2) {
+	if (binary_image_optimization) {
 		std::vector<uint64_t> uniq = crackle::labels::unique(binary);
 		for_each_z_vcg_parallel<LABEL>(
 			buffer, num_bytes,
@@ -2431,6 +2436,7 @@ std::vector<uint8_t> select_enclosed_points(
 	const bool binary_image_optimization = (
 		num_labels == 2 
 		&& header.label_format == LabelFormat::FLAT
+		&& header.is_remapped == false
 	);
 
 	for (size_t t = 0; t < parallel; t++) {
