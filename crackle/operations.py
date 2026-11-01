@@ -891,26 +891,10 @@ def recompress(
   full decompression/recompression cycle would have required
   120 GB.
   """
-  head = header(binary)
-  # approximate RAM needed to encode/decode a full z-section
-  # section + CCL + VCG
-  section_bytes = head.sx * head.sy * (head.data_width + 4 + 1)
-
-  min_memory_request = 2 * len(binary) + section_bytes
-
-  if min_memory_request >= memory_target:
-    warnings.warn(
-      f"Memory required is potentially more than the memory target specified. "
-      f"Sometimes recompression will result in substantial additional savings "
-      f"so this isn't a hard error. Recompression will require storing approximately"
-      f"thirce the same binary size in RAM plus additional memory per a parallel section.\n"
-      f"memory target: {memory_target} bytes\n"
-      f"requested: {min_memory_request} bytes"
-    )
 
   binaries = fastcrackle.recompress(
     binary,
-    z_start, z_end, parallel, 
+    0, -1, parallel, 
   )
   return zstack(binaries)
 
