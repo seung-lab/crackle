@@ -15,7 +15,8 @@ from .codec import (
   decode_condensed_pins, decode_condensed_pins_components,
   num_labels, crack_codes, components,
   reencode, background_color, crack_crcs, labels_crc,
-  condense_unique, z_range_for_label,
+  condense_unique, z_range_for_label, point_cloud,
+  contains,
 )
 from .headers import CrackleHeader, CrackFormat, LabelFormat, FormatError
 from .lib import width2dtype, compute_byte_width, compute_dtype, crc32c
@@ -1190,10 +1191,57 @@ def select_enclosed_points(
 
   return mask
 
+def signed_distance_to_boundary(
+  binary:bytes, 
+  label:int,
+  points:np.ndarray,
+  anisotropy:np.ndarray = np.ones(3, dtype=np.float32),
+  parallel:int = 0,
+  z_chunk:int = 100,
+) -> npt.NDArray[float]:
+  from pykdtree.kdtree import KDTree
 
+  radii = np.full(points.shape[0], np.inf, dtype=np.float32)
 
+  if not contains(binary, label):
+    return radii
+  
+  inside_mask = select_enclosed_points(binary, label, points, parallel)
 
+  head = header(binary)
+  z_chunk = min(z_chunk, head.sz)
+  anisotropy = np.asarray(anisotropy, dtype=np.float32)
 
+  correction_factor = np.min(anisotropy)
 
+  scaled_points = points * anisotropy
 
+  for z in range(0, head.sz, z_chunk):
+    ptc = point_cloud(
+      binary, 
+      z_start=z,
+      z_end=min(z+z_chunk, head.sz),
+      label=label, 
+      parallel=parallel
+    )
+    if ptc.size == 0:
+      continue
+
+    ptc = ptc.astype(np.float32)
+    ptc[:] *= anisotropy
+    tree = KDTree(ptc)
+    chunk_radii, _ = tree.query(scaled_points, k=1)
+
+    # regular edt is distance to bg, kdtree returns
+    # distance to contour, which is a difference of 1 
+    # can maybe improve this by taking the mean of the
+    # axial, square diagonal, and cubic directions
+    # distances inside need to be expanded, points outside contracted
+    np.add(chunk_radii, correction_factor, out=chunk_radii, where=inside_mask)
+    np.subtract(chunk_radii, correction_factor, out=chunk_radii, where=~inside_mask)
+    np.minimum(radii, chunk_radii, out=radii)
+
+  np.negative(radii, out=radii, where=inside_mask)
+
+  return radii
 
