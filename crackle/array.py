@@ -15,7 +15,7 @@ from .operations import (
   refit, 
   renumber,
   zstack, zsplit,
-  remap,
+  remap, recompress,
   eq_scalar, neq_scalar,
   gt_scalar, gte_scalar, lt_scalar, lte_scalar,
   add_scalar, subtract_scalar,
@@ -288,6 +288,13 @@ class CrackleArray:
     binary = apply_binary_mask(
       self.binary, other.binary, parallel=self.parallel
     )
+    return CrackleArray(binary, parallel=self.parallel)
+
+  def recompress(self) -> "CrackleArray":
+    """
+    Regenerate crack codes after remapping.
+    """
+    binary = recompress(self.binary, parallel=self.parallel)
     return CrackleArray(binary, parallel=self.parallel)
 
   def viewer(self):
