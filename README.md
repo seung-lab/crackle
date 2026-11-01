@@ -301,7 +301,7 @@ Due to this mutli-crc strategy, it is possible to narrow down corruptions to the
 | crc8             | Any.              | u8      | CRC8 of format_field thru num_label_bytes using polynomial 0xe7 (implicit) and 0xFF initialization. |
 
 
-Format Field (u16): DDSSCLLFGOOOOURR (each letter represents a bit, left is LSB)
+Format Field (u16): DDSSCLLFGOOOOUMR (each letter represents a bit, left is LSB)
 
 DD: 2^(DD) = byte width of returned array (1,2,4,8 bytes)  
 SS: 2^(SS) = byte width of stored labels (sometimes you can store values in 2 bytes when the final array is 8 bytes)  
@@ -311,6 +311,7 @@ F: whether the array is to be rendered as C (0) or F (1) order
 G: Signed (if (1), data are signed int, otherwise unsigned int)  
 OOOO: Nth-Order of Markov Chain (as an unsigned integer, typical values 0, or 3 to 7). If 0, markov compression is disabled.  
 U: if 0, unique labels are sorted, else, unsorted  
+M: if 1, the unique labels were remapped and so certain performance optimizations that rely on "clean" crack codes are not available
 R: Reserved  
 
 CRC8 only covers the header. It doesn't cover the magic number or format version since those are easily human correctable if needed.

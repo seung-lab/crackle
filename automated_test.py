@@ -1129,11 +1129,17 @@ def test_unary_operations(dtype):
   assert np.all(negated == (-ckl))
 
 
-def test_select_enclosed_points():
+@pytest.mark.parametrize('binary_mode', [True])
+def test_select_enclosed_points(binary_mode):
   labels = compresso.load("connectomics.npy.cpso.gz")
   labels = crackle.compressa(labels)
 
   soma = 25024949
+
+  if binary_mode:
+    labels = (labels == soma).recompress()
+    soma = 1
+
   mask = labels.select_enclosed_points(
     points=[
       [-1,-1,-1],

@@ -55,6 +55,7 @@ class CrackleHeader:
     signed:bool,
     markov_model_order:int,
     is_sorted:bool,
+    is_remapped:bool,
     format_version:int = 1,
     crc:Optional[int] = None,
   ):
@@ -71,6 +72,7 @@ class CrackleHeader:
     self.signed = bool(signed)
     self.markov_model_order = int(markov_model_order)
     self.is_sorted = bool(is_sorted)
+    self.is_remapped = bool(is_remapped)
     self.format_version = format_version
     self.crc = crc
 
@@ -89,7 +91,7 @@ class CrackleHeader:
       int.from_bytes(buffer[5:7], byteorder='little', signed=False), 
     [
       2, 2, 1, 2, 1,
-      1, 4, 1
+      1, 4, 1, 1,
     ])
 
     nlabel_width = 8
@@ -119,6 +121,7 @@ class CrackleHeader:
       signed=bool(values[5]),
       markov_model_order=int(values[6]),
       is_sorted=(not bool(values[7])),
+      is_remapped=(bool(values[8])),
       format_version=format_version,
       crc=stored_crc,
     )
@@ -150,6 +153,7 @@ class CrackleHeader:
       (int(self.signed), 1),
       (int(self.markov_model_order), 4),
       (int(not self.is_sorted), 1),
+      (int(self.is_remapped), 1),
     ])
 
     log_grid_size = int(np.log2(self.grid_size))
