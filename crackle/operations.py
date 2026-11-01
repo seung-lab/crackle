@@ -1200,11 +1200,13 @@ def signed_distance_to_boundary(
   anisotropy:np.ndarray = np.ones(3, dtype=np.float32),
   parallel:int = 0,
   z_chunk:int = 100,
+  progress:bool = False,
 ) -> npt.NDArray[float]:
   """
   Compute the signed distance field for a sparse set of points.
   """
   from pykdtree.kdtree import KDTree
+  from tqdm import tqdm
 
   points = np.asarray(points)
   radii = np.full(points.shape[0], np.inf, dtype=np.float32)
@@ -1215,18 +1217,25 @@ def signed_distance_to_boundary(
   inside_mask = select_enclosed_points(binary, label, points, parallel)
 
   head = header(binary)
-  z_chunk = min(z_chunk, head.sz)
+  z_chunk = np.min([ z_chunk, head.sz ])
   anisotropy = np.asarray(anisotropy, dtype=np.float32)
 
   correction_factor = np.min(anisotropy)
 
   scaled_points = points * anisotropy
+  scaled_points = scaled_points.astype(np.float32)
 
-  for z in range(0, head.sz, z_chunk):
+  iter = tqdm(
+    range(0, head.sz, z_chunk),
+    disable=(not progress),
+    desc="Signed Distance to Boundary",
+  )
+
+  for z in iter:
     ptc = point_cloud(
       binary, 
       z_start=z,
-      z_end=min(z+z_chunk, head.sz),
+      z_end=np.min([ z+z_chunk, head.sz ]),
       label=label, 
       parallel=parallel
     )

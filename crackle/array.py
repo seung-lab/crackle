@@ -195,12 +195,14 @@ class CrackleArray:
     self,
     label:int,
     points:np.ndarray,
+    progress:bool = False,
   ) -> npt.NDArray[np.float32]:
     return signed_distance_to_boundary(
       self.binary,
       label=label,
       points=points,
-      parallel=self.parallel
+      progress=progress,
+      parallel=self.parallel,
     )
 
   def connected_components(

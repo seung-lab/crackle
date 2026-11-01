@@ -48,14 +48,25 @@ setuptools.setup(
     ],
     "sdf": [
       "pykdtree",
+      "tqdm",
     ],
     "ccl": [ 
       "connected-components-3d",
+      "tqdm",
     ],
     "meta": [
       "pyarrow",
     ],
     "formats": [
+      "compresso",
+      "pynrrd",
+      "tifffile",
+    ],
+    "all": [
+      "pykdtree",
+      "connected-components-3d",
+      "tqdm",
+      "pyarrow",
       "compresso",
       "pynrrd",
       "tifffile",
