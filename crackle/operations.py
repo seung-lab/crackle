@@ -114,6 +114,7 @@ def remap(
     head.data_width = data_width
   head.stored_data_width = data_width
   head.is_sorted = np.all(uniq[:-1] <= uniq[1:])
+  head.is_remapped = True
 
   labels_binary = b''.join([
     len(uniq).to_bytes(8, 'little'),
@@ -765,12 +766,13 @@ def ones(shape, dtype=None, order="C"):
   """
   return full(shape, 1, dtype, order)
 
-def operator(binary:bytes, fn) -> bytes:
+def operator(binary:bytes, is_remapped:bool, fn) -> bytes:
   head = header(binary)
   parts = decode_flat_labels(head, binary)
   parts["unique"] = fn(parts["unique"])
 
   head.is_sorted = fastremap.is_sorted(parts["unique"])
+  head.is_remapped = is_remapped
   head.stored_data_width = compute_byte_width(parts["unique"].max())
 
   labels_binary = b''.join([
@@ -799,79 +801,79 @@ def operator(binary:bytes, fn) -> bytes:
   ])
 
 def eq_scalar(binary:bytes, scalar:int) -> bytes:
-  return operator(binary, lambda uniq: uniq == scalar)
+  return operator(binary, True, lambda uniq: uniq == scalar)
 
 def neq_scalar(binary:bytes, scalar:int) -> bytes:
-  return operator(binary, lambda uniq: uniq != scalar)
+  return operator(binary, True, lambda uniq: uniq != scalar)
 
 def gt_scalar(binary:bytes, scalar:int) -> bytes:
-  return operator(binary, lambda uniq: uniq > scalar)
+  return operator(binary, True, lambda uniq: uniq > scalar)
 
 def gte_scalar(binary:bytes, scalar:int) -> bytes:
-  return operator(binary, lambda uniq: uniq >= scalar)
+  return operator(binary, True, lambda uniq: uniq >= scalar)
 
 def lt_scalar(binary:bytes, scalar:int) -> bytes:
-  return operator(binary, lambda uniq: uniq < scalar)
+  return operator(binary, True, lambda uniq: uniq < scalar)
 
 def lte_scalar(binary:bytes, scalar:int) -> bytes:
-  return operator(binary, lambda uniq: uniq <= scalar)
+  return operator(binary, True, lambda uniq: uniq <= scalar)
 
 def add_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 0:
     return binary
-  return operator(binary, lambda uniq: uniq + scalar)
+  return operator(binary, False, lambda uniq: uniq + scalar)
 
 def subtract_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 0:
     return binary
-  return operator(binary, lambda uniq: uniq - scalar)
+  return operator(binary, False, lambda uniq: uniq - scalar)
 
 def multiply_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 1:
     return binary
-  return operator(binary, lambda uniq: uniq * scalar)
+  return operator(binary, scalar != 0, lambda uniq: uniq * scalar)
 
 def floordiv_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 0:
     raise ZeroDivisionError("Cannot divide by zero.")
   elif scalar == 1:
     return binary
-  return operator(binary, lambda uniq: uniq // scalar)
+  return operator(binary, True, lambda uniq: uniq // scalar)
 
 def mod_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 0:
     raise ZeroDivisionError("Cannot divide by zero.")
   elif scalar > max(binary):
     return binary
-  return operator(binary, lambda uniq: uniq % scalar)
+  return operator(binary, True, lambda uniq: uniq % scalar)
 
 def truediv_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 1:
     return binary
-  return operator(binary, lambda uniq: uniq / scalar)
+  return operator(binary, True, lambda uniq: uniq / scalar)
 
 def xor_scalar(binary:bytes, scalar:int) -> bytes:
-  return operator(binary, lambda uniq: uniq ^ scalar)
+  return operator(binary, True, lambda uniq: uniq ^ scalar)
 
 def bitwise_and_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == np.iinfo(header(binary).dtype).max:
     return binary
-  return operator(binary, lambda uniq: uniq & scalar)
+  return operator(binary, True, lambda uniq: uniq & scalar)
 
 def bitwise_or_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 0:
     return binary
-  return operator(binary, lambda uniq: uniq | scalar)
+  return operator(binary, True, lambda uniq: uniq | scalar)
 
 def lshift_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 0:
     return binary
-  return operator(binary, lambda uniq: uniq << scalar)
+  return operator(binary, True, lambda uniq: uniq << scalar)
 
 def rshift_scalar(binary:bytes, scalar:int) -> bytes:
   if scalar == 0:
     return binary
-  return operator(binary, lambda uniq: uniq >> scalar)
+  return operator(binary, True, lambda uniq: uniq >> scalar)
 
 def recompress(
   binary:bytes,

@@ -805,6 +805,7 @@ def condense_unique(binary:bytes) -> bytes:
   comps = components(binary)
   head.num_label_bytes = len(labels_binary)
   head.is_sorted = True
+  head.is_remapped = True
 
   crack_crcs = comps["crcs"][4:]
 
