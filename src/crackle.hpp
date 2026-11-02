@@ -364,9 +364,9 @@ std::span<const uint32_t> get_crack_code_crcs(
 	const CrackleHeader &header,
 	const std::span<const unsigned char> &binary
 ) {
-  if (binary.size() < header.sz * sizeof(uint32_t)) {
-  	throw std::out_of_range("Insufficient binary data for crack code CRCs.");
-  }
+	if (binary.size() < header.sz * sizeof(uint32_t)) {
+		throw std::out_of_range("Insufficient binary data for crack code CRCs.");
+	}
 
 	// Compute the start of the uint32_t array
 	const uint32_t* start = reinterpret_cast<const uint32_t*>(
@@ -399,9 +399,9 @@ std::vector<std::vector<uint8_t>> decode_markov_model(
 
 std::vector<std::pair<uint64_t, std::vector<unsigned char>> >
 crack_code_to_symbols(
-  const std::span<const unsigned char>& code,
-  const uint64_t sx, const uint64_t sy,
-  const std::vector<std::vector<uint8_t>>& markov_model
+	const std::span<const unsigned char>& code,
+	const uint64_t sx, const uint64_t sy,
+	const std::vector<std::vector<uint8_t>>& markov_model
 ) {
 	std::vector<uint64_t> nodes = crackle::crackcodes::read_boc_index(code, sx, sy);
 
@@ -419,11 +419,11 @@ crack_code_to_symbols(
 
 // vcg: voxel connectivity graph
 void crack_code_to_vcg(
-  const std::span<const unsigned char>& code,
-  const uint64_t sx, const uint64_t sy,
-  const bool permissible, 
-  const std::vector<std::vector<uint8_t>>& markov_model,
-  uint8_t* slice_edges
+	const std::span<const unsigned char>& code,
+	const uint64_t sx, const uint64_t sy,
+	const bool permissible, 
+	const std::vector<std::vector<uint8_t>>& markov_model,
+	uint8_t* slice_edges
 ) {
 	auto symbol_stream = crack_code_to_symbols(code, sx, sy, markov_model);
 	crackle::crackcodes::decode_crack_code(
@@ -433,12 +433,12 @@ void crack_code_to_vcg(
 
 template <typename CCL>
 CCL* crack_codes_to_cc_labels(
-  std::span<const unsigned char>& crack_codes,
-  const uint64_t sx, const uint64_t sy,
-  const bool permissible, uint64_t &N,
-  const std::vector<std::vector<uint8_t>>& markov_model,
-  std::span<uint8_t>& vcg,
-  CCL* out = NULL
+	const std::span<const unsigned char>& crack_codes,
+	const uint64_t sx, const uint64_t sy,
+	const bool permissible, uint64_t &N,
+	const std::vector<std::vector<uint8_t>>& markov_model,
+	std::span<uint8_t>& vcg,
+	CCL* out = NULL
 ) {
 	crack_code_to_vcg(
 		crack_codes, sx, sy,
@@ -506,6 +506,160 @@ std::vector<LABEL> decode_label_map(
 	}
 }
 
+template <typename LABEL, typename OUT>
+void decompress_multivalued_slice(
+	OUT* output,
+	const CrackleHeader& header,
+	const std::span<const unsigned char> binary,
+	const std::vector<std::vector<uint8_t>>& markov_model,
+	const std::vector<std::span<const unsigned char>>& crack_codes,
+	const std::span<const uint32_t> crack_code_crcs,
+	const std::optional<uint64_t> label,
+	const int64_t z_start,
+	const int64_t szr,
+	const uint64_t sxy,
+	const uint64_t z,
+	std::span<uint8_t> vcg,
+	std::span<uint32_t> cc_labels
+) {
+	uint64_t N = 0;
+	crack_codes_to_cc_labels<uint32_t>(
+		crack_codes[z], header.sx, header.sy,
+		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+		/*N=*/N,
+		/*markov_model=*/markov_model,
+		/*vcg=*/vcg,
+		/*output=*/cc_labels.data()
+	);
+
+	if (header.format_version > 0) {
+		const uint32_t computed_crc = crackle::crc::crc32c(cc_labels.data(), sxy);
+
+		if (crack_code_crcs[z_start + z] != computed_crc) {
+			std::string err = "crackle: crack code crc mismatch on z=";
+			err += std::to_string(z_start + z);
+			err += " computed: ";
+			err += std::to_string(computed_crc);
+			err += " stored: ";
+			err += std::to_string(crack_code_crcs[z_start + z]);
+			throw std::runtime_error(err);
+		}
+	}
+
+	const std::vector<LABEL> label_map = decode_label_map<LABEL>(
+		header, binary, cc_labels.data(), N, z_start + z, z_start + z + 1
+	);
+
+	if (label.has_value()) {
+		const uint64_t label_v = *label;
+
+		if (header.fortran_order) {
+			for (uint64_t i = 0; i < sxy; i++) {
+				output[i + z * sxy] = (label_map[cc_labels[i]] == label_v);
+			}
+		}
+		else {
+			uint64_t i = 0;
+			for (uint64_t y = 0; y < header.sy; y++) {
+				for (uint64_t x = 0; x < header.sx; x++, i++) {
+					output[z + szr * (y + header.sy * x)] = (label_map[cc_labels[i]] == label_v);
+				}
+			}
+		}
+	}
+	else {
+		if (header.fortran_order) {
+			uint64_t i = 0;
+			uint64_t end = (sxy >> 2) << 2;
+			for (i = 0; i < end; i += 4) {
+				output[i + z * sxy] = label_map[cc_labels[i]];
+				output[i+1 + z * sxy] = label_map[cc_labels[i+1]];
+				output[i+2 + z * sxy] = label_map[cc_labels[i+2]];
+				output[i+3 + z * sxy] = label_map[cc_labels[i+3]];
+			}
+			for (i = end; i < sxy; i++) {
+				output[i + z * sxy] = label_map[cc_labels[i]];
+			}
+		}
+		else {
+			uint64_t i = 0;
+			for (uint64_t y = 0; y < header.sy; y++) {
+				for (uint64_t x = 0; x < header.sx; x++, i++) {
+					output[z + szr * (y + header.sy * x)] = label_map[cc_labels[i]];
+				}
+			}
+		}
+	}
+}
+
+template <typename LABEL, typename OUT>
+void decompress_binary_slice(
+	OUT* output,
+	const CrackleHeader& header,
+	const std::span<const unsigned char> binary,
+	const std::vector<std::vector<uint8_t>>& markov_model,
+	const std::vector<std::span<const unsigned char>>& crack_codes,
+	const std::span<const uint32_t> crack_code_crcs,
+	const std::optional<uint64_t> label,
+	const int64_t z_start,
+	const int64_t szr,
+	const uint64_t sxy,
+	const uint64_t z,
+	std::span<uint8_t> vcg,
+	const std::span<uint64_t> uniq
+) {
+	const std::vector<LABEL> label_map = decode_label_map<LABEL>(
+		header, binary, nullptr, 0, z_start + z, z_start + z + 1
+	);
+
+	uint8_t flip = label.has_value()
+		? (label_map[0] == *label)
+		: (label_map[0] == uniq[1]);
+
+	crack_code_to_vcg(
+		crack_codes[z], header.sx, header.sy,
+		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+		/*markov_model=*/markov_model,
+		/*vcg=*/vcg.data()
+	);
+
+	crackle::cc3d::color_binary_connectivity_graph_2d(
+		vcg,
+		header.sx, header.sy,
+		/*start=*/flip
+	);
+
+	if (label.has_value()) {
+		if (header.fortran_order) {
+			for (uint64_t i = 0; i < sxy; i++) {
+				output[i + z * sxy] = vcg[i];
+			}
+		}
+		else {
+			uint64_t i = 0;
+			for (uint64_t y = 0; y < header.sy; y++) {
+				for (uint64_t x = 0; x < header.sx; x++, i++) {
+					output[z + szr * (y + header.sy * x)] = vcg[i];
+				}
+			}
+		}
+	}
+	else {
+		if (header.fortran_order) {
+			for (uint64_t i = 0; i < sxy; i++) {
+				output[i + z * sxy] = uniq[vcg[i]];
+			}
+		}
+		else {
+			uint64_t i = 0;
+			for (uint64_t y = 0; y < header.sy; y++) {
+				for (uint64_t x = 0; x < header.sx; x++, i++) {
+					output[z + szr * (y + header.sy * x)] = uniq[vcg[i]];
+				}
+			}
+		}
+	}
+}
 
 template <typename LABEL, typename OUT>
 OUT* decompress(
@@ -515,7 +669,8 @@ OUT* decompress(
 	int64_t z_start = -1,
 	int64_t z_end = -1,
 	size_t parallel = 1,
-	const std::optional<uint64_t> label = std::nullopt
+	const std::optional<uint64_t> label = std::nullopt,
+	const bool skip_crc_check = false
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
@@ -581,87 +736,71 @@ OUT* decompress(
 
 	ThreadPool pool(parallel);
 
+	const bool binary_image_optimization = (
+		crackle::labels::num_labels(binary) == 2
+		&& header.label_format == LabelFormat::FLAT
+		&& header.is_remapped == false
+		// && skip_crc_check == true
+	);
+
+	std::vector<uint64_t> uniq;
+	if (binary_image_optimization) {
+		uniq = crackle::labels::unique(binary);
+
+		if (label.has_value() && !(uniq[0] == *label || uniq[1] == *label)) {
+			std::fill(output, output + voxels, 0u);
+			return output;
+		}
+	}
+
 	std::vector<std::unique_ptr<uint8_t[]>> vcg_scratch(parallel);
 	std::vector<std::unique_ptr<uint32_t[]>> cc_labels_scratch(parallel);
 	for (size_t t = 0; t < parallel; t++) {
 		vcg_scratch[t] = std::unique_ptr<uint8_t[]>(new uint8_t[sxy]);
-		cc_labels_scratch[t] = std::unique_ptr<uint32_t[]>(new uint32_t[sxy]);
+		if (!binary_image_optimization) {
+			cc_labels_scratch[t] = std::unique_ptr<uint32_t[]>(new uint32_t[sxy]);
+		}
 	}
 
 	for (uint64_t z = 0; z < static_cast<uint64_t>(szr); z++) {
-		pool.enqueue([&,z](size_t t) {
-			auto vcg = std::span<uint8_t>(vcg_scratch[t].get(), sxy);
-			auto cc_labels = std::span<uint32_t>(cc_labels_scratch[t].get(), sxy);
-
-			uint64_t N = 0;
-			crack_codes_to_cc_labels<uint32_t>(
-				crack_codes[z], header.sx, header.sy,
-				/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE), 
-				/*N=*/N,
-				/*markov_model=*/markov_model,
-				/*vcg=*/vcg,
-				/*output=*/cc_labels.data()
-			);
-
-			if (header.format_version > 0) {
-				const uint32_t computed_crc = crackle::crc::crc32c(cc_labels.data(), sxy);
-
-				if (crack_code_crcs[z_start + z] != computed_crc) {
-					std::string err = "crackle: crack code crc mismatch on z=";
-					err += std::to_string(z_start + z);
-					err += " computed: ";
-					err += std::to_string(computed_crc);
-					err += " stored: ";
-					err += std::to_string(crack_code_crcs[z_start + z]);
-					throw std::runtime_error(err);
-				}
-			}
-
-			const std::vector<LABEL> label_map = decode_label_map<LABEL>(
-				header, binary, cc_labels.data(), N, z_start+z, z_start+z+1
-			);
-
-			if (label.has_value()) {
-				const uint64_t label_v = *label;
-
-				if (header.fortran_order) {
-					for (uint64_t i = 0; i < sxy; i++) {
-						output[i + z * sxy] = (label_map[cc_labels[i]] == label_v);
-					}
-				}
-				else {
-					uint64_t i = 0;
-					for (uint64_t y = 0; y < header.sy; y++) {
-						for (uint64_t x = 0; x < header.sx; x++, i++) {
-							output[z + szr * (y + header.sy * x)] = (label_map[cc_labels[i]] == label_v);
-						}
-					}
-				}
-			}
-			else {
-				if (header.fortran_order) {
-					uint64_t i = 0;
-					uint64_t end = (sxy >> 2) << 2;
-					for (i = 0; i < end; i += 4) {
-						output[i + z * sxy] = label_map[cc_labels[i]];
-						output[i+1 + z * sxy] = label_map[cc_labels[i+1]];
-						output[i+2 + z * sxy] = label_map[cc_labels[i+2]];
-						output[i+3 + z * sxy] = label_map[cc_labels[i+3]];
-					}
-					for (i = end; i < sxy; i++) {
-						output[i + z * sxy] = label_map[cc_labels[i]];
-					}
-				}
-				else {
-					uint64_t i = 0;
-					for (uint64_t y = 0; y < header.sy; y++) {
-						for (uint64_t x = 0; x < header.sx; x++, i++) {
-							output[z + szr * (y + header.sy * x)] = label_map[cc_labels[i]];
-						}
-					}
-				}
-			}
-		});
+		if (binary_image_optimization) {
+			pool.enqueue([&,z](size_t t) {
+				decompress_binary_slice<LABEL, OUT>(
+					output,
+					header,
+					binary,
+					markov_model,
+					crack_codes,
+					crack_code_crcs,
+					label,
+					z_start,
+					szr,
+					sxy,
+					z,
+					std::span<uint8_t>(vcg_scratch[t].get(), sxy),
+					uniq
+				);
+			});			
+		}
+		else {
+			pool.enqueue([&,z](size_t t) {
+				decompress_multivalued_slice<LABEL, OUT>(
+					output,
+					header,
+					binary,
+					markov_model,
+					crack_codes,
+					crack_code_crcs,
+					label,
+					z_start,
+					szr,
+					sxy,
+					z,
+					std::span<uint8_t>(vcg_scratch[t].get(), sxy),
+					std::span<uint32_t>(cc_labels_scratch[t].get(), sxy)
+				);
+			});
+		}
 	}
 
 	pool.join();
@@ -1056,9 +1195,9 @@ void remap(
 		iters.reserve(mapping.size());
 
 		for (auto& [k,v] : mapping) {
-    	auto it = std::lower_bound(unique.begin(), unique.end(), k);
-	    if (it != unique.end() && *it == k) {
-	    	iters.push_back(it);
+			auto it = std::lower_bound(unique.begin(), unique.end(), k);
+			if (it != unique.end() && *it == k) {
+				iters.push_back(it);
 			}
 		}
 		for (auto& it : iters) {
