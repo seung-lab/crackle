@@ -34,6 +34,7 @@ from .operations import (
   apply_binary_mask,
   binary_operator,
   select_enclosed_points,
+  scattered_points,
   signed_distance_to_boundary,
 )
 from . import codec, operations
@@ -393,6 +394,14 @@ class CrackleArray:
     if slcs == (Ellipsis, np.newaxis):
       self.shape = self.shape + (1,)
       return self
+    elif (
+      hasattr(slices, "__len__") 
+      and len(slices) == 3
+      and all([ isinstance(slc, (list, tuple, np.ndarray)) for slc in slices ])
+    ):
+      return scattered_points(
+        np.array([ (x,y,z) for x,y,z in zip(slices[0],slices[1],slices[2]) ], dtype=np.uint16)
+      )
 
     slices = reify_slices(slcs, *self.shape[:3])
 

@@ -1175,7 +1175,7 @@ def select_enclosed_points(
   idx = np.flatnonzero(mask)
   considered_points = points[idx].astype(np.uint16, copy=False)
 
-  values = scattered_points(
+  values = fastremap.scattered_points(
     binary, considered_points, parallel
   )
 
@@ -1192,6 +1192,28 @@ def scattered_points(
   Efficiently fetch the values of a sparse
   set of points.
   """
+ points = np.asarray(points)
+
+  assert points.ndim == 2
+  assert points.shape[1] == 3
+
+  head = header(binary)
+
+  mask = np.ones(points.shape[0], dtype=bool)
+
+  mask &= points[:,0] >= 0
+  mask &= points[:,1] >= 0
+  mask &= points[:,2] >= 0
+
+  mask &= points[:,0] < head.sx
+  mask &= points[:,1] < head.sy
+  mask &= points[:,2] < head.sz
+
+  if not mask.any():
+    num_bad = np.sum(~mask)
+    examples = points[~mask][:10]
+    raise ValueError(f"{num_bad} points were out of range. Up to 10 examples: {examples}")
+
   return fastcrackle.scattered_points(
     binary, points, parallel
   )
