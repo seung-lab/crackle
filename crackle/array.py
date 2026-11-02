@@ -395,12 +395,16 @@ class CrackleArray:
       self.shape = self.shape + (1,)
       return self
     elif (
-      hasattr(slices, "__len__") 
-      and len(slices) == 3
-      and all([ isinstance(slc, (list, tuple, np.ndarray)) for slc in slices ])
+      hasattr(slcs, "__len__") 
+      and len(slcs) == 3
+      and all([ isinstance(slc, (list, tuple, np.ndarray)) for slc in slcs ])
     ):
       return scattered_points(
-        np.array([ (x,y,z) for x,y,z in zip(slices[0],slices[1],slices[2]) ], dtype=np.uint16)
+        self.binary,
+        points=np.array([ 
+            (x,y,z) for x,y,z in zip(slcs[0],slcs[1],slcs[2])
+          ], dtype=np.uint16),
+        parallel=self.parallel,
       )
 
     slices = reify_slices(slcs, *self.shape[:3])

@@ -1192,7 +1192,7 @@ def scattered_points(
   Efficiently fetch the values of a sparse
   set of points.
   """
- points = np.asarray(points)
+  points = np.asarray(points)
 
   assert points.ndim == 2
   assert points.shape[1] == 3
