@@ -2389,19 +2389,26 @@ auto binary_operator(
 }
 
 template <std::integral LABEL, std::integral POINT_T>
-std::vector<uint8_t> select_enclosed_points(
+std::vector<LABEL> scattered_points(
 	const unsigned char* buffer,
 	const size_t num_bytes,
-	const LABEL label,
 	const std::span<const POINT_T> points,
 	size_t parallel = 1
 ) {
 	const CrackleHeader header = get_header(buffer, num_bytes);
 
-	std::vector<uint8_t> mask(points.size() / 3);
+	std::vector<LABEL> values(points.size() / 3);
 
 	if (header.voxels() == 0) {
-		return mask;
+		return values;
+	}
+
+	if (points.size() == 0) {
+		return values;
+	}
+
+	if (points.size() % 3 != 0) {
+		throw std::invalid_argument("points must contain xyz triples.");
 	}
 
 	const uint64_t sx = header.sx;
@@ -2411,6 +2418,15 @@ std::vector<uint8_t> select_enclosed_points(
 	std::vector<std::vector<uint64_t>> clustered_by_z(header.sz);
 
 	for (uint64_t i = 0, j = 0; i < points.size(); i += 3, j++) {
+		if (
+			points[i+0] < 0 || points[i+0] >= sx ||
+			points[i+1] < 0 || points[i+1] >= sy ||
+			points[i+2] < 0 || points[i+2] >= sz
+
+		) {
+			throw std::invalid_argument("points must lie inside the volume");
+		}
+
 		clustered_by_z[points[i+2]].push_back(j);
 	}
 
@@ -2470,11 +2486,7 @@ std::vector<uint8_t> select_enclosed_points(
 				label_map = decode_label_map<LABEL>(
 					header, binary, nullptr, 0, z, z+1
 				);
-
-				cc3d::color_binary_connectivity_graph_2d(
-					vcg, sx, sy, 
-					/*start=*/(label_map[0] == label)
-				);
+				cc3d::color_binary_connectivity_graph_2d(vcg, sx, sy);
 			}
 			else {
 				uint64_t N = 0;
@@ -2492,65 +2504,63 @@ std::vector<uint8_t> select_enclosed_points(
 				const POINT_T y = points[idx*3 + 1];
 				const uint64_t loc = (uint64_t)x + sx * (uint64_t)y;
 
-				mask[idx] = binary_image_optimization
-					? vcg[loc]
-					: label_map[ccl[loc]] == label;
+				values[idx] = binary_image_optimization
+					? label_map[vcg[loc]]
+					: label_map[ccl[loc]];
 			}
 		});
 	}
 
 	pool.join();
 
-	return mask;
+	return values;
 }
  
 template <std::integral POINT_T>
-auto select_enclosed_points(
+auto scattered_points(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
-	const uint64_t label,
 	const std::span<const POINT_T> points,
 	size_t parallel = 1
 ) {
 	CrackleHeader header(buffer);
 
 	if (header.data_width == 1) {
-		return select_enclosed_points<uint8_t, POINT_T>(
+		return scattered_points<uint8_t, POINT_T>(
 			buffer, num_bytes,
-			label, points, parallel
+			points, parallel
 		);
 	}
 	else if (header.data_width == 2) {
-		return select_enclosed_points<uint16_t, POINT_T>(
+		return scattered_points<uint16_t, POINT_T>(
 			buffer, num_bytes,
-			label, points, parallel
+			points, parallel
 		);
 	}
 	else if (header.data_width == 4) {
-		return select_enclosed_points<uint32_t, POINT_T>(
+		return scattered_points<uint32_t, POINT_T>(
 			buffer, num_bytes,
-			label, points, parallel
+			points, parallel
 		);
 	}
 	else {
-		return select_enclosed_points<uint64_t, POINT_T>(
+		return scattered_points<uint64_t, POINT_T>(
 			buffer, num_bytes,
-			label, points, parallel
+			points, parallel
 		);
 	}
 }
 
 template <std::integral POINT_T>
-auto select_enclosed_points(
+auto scattered_points(
 	const std::span<const unsigned char>& buffer,
-	const uint64_t label,
 	const std::span<const POINT_T> points,
 	size_t parallel = 1
 ) {
-	return select_enclosed_points<POINT_T>(
+	return scattered_points<POINT_T>(
 		buffer.data(),
 		buffer.size(),
-		label, points, parallel
+		points, parallel
 	);
 }
 

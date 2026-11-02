@@ -1175,11 +1175,26 @@ def select_enclosed_points(
   idx = np.flatnonzero(mask)
   considered_points = points[idx].astype(np.uint16, copy=False)
 
-  mask[idx] = fastcrackle.select_enclosed_points(
-    binary, label, considered_points, parallel
+  values = scattered_points(
+    binary, considered_points, parallel
   )
 
+  mask[idx] = values == label
+
   return mask
+
+def scattered_points(
+  binary:bytes, 
+  points:np.ndarray,
+  parallel:int = 0,
+) -> np.ndarray:
+  """
+  Efficiently fetch the values of a sparse
+  set of points.
+  """
+  return fastcrackle.scattered_points(
+    binary, points, parallel
+  )
 
 def signed_distance_to_boundary(
   binary:bytes, 
