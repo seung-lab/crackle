@@ -1175,7 +1175,7 @@ def select_enclosed_points(
   idx = np.flatnonzero(mask)
   considered_points = points[idx].astype(np.uint16, copy=False)
 
-  values = fastremap.scattered_points(
+  values = fastcrackle.scattered_points(
     binary, considered_points, parallel
   )
 
