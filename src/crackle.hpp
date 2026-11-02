@@ -94,7 +94,8 @@ std::vector<unsigned char> compress_helper(
 		/*fortran_order*/fortran_order,
 		/*markov_model_order=*/markov_model_order, // 0 is disabled
 		/*is_sorted=*/true,
-		/*crc=*/0xFF // will be recalculated on saving
+		/*crc=*/0xFF, // will be recalculated on saving
+		/*is_remapped=*/false // this is a clean compression, so no remapping
 	);
 
 	if (voxels == 0) {
@@ -1128,6 +1129,7 @@ void remap(
 		}
 	}
 
+	header.is_remapped = true;
 	header.tochars(binary);
 
 	if (header.format_version > 0) {

@@ -15,7 +15,7 @@ from .operations import (
   refit, 
   renumber,
   zstack, zsplit,
-  remap,
+  remap, recompress,
   eq_scalar, neq_scalar,
   gt_scalar, gte_scalar, lt_scalar, lte_scalar,
   add_scalar, subtract_scalar,
@@ -33,6 +33,9 @@ from .operations import (
   edge_labels,
   apply_binary_mask,
   binary_operator,
+  select_enclosed_points,
+  scattered_points,
+  signed_distance_to_boundary,
 )
 from . import codec, operations
 from .lib import crc32c
@@ -177,6 +180,32 @@ class CrackleArray:
       parallel=self.parallel,
     )
 
+  def select_enclosed_points(
+    self,
+    label:int,
+    points:np.ndarray,
+  ) -> npt.NDArray[bool]:
+    return select_enclosed_points(
+      self.binary,
+      label,
+      points,
+      parallel=self.parallel
+    )
+
+  def signed_distance_to_boundary(
+    self,
+    label:int,
+    points:np.ndarray,
+    progress:bool = False,
+  ) -> npt.NDArray[np.float32]:
+    return signed_distance_to_boundary(
+      self.binary,
+      label=label,
+      points=points,
+      progress=progress,
+      parallel=self.parallel,
+    )
+
   def connected_components(
     self, 
     connectivity:Literal[6,26] = 26,
@@ -260,6 +289,13 @@ class CrackleArray:
     binary = apply_binary_mask(
       self.binary, other.binary, parallel=self.parallel
     )
+    return CrackleArray(binary, parallel=self.parallel)
+
+  def recompress(self) -> "CrackleArray":
+    """
+    Regenerate crack codes after remapping.
+    """
+    binary = recompress(self.binary, parallel=self.parallel)
     return CrackleArray(binary, parallel=self.parallel)
 
   def viewer(self):
@@ -358,6 +394,18 @@ class CrackleArray:
     if slcs == (Ellipsis, np.newaxis):
       self.shape = self.shape + (1,)
       return self
+    elif (
+      hasattr(slcs, "__len__") 
+      and len(slcs) == 3
+      and all([ isinstance(slc, (list, tuple, np.ndarray)) for slc in slcs ])
+    ):
+      return scattered_points(
+        self.binary,
+        points=np.array([ 
+            (x,y,z) for x,y,z in zip(slcs[0],slcs[1],slcs[2])
+          ], dtype=np.uint16),
+        parallel=self.parallel,
+      )
 
     slices = reify_slices(slcs, *self.shape[:3])
 

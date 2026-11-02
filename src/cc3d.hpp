@@ -26,6 +26,7 @@
 #ifndef __CC3D_SPECIAL_2_4_HPP__
 #define __CC3D_SPECIAL_2_4_HPP__
 
+#include <concepts>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -39,7 +40,7 @@ namespace cc3d {
 
 static uint64_t _dummy_N;
 
-template <typename T>
+template <std::integral T>
 class DisjointSet {
 public:
   std::vector<T> ids;
@@ -111,7 +112,7 @@ public:
 // labels and this resolves them into their final labels. We
 // modify this pass to also ensure that the output labels are
 // numbered from 1 sequentially.
-template <typename OUT = uint32_t>
+template <std::integral OUT = uint32_t>
 OUT* relabel(
     OUT* out_labels, const int64_t voxels,
     const int64_t num_labels, DisjointSet<uint32_t> &equivalences,
@@ -143,7 +144,47 @@ OUT* relabel(
   return out_labels;
 }
 
-template <typename OUT>
+// optimization for binary images requiring no
+// separate ccl planes
+void color_binary_connectivity_graph_2d(
+  std::span<uint8_t> vcg,
+  const uint64_t sx, const uint64_t sy,
+  const bool start = 0
+) {
+  uint8_t cur = (uint8_t)start;
+  vcg[0] = cur;
+  uint64_t loc = 0;
+  for (uint64_t y = 0; y < sy; y++) {
+    if (y > 0) {
+      cur = (vcg[loc] & 0b1000)
+        ? vcg[loc - sx]
+        : !vcg[loc - sx];
+    }
+    vcg[loc] = cur;
+    loc++;
+
+    // branchless is required because the
+    // simple branchy version was slower than
+    // the general cc3d version! This about matches it.
+    // probably some SIMD or uint64 cast magic could do
+    // even better.
+    // Thank you DeepSeek for the specific suggestion.
+
+    // cur | vcg | left_bit | lb^1 | cur ^ (lb^1)
+    //  0  |  1  |    1     |  0   |     0
+    //  0  |  0  |    0     |  1   |     1
+    //  1  |  1  |    1     |  0   |     1
+    //  1  |  0  |    0     |  1   |     0
+
+    for (uint64_t x = 1; x < sx; x++, loc++) {
+      uint8_t left_bit = (vcg[loc] >> 1) & 1;
+      cur ^= (left_bit ^ 1); 
+      vcg[loc] = cur;
+    }
+  }
+}
+
+template <std::integral OUT>
 OUT* color_connectivity_graph(
   const std::span<const uint8_t> &vcg, // voxel connectivity graph
   const int64_t sx, const int64_t sy, const int64_t sz,
@@ -254,7 +295,7 @@ OUT* color_connectivity_graph(
 }
 
 
-template <typename LABEL, typename OUT>
+template <std::integral LABEL, std::integral OUT>
 OUT* connected_components2d_4(
     const LABEL* in_labels, 
     const int64_t sx, const int64_t sy, const int64_t sz,
@@ -368,7 +409,7 @@ OUT* connected_components2d_4(
   return relabel<OUT>(out_labels, voxels, next_label, equivalences, N, start_label);
 }
 
-template <typename LABEL, typename OUT = uint64_t>
+template <std::integral LABEL, std::integral OUT = uint64_t>
 OUT* connected_components(
   const LABEL* in_labels, 
   const int64_t sx, const int64_t sy, const int64_t sz,

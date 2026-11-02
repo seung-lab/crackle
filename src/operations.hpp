@@ -1,6 +1,7 @@
 #ifndef __CRACKLE_OPERATIONS_HPP__
 #define __CRACKLE_OPERATIONS_HPP__
 
+#include <concepts>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -297,11 +298,16 @@ point_cloud(
 
 	std::mutex mtx;
 
+	const bool binary_image_optimization = (
+		num_labels == 2
+		&& header.is_remapped == false
+	);
+
 	// This is a lower memory pathway that reduces base memory usage by 80%
 	// by avoiding the use of a ccl buffer, instead it can work directly
 	// with the VCG. It should be possible to do this for the general case
 	// too, but it requires a more sophisticated strategy.
-	if (num_labels == 2) {
+	if (binary_image_optimization) {
 		std::vector<uint64_t> uniq = crackle::labels::unique(binary);
 		for_each_z_vcg_parallel<LABEL>(
 			buffer, num_bytes,
@@ -2382,6 +2388,181 @@ auto binary_operator(
 	);
 }
 
+template <std::integral LABEL, std::integral POINT_T>
+std::vector<LABEL> scattered_points(
+	const unsigned char* buffer,
+	const size_t num_bytes,
+	const std::span<const POINT_T> points,
+	size_t parallel = 1
+) {
+	const CrackleHeader header = get_header(buffer, num_bytes);
+
+	std::vector<LABEL> values(points.size() / 3);
+
+	if (header.voxels() == 0) {
+		return values;
+	}
+
+	if (points.size() == 0) {
+		return values;
+	}
+
+	if (points.size() % 3 != 0) {
+		throw std::invalid_argument("points must contain xyz triples.");
+	}
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+	const uint64_t sz = header.sz;
+
+	std::vector<std::vector<uint64_t>> clustered_by_z(header.sz);
+
+	for (uint64_t i = 0, j = 0; i < points.size(); i += 3, j++) {
+		if (
+			points[i+0] < 0 || points[i+0] >= sx ||
+			points[i+1] < 0 || points[i+1] >= sy ||
+			points[i+2] < 0 || points[i+2] >= sz
+
+		) {
+			throw std::invalid_argument("points must lie inside the volume");
+		}
+
+		clustered_by_z[points[i+2]].push_back(j);
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);
+
+	// only used for markov compressed streams
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	
+	auto crack_codes = get_crack_codes(header, binary, 0, sz);
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, static_cast<size_t>(sz));
+
+	ThreadPool pool(parallel);
+
+	std::vector<std::vector<uint8_t>> vcgs(parallel);
+	std::vector<std::vector<uint32_t>> ccls(parallel);
+
+	const uint64_t num_labels = crackle::labels::num_labels(binary);
+
+	const bool binary_image_optimization = (
+		num_labels == 2 
+		&& header.label_format == LabelFormat::FLAT
+		&& header.is_remapped == false
+	);
+
+	for (size_t t = 0; t < parallel; t++) {
+		vcgs[t].resize(header.sx * header.sy);
+		if (!binary_image_optimization) {
+			ccls[t].resize(header.sx * header.sy);
+		}
+	}
+
+	for (size_t z = 0; z < sz; z++) {
+		if (clustered_by_z[z].size() == 0) {
+			continue;
+		}
+
+		pool.enqueue([&,z](size_t t) {
+			std::vector<uint8_t>& vcg = vcgs[t];
+			std::vector<uint32_t>& ccl = ccls[t];
+			auto& crack_code = crack_codes[z];
+
+			crack_code_to_vcg(
+				/*code=*/crack_code,
+				/*sx=*/header.sx, /*sy=*/header.sy,
+				/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+				/*markov_model=*/markov_model,
+				/*slice_edges=*/vcg.data()
+			);
+
+			std::vector<LABEL> label_map;
+
+			if (binary_image_optimization) {
+				label_map = decode_label_map<LABEL>(
+					header, binary, nullptr, 0, z, z+1
+				);
+				cc3d::color_binary_connectivity_graph_2d(vcg, sx, sy);
+			}
+			else {
+				uint64_t N = 0;
+				crackle::cc3d::color_connectivity_graph<uint32_t>(
+					vcg, header.sx, header.sy, 1, ccl.data(), N
+				);
+
+				label_map = decode_label_map<LABEL>(
+					header, binary, ccl.data(), N, z, z+1
+				);
+			}
+
+			for (uint64_t idx : clustered_by_z[z]) {
+				const POINT_T x = points[idx*3];
+				const POINT_T y = points[idx*3 + 1];
+				const uint64_t loc = (uint64_t)x + sx * (uint64_t)y;
+
+				values[idx] = binary_image_optimization
+					? label_map[vcg[loc]]
+					: label_map[ccl[loc]];
+			}
+		});
+	}
+
+	pool.join();
+
+	return values;
+}
+ 
+template <std::integral POINT_T>
+auto scattered_points(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	const std::span<const POINT_T> points,
+	size_t parallel = 1
+) {
+	CrackleHeader header(buffer);
+
+	if (header.data_width == 1) {
+		return scattered_points<uint8_t, POINT_T>(
+			buffer, num_bytes,
+			points, parallel
+		);
+	}
+	else if (header.data_width == 2) {
+		return scattered_points<uint16_t, POINT_T>(
+			buffer, num_bytes,
+			points, parallel
+		);
+	}
+	else if (header.data_width == 4) {
+		return scattered_points<uint32_t, POINT_T>(
+			buffer, num_bytes,
+			points, parallel
+		);
+	}
+	else {
+		return scattered_points<uint64_t, POINT_T>(
+			buffer, num_bytes,
+			points, parallel
+		);
+	}
+}
+
+template <std::integral POINT_T>
+auto scattered_points(
+	const std::span<const unsigned char>& buffer,
+	const std::span<const POINT_T> points,
+	size_t parallel = 1
+) {
+	return scattered_points<POINT_T>(
+		buffer.data(),
+		buffer.size(),
+		points, parallel
+	);
+}
 
 };
 };

@@ -56,6 +56,7 @@ public:
 	uint8_t markov_model_order;
 	bool is_sorted;
 	uint8_t crc;
+	bool is_remapped;
 
 	CrackleHeader() :
 		format_version(1),
@@ -65,7 +66,8 @@ public:
 		data_width(1), stored_data_width(1),
 		sx(1), sy(1), sz(1), grid_size(2147483648),
 		num_label_bytes(0), fortran_order(true),
-		markov_model_order(0), is_sorted(1), crc(0xFF)
+		markov_model_order(0), is_sorted(1), crc(0xFF),
+		is_remapped(false)
 	{}
 
 	CrackleHeader(
@@ -81,7 +83,8 @@ public:
 		const bool _fortran_order,
 		const uint8_t _markov_model_order,
 		const bool _is_sorted,
-		const uint8_t _crc
+		const uint8_t _crc,
+		const bool _is_remapped
 	) : 
 		format_version(_format_version),
 		label_format(_label_fmt),
@@ -93,7 +96,7 @@ public:
 		num_label_bytes(_num_label_bytes), 
 		fortran_order(_fortran_order), 
 		markov_model_order(_markov_model_order),
-		is_sorted(_is_sorted), crc(_crc)
+		is_sorted(_is_sorted), crc(_crc), is_remapped(_is_remapped)
 	{}
 
 	void assign_from_buffer(const unsigned char* buf) {
@@ -126,6 +129,7 @@ public:
 		is_signed = static_cast<bool>((format_bytes >> 8) & 0b1);
 		markov_model_order = static_cast<uint8_t>((format_bytes >> 9) & 0b1111);
 		is_sorted = !static_cast<bool>((format_bytes >> 13) & 0b1);
+		is_remapped = static_cast<bool>((format_bytes >> 14) & 0b1);
 
 		if (format_version == 0) {
 			return; // no support for CRC
@@ -223,6 +227,7 @@ public:
 		format_bytes |= static_cast<uint16_t>(is_signed) << 8;
 		format_bytes |= static_cast<uint16_t>((markov_model_order & 0b1111) << 9);
 		format_bytes |= static_cast<uint16_t>((!is_sorted) << 13); // is_sorted
+		format_bytes |= static_cast<uint16_t>(is_remapped << 14);
 
 		uint8_t fmt_ver = format_version;
 		// try to use the set format version unless it hits the upper

@@ -474,12 +474,20 @@ def z_range_for_label_flat(binary:bytes, label:int) -> Tuple[int,int]:
     count=num_labels,
     dtype=head.stored_dtype
   )
-  try:
-    label = np.asarray(label, dtype=uniq.dtype)
-    idx = np.searchsorted(uniq, label)
-  except OverflowError:
-    idx = -1
-    
+
+  if head.is_sorted:
+    try:
+      label = np.asarray(label, dtype=uniq.dtype)
+      idx = np.searchsorted(uniq, label)
+    except OverflowError:
+      idx = -1
+  else:
+    idx = np.where(uniq == label)
+    if len(idx) == 0:
+      idx = -1
+    else:
+      idx = idx[0][0]
+
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
 
@@ -536,11 +544,19 @@ def z_range_for_label_condensed_pins(binary:bytes, label:int) -> Tuple[int,int]:
     count=num_labels,
     dtype=head.stored_dtype,
   )
-  try:
-    label = np.asarray(label, dtype=uniq.dtype)
-    idx = np.searchsorted(uniq, label)
-  except OverflowError:
-    idx = -1
+
+  if head.is_sorted:
+    try:
+      label = np.asarray(label, dtype=uniq.dtype)
+      idx = np.searchsorted(uniq, label)
+    except OverflowError:
+      idx = -1
+  else:
+    idx = np.where(uniq == label)
+    if len(idx) == 0:
+      idx = -1
+    else:
+      idx = idx[0][0]
 
   if idx < 0 or idx >= uniq.size or uniq[idx] != label:
     return (-1, -1)
@@ -789,6 +805,7 @@ def condense_unique(binary:bytes) -> bytes:
   comps = components(binary)
   head.num_label_bytes = len(labels_binary)
   head.is_sorted = True
+  head.is_remapped = True
 
   crack_crcs = comps["crcs"][4:]
 

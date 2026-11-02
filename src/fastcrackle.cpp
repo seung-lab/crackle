@@ -7,6 +7,7 @@
 #include <optional>
 #include <vector>
 #include <unordered_map>
+#include <span>
 
 #include "crackle.hpp"
 #include "operations.hpp"
@@ -400,11 +401,11 @@ py::dict centroids(
 
 	py::dict pycentroids;
 	for (const auto& [label, xyz] : centroid_data) {
-    	py::array_t<double> np_xyz({3}, {sizeof(double)});
-    	auto buf = np_xyz.mutable_unchecked<1>();
-        buf(0) = xyz[0];
-        buf(1) = xyz[1];
-        buf(2) = xyz[2];
+		py::array_t<double> np_xyz({3}, {sizeof(double)});
+		auto buf = np_xyz.mutable_unchecked<1>();
+		buf(0) = xyz[0];
+		buf(1) = xyz[1];
+		buf(2) = xyz[2];
 		pycentroids[py::int_(label)] = np_xyz;
 	}
 
@@ -889,6 +890,71 @@ py::list binary_operator(
 	return result;
 }
 
+template <typename T, typename POINT_T>
+py::array _compute_scattered(
+	uint8_t* data, size_t num_bytes,
+	std::span<const POINT_T> pts,
+	size_t parallel
+) {
+	std::vector<T> values;
+	{
+		py::gil_scoped_release release;
+		values = crackle::operations::scattered_points<T, POINT_T>(
+			data, num_bytes, pts, parallel
+		);
+	}
+	py::array_t<T> npy_values({static_cast<py::ssize_t>(values.size())});
+	if (!values.empty()) {
+		std::memcpy(npy_values.mutable_data(), values.data(),
+					values.size() * sizeof(T));
+	}
+	return npy_values;
+}
+
+template <typename POINT_T>
+py::array scattered_points(
+	const py::buffer buffer,
+	py::array_t<POINT_T, py::array::c_style> points,
+	const size_t parallel = 1
+) {
+
+	py::buffer_info info = buffer.request();
+	if (info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+	const size_t num_bytes = info.size;
+
+	py::buffer_info pts_info = points.request();
+	if (pts_info.ndim != 2 || pts_info.shape[1] != 3) {
+		throw std::invalid_argument("Expected points to have shape (N, 3)");
+	}
+	const size_t n_points = pts_info.shape[0];
+
+	std::span<POINT_T> pts(
+		static_cast<POINT_T*>(pts_info.ptr),
+		n_points * 3
+	);
+
+	crackle::CrackleHeader head(data);
+
+	if (head.data_width == 8) {
+		return _compute_scattered<uint64_t, POINT_T>(data, num_bytes, pts, parallel);
+	}
+	else if (head.data_width == 4) {
+		return _compute_scattered<uint32_t, POINT_T>(data, num_bytes, pts, parallel);
+	}
+	else if (head.data_width == 2) {
+		return _compute_scattered<uint16_t, POINT_T>(data, num_bytes, pts, parallel);
+	}
+	else if (head.data_width == 1) {
+		return _compute_scattered<uint8_t, POINT_T>(data, num_bytes, pts, parallel);
+	}
+	else {
+		throw std::runtime_error("corrupt data width");
+	}
+}
+
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
@@ -916,6 +982,9 @@ PYBIND11_MODULE(fastcrackle, m) {
 	m.def("apply_binary_mask", &apply_binary_mask, "Apply a mask using logical AND from a binary image of the same size.");
 	m.def("recompress", &recompress, "Perform a complete decompress and compress cycle.");
 	m.def("binary_operator", &binary_operator, "Perform a voxelwise comparison like =, !=, <, <=, >, >=, +, -, *, /, %, |, &, ^.");
+	
+	m.def("scattered_points", &scattered_points<uint16_t>, "Retrieve the values of sparse voxels.");
+	m.def("scattered_points", &scattered_points<uint32_t>, "Retrieve the values of sparse voxels.");
 
 	py::class_<crackle::pins::Pin<uint64_t, uint64_t, uint64_t>>(m, "CppPin")
 		.def(py::init<>())
