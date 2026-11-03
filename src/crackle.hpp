@@ -670,7 +670,7 @@ OUT* decompress(
 	int64_t z_end = -1,
 	size_t parallel = 1,
 	const std::optional<uint64_t> label = std::nullopt,
-	const bool skip_crc_check = false
+	const bool verify = true
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
@@ -740,7 +740,7 @@ OUT* decompress(
 		crackle::labels::num_labels(binary) == 2
 		&& header.label_format == LabelFormat::FLAT
 		&& header.is_remapped == false
-		// && skip_crc_check == true
+		&& verify == false
 	);
 
 	std::vector<uint64_t> uniq;

@@ -615,6 +615,7 @@ def decompress_binary_image(
   label:int,
   parallel:int,
   crop:bool = True,
+  verify:bool = True,
 ) -> npt.NDArray[np.bool_]:
   z_start, z_end = z_range_for_label(binary, label)
   header = CrackleHeader.frombytes(binary)
@@ -625,7 +626,8 @@ def decompress_binary_image(
 
   if z_start == 0 and z_end == header.sz or crop:
     return decompress_range(
-      binary, z_start, z_end, parallel, label
+      binary, z_start, z_end, parallel, label,
+      verify=verify
     ).view(bool)
 
   image = np.zeros([header.sx, header.sy, header.sz], dtype=bool, order=order)
@@ -634,7 +636,8 @@ def decompress_binary_image(
     return image
 
   image[:,:,z_start:z_end] = decompress_range(
-    binary, z_start, z_end, parallel, label
+    binary, z_start, z_end, parallel, label, 
+    verify=verify,
   )
   return image
 
@@ -643,16 +646,23 @@ def decompress(
   label:Optional[int] = None,
   parallel:int = 0,
   crop:bool = False,
+  verify:bool = True,
 ) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array. 
   If label is provided, decompress into  a binary (bool) image.
   crop only has meaning in the context of label where it will
     return an image cropped in Z to the ROI.
+
+  verify: by default, CRC32c is checked for each slice, but for
+    some configurations, there may be an accelerated decode path
+    (e.g. for binary images) that elides the necessary data structures
+    for checking the crc. Setting verify=False can be an acceptable
+    tradeoff when the files are already known to be good.
   """
   if label is None:
-    return decompress_range(binary, None, None, parallel)
-  return decompress_binary_image(binary, label, parallel, crop=crop)
+    return decompress_range(binary, None, None, parallel, verify=verify)
+  return decompress_binary_image(binary, label, parallel, crop=crop, verify=verify)
 
 def decompress_range(
   binary:bytes, 
@@ -660,6 +670,7 @@ def decompress_range(
   z_end:Optional[int],
   parallel:int,
   label:Optional[int] = None,
+  verify:bool = True,
 ) -> np.ndarray:
   """
   Decompress a Crackle binary into a Numpy array.
@@ -692,7 +703,7 @@ def decompress_range(
     else:
       labels = np.full(shape, single_label, order=order, dtype=header.dtype)
   else:
-    labels = fastcrackle.decompress(binary, z_start, z_end, parallel, label)
+    labels = fastcrackle.decompress(binary, z_start, z_end, parallel, label, verify)
 
   labels = labels.reshape(shape, order=order)
 
