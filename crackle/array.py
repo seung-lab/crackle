@@ -223,8 +223,8 @@ class CrackleArray:
       return_mapping=return_mapping,
     )
     if return_mapping:
-      return (CrackleArray(out[0]), out[1])
-    return CrackleArray(out)
+      return (CrackleArray(out[0], parallel=self.parallel), out[1])
+    return CrackleArray(out, parallel=self.parallel)
 
   def mode_pooling_2x2x1(self, sparse:bool = False) -> "CrackleArray":
     ds_binary = mode_pooling_2x2x1(self.binary, sparse=sparse, parallel=self.parallel)
