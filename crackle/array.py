@@ -239,7 +239,7 @@ class CrackleArray:
     self, 
     anisotropy:tuple[float,float,float] = (1.0,1.0,1.0),
   ) -> dict[tuple[int,int],float]:
-    return contacts(self.binary, anisotropy=anisotropy)
+    return contacts(self.binary, anisotropy=anisotropy, parallel=self.parallel)
 
   def zrange(self, z_start:int, z_end:int) -> "CrackleArray":
     """Get this zrange in the compressed state from bigger array."""
