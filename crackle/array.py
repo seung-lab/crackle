@@ -241,6 +241,37 @@ class CrackleArray:
   ) -> dict[tuple[int,int],float]:
     return contacts(self.binary, anisotropy=anisotropy)
 
+  def zrange(self, z_start:int, z_end:int) -> "CrackleArray":
+    """Get this zrange in the compressed state from bigger array."""
+
+    sz = self.shape[2]
+
+    if z_start < 0:
+      z_start = sz - z_start
+    if z_end < 0:
+      z_end = sz - z_end
+    if z_end >= sz:
+      z_end = sz
+
+    if z_start == z_end or z_start >= sz:
+      raise ValueError("zero z-depth")
+
+    (before_0, mid_0, after_0) = zsplit(self.binary, z_start)
+    del before_0
+
+    if z_end - z_start == 1:
+      return CrackleArray(mid_0, parallel=self.parallel)
+
+    (before_1, mid_1, after_1) = zsplit(after_0, z_end - z_start - 1)
+    del after_1
+    del mid_1
+    del after_0
+
+    binary = zstack([
+      mid_0, before_1
+    ])
+    return CrackleArray(binary, parallel=self.parallel)
+  
   def to_parquet(self):
     return to_parquet(self.binary, parallel=self.parallel)
 
