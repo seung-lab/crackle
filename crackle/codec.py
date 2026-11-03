@@ -87,13 +87,16 @@ def num_labels(binary:bytes) -> int:
   if head.voxels() == 0:
     return 0
 
-  offset = hb + head.grid_index_bytes
-  N = 0
-  if head.label_format != LabelFormat.FLAT:
-    offset += head.stored_data_width
-    N += 1 # bgcolor
-  N += int.from_bytes(binary[offset:offset+8], 'little')
-  return N
+  if not head.is_remapped:
+    offset = hb + head.grid_index_bytes
+    N = 0
+    if head.label_format != LabelFormat.FLAT:
+      offset += head.stored_data_width
+      N += 1 # bgcolor
+    N += int.from_bytes(binary[offset:offset+8], 'little')
+    return N
+  else:
+    return fastremap.unique(labels(binary)).size
 
 def contains(binary:bytes, label:int) -> bool:
   """Rapidly check if a label exists in a Crackle bytestream."""
