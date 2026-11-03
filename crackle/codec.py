@@ -79,22 +79,28 @@ def labels_for_z_range(binary:bytes, z_start:int, z_end:int) -> np.ndarray:
 
   return section_labels.astype(head.dtype, copy=False)
 
-def num_labels(binary:bytes) -> int:
-  """Returns the number of unique labels."""
+def num_labels_raw(binary:bytes) -> int:
+  """Returns the number of unique labels in the codec stream."""
   head = header(binary)
   hb = head.header_bytes
 
   if head.voxels() == 0:
     return 0
 
+  offset = hb + head.grid_index_bytes
+  N = 0
+  if head.label_format != LabelFormat.FLAT:
+    offset += head.stored_data_width
+    N += 1 # bgcolor
+  N += int.from_bytes(binary[offset:offset+8], 'little')
+  return N
+
+def num_labels(binary:bytes) -> int:
+  """Returns the number of unique labels."""
+  head = header(binary)
+
   if not head.is_remapped:
-    offset = hb + head.grid_index_bytes
-    N = 0
-    if head.label_format != LabelFormat.FLAT:
-      offset += head.stored_data_width
-      N += 1 # bgcolor
-    N += int.from_bytes(binary[offset:offset+8], 'little')
-    return N
+    return num_labels_raw(binary)
   else:
     return fastremap.unique(labels(binary)).size
 
@@ -756,7 +762,7 @@ def extract_keys(binary:bytes) -> np.ndarray:
   if head.label_format != LabelFormat.FLAT:
     raise FormatError("Can't use this function except with FLAT labels.")
 
-  N = num_labels(binary)
+  N = num_labels_raw(binary)
   raw = raw_labels(binary)
   idx_bytes = head.component_width() * head.sz
   offset = 8 + N * head.stored_data_width + idx_bytes

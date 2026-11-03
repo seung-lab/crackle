@@ -13,7 +13,7 @@ from .codec import (
   compress, decompress, decompress_range, labels, 
   header, raw_labels, decode_flat_labels,
   decode_condensed_pins, decode_condensed_pins_components,
-  num_labels, crack_codes, components,
+  num_labels, num_labels_raw, crack_codes, components,
   reencode, background_color, crack_crcs, labels_crc,
   condense_unique, z_range_for_label, point_cloud,
   contains,
@@ -51,13 +51,13 @@ def max(binary:bytes) -> int:
   loff = head.header_bytes + head.grid_index_bytes
 
   if head.label_format == LabelFormat.FLAT:
-    N = num_labels(binary)
+    N = num_labels_raw(binary)
     offset = loff + 8 + (N-1) * head.stored_data_width
     return int.from_bytes(binary[offset:offset+head.stored_data_width], byteorder='little')
   else:
     bgcolor = background_color(binary)
     sdw = head.stored_data_width
-    N = num_labels(binary) - 1
+    N = num_labels_raw(binary) - 1
     offset = loff + sdw + 8 + (N-1) * sdw
     arrmin = int.from_bytes(binary[offset:offset+sdw], byteorder='little')
     if bgcolor > arrmin:
@@ -560,7 +560,7 @@ def _zsplit_helper(binary:bytes):
   uniq = labels(binary)
   raw = raw_labels(binary)
 
-  N = num_labels(binary)
+  N = num_labels_raw(binary)
   idx_bytes = head.component_width() * head.sz
   offset = 8 + N * head.stored_data_width
   label_idx = np.frombuffer(raw[offset:offset + idx_bytes], dtype=f"u{head.component_width()}")
