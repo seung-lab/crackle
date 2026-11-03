@@ -982,7 +982,8 @@ def test_voxel_connectivity_graph():
   assert np.all(gt_vcg == crackle_vcg)
 
 
-def test_contacts():
+@pytest.mark.parametrize('parallel', [1,2])
+def test_contacts(parallel):
   import cc3d
   import fastremap 
 
@@ -992,7 +993,7 @@ def test_contacts():
 
   binary = crackle.compress(labels)
 
-  crackle_contacts = crackle.contacts(binary)
+  crackle_contacts = crackle.contacts(binary, parallel=parallel)
 
   assert np.all(gt_contacts == crackle_contacts)
 

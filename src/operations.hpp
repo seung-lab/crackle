@@ -987,15 +987,18 @@ struct pair_hash {
 	}
 };
 
-const std::unordered_map<std::pair<uint64_t,uint64_t>, float, pair_hash> 
-contacts(
+typedef std::unordered_map<std::pair<uint64_t,uint64_t>, float, pair_hash> contacts_t;
+
+// single threaded version
+contacts_t _contacts(
 	const unsigned char* buffer,
 	const size_t num_bytes,
-	int64_t z_start = -1,
-	int64_t z_end = -1,
-	const float wx = 1,
-	const float wy = 1,
-	const float wz = 1
+	int64_t z_start,
+	int64_t z_end,
+	const float wx = 1.0,
+	const float wy = 1.0,
+	const float wz = 1.0,
+	const bool skip_last_2d = false
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
@@ -1036,7 +1039,7 @@ contacts(
 		* static_cast<uint64_t>(szr)
 	);
 
-	std::unordered_map<std::pair<uint64_t, uint64_t>, float, pair_hash> edges;
+	contacts_t edges;
 
 	if (voxels == 0) {
 		return edges;
@@ -1105,7 +1108,6 @@ contacts(
 		size_t bottom_j = i & 0b1;
 		size_t top_j = (i-1) & 0b1;
 
-
 		crack_code_to_vcg(
 			/*code=*/crack_codes[i],
 			/*sx=*/sx, /*sy=*/sy,
@@ -1133,19 +1135,21 @@ contacts(
 			for (size_t x = 0; x < sx; x++) {
 				const int64_t loc = x + sx * y;
 
-				if (x < sx - 1 && bottom_ccl[loc] != bottom_ccl[loc+1]) {
-					add_edge(
-						bottom_labels[bottom_ccl[loc]], 
-						bottom_labels[bottom_ccl[loc+1]],
-						area_x
-					);
-				}
-				if (y < sy - 1 && bottom_ccl[loc] != bottom_ccl[loc+sx]) {
-					add_edge(
-						bottom_labels[bottom_ccl[loc]],
-						bottom_labels[bottom_ccl[loc+sx]],
-						area_y
-					);
+				if (!skip_last_2d || i < crack_codes.size() - 1) {
+					if (x < sx - 1 && bottom_ccl[loc] != bottom_ccl[loc+1]) {
+						add_edge(
+							bottom_labels[bottom_ccl[loc]], 
+							bottom_labels[bottom_ccl[loc+1]],
+							area_x
+						);
+					}
+					if (y < sy - 1 && bottom_ccl[loc] != bottom_ccl[loc+sx]) {
+						add_edge(
+							bottom_labels[bottom_ccl[loc]],
+							bottom_labels[bottom_ccl[loc+sx]],
+							area_y
+						);
+					}
 				}
 				if (bottom_labels[bottom_ccl[loc]] != top_labels[top_ccl[loc]]) {
 					add_edge(
@@ -1162,18 +1166,103 @@ contacts(
 }
 
 auto contacts(
+	const unsigned char* buffer,
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	const float wx = 1,
+	const float wy = 1,
+	const float wz = 1,
+	int parallel = 1
+) {
+	if (num_bytes < CrackleHeader::header_size) {
+		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
+		err += std::to_string(num_bytes);
+		throw std::runtime_error(err);
+	}
+
+	const CrackleHeader header(buffer);
+
+	const uint64_t sx = header.sx;
+	const uint64_t sy = header.sy;
+	const uint64_t sz = header.sz;
+	const uint64_t sxy = header.sx * header.sy;
+
+	if (header.format_version > CrackleHeader::current_version) {
+		std::string err = "crackle: Invalid format version.";
+		err += std::to_string(header.format_version);
+		throw std::runtime_error(err);
+	}
+
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(sz - 1)), static_cast<int64_t>(0));
+	z_end = z_end < 0 ? static_cast<int64_t>(sz) : z_end;
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(sz)), static_cast<int64_t>(0));
+
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
+	}
+
+	const uint64_t szr = z_end - z_start;
+
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
+	}
+	parallel = std::min(parallel, (int)szr / 2);
+	parallel = std::max(parallel, (int)1);
+
+	int64_t cz = szr / parallel;
+	cz = std::max(cz, (int64_t)2);
+	cz = std::min(cz, (int64_t)szr);
+
+	const uint64_t num_chunks = std::max((szr + cz - 1) / cz, (uint64_t)1);
+
+	ThreadPool pool(parallel);
+	std::vector<contacts_t> edges(num_chunks);
+
+	for (int64_t z = z_start, i = 0; z < (int64_t)z_end; z += cz, i++) {
+		pool.enqueue([&,i,z](size_t t) {
+			int64_t z_start_i = (z == z_start) ? z : z - 1;
+			int64_t z_end_i = std::min(z + cz, z_end);
+			edges[i] = _contacts(
+				buffer, num_bytes,
+				z_start_i, z_end_i,
+				wx, wy, wz,
+				/*skip_last_2d=*/(z_end_i < z_end)
+			);
+		});
+	}
+
+	pool.join();
+
+	contacts_t accumulated_edges = std::move(edges[0]);
+	for (int64_t i = 1; i < num_chunks; i++) {
+		for (auto& [edge, area] : edges[i]) {
+			accumulated_edges[edge] += area;
+		}
+	}
+
+	return accumulated_edges;
+}
+
+auto contacts(
 	const std::span<const unsigned char>& buffer,
 	const int64_t z_start = -1, 
 	const int64_t z_end = -1,
 	const float wx = 1,
 	const float wy = 1,
-	const float wz = 1
+	const float wz = 1,
+	int parallel = 1
 ) {
 	return contacts(
 		buffer.data(),
 		buffer.size(),
 		z_start, z_end,
-		wx, wy, wz
+		wx, wy, wz,
+		parallel
 	);
 }
 

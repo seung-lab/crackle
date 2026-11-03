@@ -589,7 +589,8 @@ py::array voxel_connectivity_graph(
 py::dict contacts(
 	const py::buffer buffer, 
 	const int64_t z_start = 0, int64_t z_end = -1,
-	const float wx = 1.0, const float wy = 1.0, const float wz = 1.0
+	const float wx = 1.0, const float wy = 1.0, const float wz = 1.0,
+	const size_t parallel = 1
 ) {
 	py::buffer_info info = buffer.request();
 
@@ -601,7 +602,8 @@ py::dict contacts(
 	auto surface_contacts = crackle::operations::contacts(
 		data, info.size, 
 		z_start, z_end, 
-		wx, wy, wz
+		wx, wy, wz,
+		parallel
 	);
 	
 	py::dict pyareas;

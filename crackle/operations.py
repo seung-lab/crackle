@@ -1000,12 +1000,13 @@ def voxel_connectivity_graph(
 def contacts(
   binary:bytes,
   anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
+  parallel:int = 0,
 ) -> dict[tuple[int,int], float]:
   """
   Extract the 6-connected contact area between regions.
   """
   wx, wy, wz = anisotropy
-  return fastcrackle.contacts(binary, 0, -1, wx, wy ,wz)
+  return fastcrackle.contacts(binary, 0, -1, wx, wy ,wz, parallel)
 
 def array_equal(
   binary1:bytes, 
