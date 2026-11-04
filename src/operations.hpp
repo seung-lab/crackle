@@ -335,7 +335,7 @@ pointcloud_t _point_cloud_binary_image(
 				continue;
 			}
 
-			std::vector<uint16_t>& label_points = ptc[current_label];
+			std::vector<uint16_t>& label_points = ptc[label_i];
 
 			for (uint32_t loc : ptc_ccl) {
 				uint16_t y = loc / header.sx;
@@ -411,8 +411,8 @@ pointcloud_t _point_cloud_binary_image(
 	}
 
 	pointcloud_t return_ptc;
-	return_ptc[0] = std::move(ptc[0]);
-	return_ptc[1] = std::move(ptc[1]);
+	return_ptc[uniq[0]] = std::move(ptc[0]);
+	return_ptc[uniq[1]] = std::move(ptc[1]);
 	return return_ptc;
 }
 
