@@ -385,12 +385,14 @@ pointcloud_t _point_cloud_binary_image(
 		const uint8_t top_offset = (top_label_map[0] == uniq[1]);
 		const uint8_t bottom_offset = (bottom_label_map[0] == uniq[1]);
 
+		printf("z: %d topo: %d bo: %d topm: %d bottom %d uniq: %d %d vcg: %d %d\n", z, top_offset, bottom_offset, top_label_map[0], bottom_label_map[0], uniq[0], uniq[1], vcgs[0][0], vcgs[1][0]);
+
 		for (int64_t y = 0; y < sy; y++) {
 			for (int64_t x = 0; x < sx; x++) {
 				int64_t loc = x + sx * y;
 
-				const uint8_t top_val = (top_vcg[loc] - top_offset);
-				const uint8_t bottom_val = (bottom_vcg[loc] - bottom_offset);
+				const uint8_t top_val = (top_vcg[loc] + top_offset) & 0b1;
+				const uint8_t bottom_val = (bottom_vcg[loc] + bottom_offset) & 0b1;
 
 				uint64_t current_label = uniq[bottom_val];
 				if (
