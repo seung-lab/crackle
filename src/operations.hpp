@@ -287,6 +287,7 @@ pointcloud_t _point_cloud_binary_image(
 
 	const int64_t sx = header.sx;
 	const int64_t sy = header.sy;
+	const int64_t sz = header.sz;
 	const int64_t sxy = header.sx * header.sy;
 
 	const bool selective = label.has_value();
@@ -350,6 +351,30 @@ pointcloud_t _point_cloud_binary_image(
 		}
 	};
 
+	if (z_start == 0) {
+		const uint8_t top_offset = (label_maps[0][0] == uniq[1]);
+
+		for (int64_t y = 0; y < sy; y++) {
+			for (int64_t x = 0; x < sx; x++) {
+				int64_t loc = x + sx * y;
+
+				const uint8_t top_val = (vcgs[0][loc] + top_offset) & 0b1;
+				const uint64_t current_label = uniq[top_val];
+				if (
+					(skip_background && current_label == 0) 
+					|| (selective && *label != current_label)
+				) {
+					continue;
+				}
+
+				std::vector<uint16_t>& label_points = ptc[top_val];
+				label_points.push_back(x);
+				label_points.push_back(y);
+				label_points.push_back(0);
+			}
+		}
+	}
+
 	copy_contour_fn(ptc_ccls, label_maps[0], z_start);
 
 	for (int64_t z = z_start + 1, i = 1; i < (int64_t)crack_codes.size(); z++, i++) {
@@ -403,7 +428,7 @@ pointcloud_t _point_cloud_binary_image(
 					continue;
 				}
 
-				if (top_val != bottom_val) {
+				if (top_val != bottom_val || z == sz - 1) {
 					std::vector<uint16_t>& label_points = ptc[bottom_val];
 					label_points.push_back(x);
 					label_points.push_back(y);
