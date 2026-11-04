@@ -713,26 +713,18 @@ def test_point_cloud():
   gt_set  = set(map(tuple, gt))
   assert ptc_set == gt_set
 
-  input_arr = np.ones([500,500,500], dtype=np.uint8)
+def test_point_cloud_solid():
+  input_arr = np.ones([100,100,100], dtype=np.uint8)
   arr = crackle.compressa(input_arr)
   arr.parallel = 2
   ptc = arr.point_cloud()[1]
-  ptc.sort(axis=0)
 
-  import microviewer
-  microviewer.objects([ptc])
-
-  input_arr[1:499,1:499,1:499] = 0
-  ptc_gt = np.where(input_arr)
-
-  gt = np.zeros([ptc_gt[0].shape[0], 3], dtype=np.uint16)
-  gt[:,0] = ptc_gt[0]
-  gt[:,1] = ptc_gt[1]
-  gt[:,2] = ptc_gt[2]
-  gt.sort(axis=0)
-
+  input_arr[1:99,1:99,1:99] = 0
+  z_idx, y_idx, x_idx = np.where(input_arr)
+  gt = np.stack([x_idx, y_idx, z_idx], axis=-1).astype(np.uint16)
   ptc_set = set(map(tuple, ptc))
   gt_set  = set(map(tuple, gt))
+
   assert ptc_set == gt_set
 
 @pytest.mark.parametrize("allow_pins", [False, True])
