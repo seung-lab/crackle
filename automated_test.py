@@ -674,8 +674,6 @@ def test_point_cloud():
   ptc = crackle.point_cloud(binary, 0, skip_background=False)
   ptc = ptc[ptc[:,2] == 1][:,:2]
 
-  print(ptc.shape)
-
   sx, sy = input_arr.shape[:2]
 
   result = []
@@ -703,9 +701,31 @@ def test_point_cloud():
   ptc.sort(axis=0)
 
   input_arr[201:299,201:299,201:299] = 0
-  ptc_gt = np.where(arr)
+  ptc_gt = np.where(input_arr)
 
-  gt = np.zeros([ptc_gt[0].shape[0], 3])
+  gt = np.zeros([ptc_gt[0].shape[0], 3], dtype=np.uint16)
+  gt[:,0] = ptc_gt[0]
+  gt[:,1] = ptc_gt[1]
+  gt[:,2] = ptc_gt[2]
+  gt.sort(axis=0)
+
+  ptc_set = set(map(tuple, ptc))
+  gt_set  = set(map(tuple, gt))
+  assert ptc_set == gt_set
+
+  input_arr = np.ones([500,500,500], dtype=np.uint8)
+  arr = crackle.compressa(input_arr)
+  arr.parallel = 2
+  ptc = arr.point_cloud()[1]
+  ptc.sort(axis=0)
+
+  import microviewer
+  microviewer.objects([ptc])
+
+  input_arr[1:499,1:499,1:499] = 0
+  ptc_gt = np.where(input_arr)
+
+  gt = np.zeros([ptc_gt[0].shape[0], 3], dtype=np.uint16)
   gt[:,0] = ptc_gt[0]
   gt[:,1] = ptc_gt[1]
   gt[:,2] = ptc_gt[2]
