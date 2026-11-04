@@ -668,21 +668,15 @@ def test_contiguous_fortran():
   assert np.all(arr2.binary == binary)
 
 def test_point_cloud():
-  input_arr = np.array([
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ], dtype=np.uint32, order="F")
+  input_arr = np.zeros([7,7,3], dtype=np.uint32, order="F")
 
   binary = crackle.compress(input_arr)
-  ptc = crackle.point_cloud(binary, 0, skip_background=False)[:,:2]
+  ptc = crackle.point_cloud(binary, 0, skip_background=False)
+  ptc = ptc[ptc[:,2] == 1][:,:2]
 
-  sx, sy = input_arr.shape
+  print(ptc.shape)
+
+  sx, sy = input_arr.shape[:2]
 
   result = []
   for x in range(sx):
@@ -699,6 +693,27 @@ def test_point_cloud():
   ptc = np.sort(ptc, axis=0)
 
   assert np.all(result == ptc)
+
+
+  input_arr = np.zeros([500,500,500], dtype=np.uint8)
+  input_arr[200:300,200:300,:200:300] = 1
+  arr = crackle.compressa(input_arr)
+  arr.parallel = 2
+  ptc = arr.point_cloud()[1]
+  ptc.sort(axis=0)
+
+  input_arr[201:299,201:299,201:299] = 0
+  ptc_gt = np.where(arr)
+
+  gt = np.zeros([ptc_gt[0].shape[0], 3])
+  gt[:,0] = ptc_gt[0]
+  gt[:,1] = ptc_gt[1]
+  gt[:,2] = ptc_gt[2]
+  gt.sort(axis=0)
+
+  ptc_set = set(map(tuple, ptc))
+  gt_set  = set(map(tuple, gt))
+  assert ptc_set == gt_set
 
 @pytest.mark.parametrize("allow_pins", [False, True])
 @pytest.mark.parametrize("dtype", [np.uint16, np.uint32])
