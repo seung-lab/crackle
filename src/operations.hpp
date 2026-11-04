@@ -381,6 +381,9 @@ pointcloud_t _point_cloud_binary_image(
 				z
 			);
 		}
+		else {
+			cc3d::color_binary_connectivity_graph_2d(bottom_vcg, sx, sy);
+		}
 
 		const uint8_t top_offset = (top_label_map[0] == uniq[1]);
 		const uint8_t bottom_offset = (bottom_label_map[0] == uniq[1]);
