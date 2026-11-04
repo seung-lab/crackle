@@ -266,6 +266,314 @@ void for_each_z_vcg_parallel(
 	return;
 }
 
+typedef std::unordered_map<uint64_t, std::vector<uint16_t>> pointcloud_t;
+
+template <typename LABEL>
+pointcloud_t _point_cloud_binary_image(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	const std::optional<uint64_t> label = std::nullopt,
+	const bool skip_background = false,
+	const bool skip_last_2d = false
+) {
+	const CrackleHeader header = get_header(buffer, num_bytes);
+	const uint64_t voxels = get_voxels(header, z_start, z_end);
+
+	if (voxels == 0) {
+		return pointcloud_t();
+	}
+
+	const int64_t sx = header.sx;
+	const int64_t sy = header.sy;
+	const int64_t sxy = header.sx * header.sy;
+
+	const bool selective = label.has_value();
+	std::span<const unsigned char> binary(buffer, num_bytes);	
+	std::vector<std::vector<uint16_t>> ptc(2);
+
+	std::vector<std::vector<uint8_t>> vcgs(2);
+	vcgs[0].resize(sxy);
+	vcgs[1].resize(sxy);
+	std::vector<std::vector<uint64_t>> label_maps(2);
+
+	std::vector<uint64_t> uniq = crackle::labels::unique(binary);
+
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
+
+	crack_code_to_vcg(
+		/*code=*/crack_codes[0],
+		/*sx=*/sx, /*sy=*/sy,
+		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+		/*markov_model=*/markov_model,
+		/*slice_edges=*/vcgs[0].data()
+	);
+
+	auto ptc_ccls = crackle::dual_graph::extract_contours_binary_image(vcgs[0], header.sx, header.sy);
+	label_maps[0] = decode_label_map<uint64_t>(
+		header, binary, nullptr, 0, z_start, z_start+1
+	);
+
+	auto copy_contour_fn = [&](
+		const std::vector<std::vector<uint32_t>>& ptc_ccls,
+		const std::vector<uint64_t>& label_map,
+		const uint16_t z
+	) {
+		uint64_t label_i = (label_map[0] == uniq[1])
+			? 1
+			: 0;
+
+		for (auto ptc_ccl : ptc_ccls) {
+			uint64_t current_label = uniq[label_i];
+
+			if ((skip_background && current_label == 0) 
+				|| (selective && current_label != *label)
+			) {
+				label_i = !label_i;
+				continue;
+			}
+
+			std::vector<uint16_t>& label_points = ptc[current_label];
+
+			for (uint32_t loc : ptc_ccl) {
+				uint16_t y = loc / header.sx;
+				uint16_t x = loc - (header.sx * y);
+
+				label_points.push_back(x);
+				label_points.push_back(y);
+				label_points.push_back(z);
+			}
+
+			label_i = !label_i;
+		}
+	};
+
+	copy_contour_fn(ptc_ccls, label_maps[0], z_start);
+
+	for (int64_t z = z_start + 1, i = 1; i < (int64_t)crack_codes.size(); z++, i++) {
+		int64_t bottom_j = i & 0b1;
+		int64_t top_j = (i-1) & 0b1;
+
+		crack_code_to_vcg(
+			/*code=*/crack_codes[i],
+			/*sx=*/sx, /*sy=*/sy,
+			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+			/*markov_model=*/markov_model,
+			/*slice_edges=*/vcgs[bottom_j].data()
+		);
+
+		const auto& top_vcg = vcgs[top_j];
+		auto& bottom_vcg = vcgs[bottom_j];
+
+		label_maps[bottom_j] = decode_label_map<uint64_t>(
+			header, binary, nullptr, 0, z, z+1
+		);
+
+		const auto& top_label_map = label_maps[top_j];
+		const auto& bottom_label_map = label_maps[bottom_j];
+
+		if (!skip_last_2d || (z < z_end - 1)) {
+			copy_contour_fn(
+				crackle::dual_graph::extract_contours_binary_image(bottom_vcg, header.sx, header.sy),
+				bottom_label_map,
+				z
+			);
+		}
+
+		const uint8_t top_offset = (top_label_map[0] == uniq[1]);
+		const uint8_t bottom_offset = (bottom_label_map[0] == uniq[1]);
+
+		for (int64_t y = 0; y < sy; y++) {
+			for (int64_t x = 0; x < sx; x++) {
+				int64_t loc = x + sx * y;
+
+				const uint8_t top_val = (top_vcg[loc] - top_offset);
+				const uint8_t bottom_val = (bottom_vcg[loc] - bottom_offset);
+
+				uint64_t current_label = uniq[bottom_val];
+				if (
+					(skip_background && current_label == 0) 
+					|| (selective && *label != current_label)
+				) {
+					continue;
+				}
+
+				if (top_val != bottom_val) {
+					std::vector<uint16_t>& label_points = ptc[current_label];
+					label_points.push_back(x);
+					label_points.push_back(y);
+					label_points.push_back(static_cast<uint16_t>(z));
+				}
+			}
+		}
+	}
+
+	pointcloud_t return_ptc;
+	return_ptc[0] = std::move(ptc[0]);
+	return_ptc[1] = std::move(ptc[1]);
+	return return_ptc;
+}
+
+template <typename LABEL>
+pointcloud_t _point_cloud_multivalued_image(
+	const unsigned char* buffer, 
+	const size_t num_bytes,
+	int64_t z_start = -1,
+	int64_t z_end = -1,
+	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
+	const bool skip_background = false,
+	const bool skip_last_2d = false
+) {
+	const CrackleHeader header = get_header(buffer, num_bytes);
+	const uint64_t voxels = get_voxels(header, z_start, z_end);
+
+	if (voxels == 0) {
+		return pointcloud_t();
+	}
+
+	const int64_t sx = header.sx;
+	const int64_t sy = header.sy;
+	const int64_t sxy = header.sx * header.sy;
+
+	const bool selective = labels.has_value();
+	robin_hood::unordered_flat_set<uint64_t> labels_set;
+	if (selective) {
+		labels_set.reserve(labels->size());
+		labels_set.insert(labels->begin(), labels->end());
+	}
+
+	std::vector<std::vector<uint8_t>> vcgs(2);
+	std::vector<std::vector<uint32_t>> ccls(2);
+	std::vector<std::vector<uint64_t>> label_maps(2);
+	for (size_t t = 0; t < ccls.size(); t++) {
+		vcgs[t].resize(sxy);
+		ccls[t].resize(sxy);
+	}
+
+	std::span<const unsigned char> binary(buffer, num_bytes);	
+	std::vector<std::vector<uint8_t>> markov_model = decode_markov_model(header, binary);
+	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
+
+	crack_code_to_vcg(
+		/*code=*/crack_codes[0],
+		/*sx=*/sx, /*sy=*/sy,
+		/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+		/*markov_model=*/markov_model,
+		/*slice_edges=*/vcgs[0].data()
+	);
+
+	uint64_t N = 0;
+	crackle::cc3d::color_connectivity_graph<uint32_t>(
+		vcgs[0], sx, sy, 1, ccls[0].data(), N
+	);
+
+	label_maps[0] = decode_label_map<uint64_t>(
+		header, binary, ccls[0].data(), N, z_start, z_start+1
+	);
+
+	pointcloud_t ptcs;
+
+	auto copy_contour_fn = [&](
+		const std::vector<std::vector<uint32_t>>& ptc_ccls,
+		const std::vector<uint64_t>& label_map,
+		const uint16_t z
+	) {
+		uint64_t label_i = 0;
+		for (auto ptc_ccl : ptc_ccls) {
+			const uint64_t current_label = label_map[label_i];
+
+			if ((skip_background && current_label == 0) 
+				|| (selective && !labels_set.contains(current_label))
+			) {
+				label_i++;
+				continue;
+			}
+
+			std::vector<uint16_t>& label_points = ptcs[current_label];
+
+			for (uint32_t loc : ptc_ccl) {
+				uint16_t y = loc / header.sx;
+				uint16_t x = loc - (header.sx * y);
+
+				label_points.push_back(x);
+				label_points.push_back(y);
+				label_points.push_back(z);
+			}
+
+			label_i++;
+		}
+	};
+
+	auto ptc_ccls = crackle::dual_graph::extract_contours(vcgs[0], ccls[0], N, header.sx, header.sy);
+	copy_contour_fn(ptc_ccls, label_maps[0], z_start);
+
+	for (int64_t z = z_start + 1, i = 1; i < (int64_t)crack_codes.size(); z++, i++) {
+		int64_t bottom_j = i & 0b1;
+		int64_t top_j = (i-1) & 0b1;
+
+		const auto& top_vcg = vcgs[top_j];
+		auto& bottom_vcg = vcgs[bottom_j];
+		const auto& top_ccl = ccls[top_j];
+		auto& bottom_ccl = ccls[bottom_j];
+
+		crack_code_to_vcg(
+			/*code=*/crack_codes[i],
+			/*sx=*/sx, /*sy=*/sy,
+			/*permissible=*/(header.crack_format == CrackFormat::PERMISSIBLE),
+			/*markov_model=*/markov_model,
+			/*slice_edges=*/bottom_vcg.data()
+		);
+
+		uint64_t N = 0;
+		crackle::cc3d::color_connectivity_graph<uint32_t>(
+			bottom_vcg, sx, sy, 1, bottom_ccl.data(), N
+		);
+
+		label_maps[bottom_j] = decode_label_map<uint64_t>(
+			header, binary, bottom_ccl.data(), N, z_start, z_start+1
+		);
+
+		const auto& top_label_map = label_maps[top_j];
+		const auto& bottom_label_map = label_maps[bottom_j];
+
+		if (!skip_last_2d || ((int)z < ((int)z_end - 1))) {
+			copy_contour_fn(
+				crackle::dual_graph::extract_contours(bottom_vcg, bottom_ccl, N, header.sx, header.sy),
+				bottom_label_map,
+				z
+			);
+		}
+
+		for (int64_t y = 0; y < sy; y++) {
+			for (int64_t x = 0; x < sx; x++) {
+				const int64_t loc = x + sx * y;
+
+				const uint64_t current_label = bottom_label_map[bottom_ccl[loc]];
+
+				if (
+					(skip_background && current_label == 0) 
+					|| (selective && !labels_set.contains(current_label))
+				) {
+					continue;
+				}
+
+				const uint64_t top_label = top_label_map[top_ccl[loc]];
+
+				if (top_label != current_label) {
+					std::vector<uint16_t>& label_points = ptcs[current_label];
+					label_points.push_back(x);
+					label_points.push_back(y);
+					label_points.push_back(static_cast<uint16_t>(z));
+				}
+			}
+		}
+	}
+
+	return ptcs;
+}
+
 template <typename LABEL>
 std::unordered_map<uint64_t, std::vector<uint16_t>>
 point_cloud(
@@ -275,7 +583,7 @@ point_cloud(
 	int64_t z_end = -1,
 	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
 	const bool skip_background = false,
-	size_t parallel = 1
+	int parallel = 1
 ) {
 	const CrackleHeader header = get_header(buffer, num_bytes);
 	const uint64_t voxels = get_voxels(header, z_start, z_end);
@@ -296,110 +604,74 @@ point_cloud(
 	std::unordered_map<uint64_t, std::vector<uint16_t>> ptc;
 	ptc.reserve(num_labels / (header.sz / szr));
 
-	std::mutex mtx;
-
 	const bool binary_image_optimization = (
 		num_labels == 2
 		&& header.is_remapped == false
 	);
 
-	// This is a lower memory pathway that reduces base memory usage by 80%
-	// by avoiding the use of a ccl buffer, instead it can work directly
-	// with the VCG. It should be possible to do this for the general case
-	// too, but it requires a more sophisticated strategy.
-	if (binary_image_optimization) {
-		std::vector<uint64_t> uniq = crackle::labels::unique(binary);
-		for_each_z_vcg_parallel<LABEL>(
-			buffer, num_bytes,
-			z_start, z_end, parallel,
-			[&](
-				std::vector<uint8_t>& vcg, 
-				std::vector<LABEL>& label_map,
-				int64_t z
-			){
-				auto ptc_ccls = crackle::dual_graph::extract_contours_binary_image(vcg, header.sx, header.sy);
-
-				uint64_t label_i = (label_map[0] == uniq[1])
-					? 1
-					: 0;
-
-				std::unique_lock<std::mutex> lock(mtx);
-
-				for (auto ptc_ccl : ptc_ccls) {
-					uint64_t current_label = uniq[label_i];
-
-					if (skip_background && current_label == 0) {
-						label_i = !label_i;
-						continue;
-					}
-					else if (selective && !labels_set.contains(current_label)) {
-						label_i = !label_i;
-						continue;
-					}
-
-					std::vector<uint16_t>& label_points = ptc[current_label];
-
-					for (uint32_t loc : ptc_ccl) {
-						uint16_t y = loc / header.sx;
-						uint16_t x = loc - (header.sx * y);
-
-						label_points.push_back(x);
-						label_points.push_back(y);
-						label_points.push_back(static_cast<uint16_t>(z));
-					}
-
-					label_i = !label_i;
-				}
-			}
-		);
+	if (parallel == 0) {
+		parallel = std::thread::hardware_concurrency();
 	}
-	else {
-		for_each_z_parallel<LABEL>(
-			buffer, num_bytes,
-			z_start, z_end, parallel,
-			[&](
-				std::vector<uint8_t>& vcg, 
-				std::vector<uint32_t>& ccl, 
-				uint64_t N,
-				std::vector<LABEL>& label_map,
-				int64_t z
-			){
-				uint64_t label_i = 0;
+	parallel = std::min(parallel, (int)(szr / 2));
+	parallel = std::max(parallel, (int)1);
 
-				auto ptc_ccls = crackle::dual_graph::extract_contours(vcg, ccl, N, header.sx, header.sy);
+	int64_t cz = szr / parallel;
+	cz = std::max(cz, (int64_t)2);
+	cz = std::min(cz, (int64_t)szr);
 
-				std::unique_lock<std::mutex> lock(mtx);
+	const int64_t num_chunks = std::max((int64_t)((szr + cz - 1) / cz), (int64_t)1);
 
-				for (auto ptc_ccl : ptc_ccls) {
-					uint64_t current_label = label_map[label_i];
-					
-					if (skip_background && current_label == 0) {
-						label_i++;
-						continue;
-					}
-					else if (selective && !labels_set.contains(current_label)) {
-						label_i++;
-						continue;
-					}
+	ThreadPool pool(parallel);
+	std::vector<pointcloud_t> ptcs(num_chunks);
 
-					std::vector<uint16_t>& label_points = ptc[current_label];
+	for (int64_t z = z_start, i = 0; z < (int64_t)z_end; z += cz, i++) {
+		pool.enqueue([&,i,z](size_t t) {
+			int64_t z_start_i = (z == z_start) ? z : z - 1;
+			int64_t z_end_i = std::min(z + cz, z_end);
 
-					for (uint32_t loc : ptc_ccl) {
-						uint16_t y = loc / header.sx;
-						uint16_t x = loc - (header.sx * y);
-
-						label_points.push_back(x);
-						label_points.push_back(y);
-						label_points.push_back(static_cast<uint16_t>(z));
-					}
-
-					label_i++;
-				}
+			if (binary_image_optimization) {
+				ptcs[i] = _point_cloud_binary_image<LABEL>(
+					buffer, num_bytes,
+					z_start_i, z_end_i,
+					/*label=*/( 
+						(labels.has_value() && labels->size()) > 0
+							? std::optional<uint64_t>{(*labels)[0]}
+							: std::nullopt
+					),
+					skip_background,
+					/*skip_last_2d=*/(z_end_i < z_end)
+				);
 			}
-		);
+			else {
+				ptcs[i] = _point_cloud_multivalued_image<LABEL>(
+					buffer, num_bytes,
+					z_start_i, z_end_i,
+					labels,
+					skip_background,
+					/*skip_last_2d=*/(z_end_i < z_end)
+				);
+			}
+		});
 	}
 
-	return ptc;
+	pool.join();
+
+	pointcloud_t accumulated_ptc = std::move(ptcs[0]);
+
+	size_t size = 0;
+	for (int64_t i = 0; i < num_chunks; i++) {
+		size += ptcs[i].size();
+	}
+	accumulated_ptc.reserve(size);
+
+	for (int64_t i = 1; i < num_chunks; i++) {
+		for (auto& [label, pts] : ptcs[i]) {
+			auto& vec = accumulated_ptc[label];
+			vec.insert(vec.end(), pts.begin(), pts.end());
+		}
+	}
+
+	return accumulated_ptc;
 }
 
 auto point_cloud(
@@ -1079,7 +1351,6 @@ contacts_t _contacts(
 	const float area_x = wy * wz;
 	const float area_y = wx * wz;
 	const float area_z = wx * wy;
-
 
 	auto add_edge = [&edges](uint64_t a, uint64_t b, float area) {
 		if (a != 0 && b != 0) {
