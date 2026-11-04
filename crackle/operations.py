@@ -1279,7 +1279,6 @@ def signed_distance_to_boundary(
     # axial, square diagonal, and cubic directions
     # distances inside need to be expanded, points outside contracted
     np.add(chunk_radii, correction_factor, out=chunk_radii, where=inside_mask)
-    np.subtract(chunk_radii, correction_factor, out=chunk_radii, where=~inside_mask)
     np.minimum(radii, chunk_radii, out=radii)
 
   np.negative(radii, out=radii, where=inside_mask)
