@@ -532,7 +532,7 @@ pointcloud_t _point_cloud_multivalued_image(
 		);
 
 		label_maps[bottom_j] = decode_label_map<uint64_t>(
-			header, binary, bottom_ccl.data(), N, z_start, z_start+1
+			header, binary, bottom_ccl.data(), N, z, z+1
 		);
 
 		const auto& top_label_map = label_maps[top_j];
@@ -656,12 +656,12 @@ point_cloud(
 
 	pool.join();
 
-	pointcloud_t accumulated_ptc = std::move(ptcs[0]);
-
 	size_t size = 0;
 	for (int64_t i = 0; i < num_chunks; i++) {
 		size += ptcs[i].size();
 	}
+	
+	pointcloud_t accumulated_ptc = std::move(ptcs[0]);
 	accumulated_ptc.reserve(size);
 
 	for (int64_t i = 1; i < num_chunks; i++) {
