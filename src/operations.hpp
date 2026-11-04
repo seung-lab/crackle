@@ -463,6 +463,7 @@ pointcloud_t _point_cloud_multivalued_image(
 
 	const int64_t sx = header.sx;
 	const int64_t sy = header.sy;
+	const int64_t sz = header.sz;
 	const int64_t sxy = header.sx * header.sy;
 
 	const bool selective = labels.has_value();
@@ -534,6 +535,27 @@ pointcloud_t _point_cloud_multivalued_image(
 		}
 	};
 
+	if (z_start == 0) {
+		for (int64_t y = 0; y < sy; y++) {
+			for (int64_t x = 0; x < sx; x++) {
+				int64_t loc = x + sx * y;
+
+				const uint64_t current_label = label_maps[0][ccls[0][loc]];
+				if (
+					(skip_background && current_label == 0) 
+					|| (selective && !labels_set.contains(current_label))
+				) {
+					continue;
+				}
+
+				std::vector<uint16_t>& label_points = ptcs[current_label];
+				label_points.push_back(x);
+				label_points.push_back(y);
+				label_points.push_back(0);
+			}
+		}
+	}
+
 	auto ptc_ccls = crackle::dual_graph::extract_contours(vcgs[0], ccls[0], N, header.sx, header.sy);
 	copy_contour_fn(ptc_ccls, label_maps[0], z_start);
 
@@ -589,7 +611,7 @@ pointcloud_t _point_cloud_multivalued_image(
 
 				const uint64_t top_label = top_label_map[top_ccl[loc]];
 
-				if (top_label != current_label) {
+				if (top_label != current_label || z == sz - 1) {
 					std::vector<uint16_t>& label_points = ptcs[current_label];
 					label_points.push_back(x);
 					label_points.push_back(y);
