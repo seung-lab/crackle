@@ -272,8 +272,8 @@ template <typename LABEL>
 pointcloud_t _point_cloud_binary_image(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
-	int64_t z_start = -1,
-	int64_t z_end = -1,
+	int64_t z_start,
+	int64_t z_end,
 	const std::optional<uint64_t> label = std::nullopt,
 	const bool skip_background = false,
 	const bool skip_last_2d = false
@@ -420,8 +420,8 @@ template <typename LABEL>
 pointcloud_t _point_cloud_multivalued_image(
 	const unsigned char* buffer, 
 	const size_t num_bytes,
-	int64_t z_start = -1,
-	int64_t z_end = -1,
+	int64_t z_start,
+	int64_t z_end,
 	const std::optional<std::vector<uint64_t>> labels = std::nullopt,
 	const bool skip_background = false,
 	const bool skip_last_2d = false
@@ -587,10 +587,23 @@ point_cloud(
 ) {
 	const CrackleHeader header = get_header(buffer, num_bytes);
 	const uint64_t voxels = get_voxels(header, z_start, z_end);
-	const int64_t szr = get_szr(header, z_start, z_end);
 
 	if (voxels == 0) {
 		return std::unordered_map<uint64_t, std::vector<uint16_t>>();
+	}
+
+	const int64_t sz = header.sz;
+	const int64_t szr = get_szr(header, z_start, z_end);
+	z_start = std::max(std::min(z_start, static_cast<int64_t>(sz - 1)), static_cast<int64_t>(0));
+	z_end = z_end < 0 ? static_cast<int64_t>(sz) : z_end;
+	z_end = std::max(std::min(z_end, static_cast<int64_t>(sz)), static_cast<int64_t>(0));
+
+	if (z_start >= z_end) {
+		std::string err = "crackle: Invalid range: ";
+		err += std::to_string(z_start);
+		err += std::string(" - ");
+		err += std::to_string(z_end);
+		throw std::runtime_error(err);
 	}
 
 	const bool selective = labels.has_value();
