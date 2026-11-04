@@ -401,7 +401,7 @@ pointcloud_t _point_cloud_binary_image(
 				}
 
 				if (top_val != bottom_val) {
-					std::vector<uint16_t>& label_points = ptc[current_label];
+					std::vector<uint16_t>& label_points = ptc[bottom_val];
 					label_points.push_back(x);
 					label_points.push_back(y);
 					label_points.push_back(static_cast<uint16_t>(z));
