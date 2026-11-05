@@ -583,7 +583,7 @@ pointcloud_t _point_cloud_multivalued_image(
 		int64_t bottom_j = i & 0b1;
 		int64_t top_j = (i-1) & 0b1;
 
-		const auto& top_vcg = vcgs[top_j];
+		// const auto& top_vcg = vcgs[top_j];
 		auto& bottom_vcg = vcgs[bottom_j];
 		const auto& top_ccl = ccls[top_j];
 		auto& bottom_ccl = ccls[bottom_j];
@@ -1557,10 +1557,7 @@ auto contacts(
 
 	const CrackleHeader header(buffer);
 
-	const uint64_t sx = header.sx;
-	const uint64_t sy = header.sy;
 	const uint64_t sz = header.sz;
-	const uint64_t sxy = header.sx * header.sy;
 
 	if (header.format_version > CrackleHeader::current_version) {
 		std::string err = "crackle: Invalid format version.";
@@ -1613,7 +1610,7 @@ auto contacts(
 	pool.join();
 
 	contacts_t accumulated_edges = std::move(edges[0]);
-	for (int64_t i = 1; i < num_chunks; i++) {
+	for (int64_t i = 1; i < (int64_t)num_chunks; i++) {
 		for (auto& [edge, area] : edges[i]) {
 			accumulated_edges[edge] += area;
 		}
