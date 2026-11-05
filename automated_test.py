@@ -1190,10 +1190,22 @@ def test_select_enclosed_points(binary_mode):
 
   assert np.all(mask == gt)
 
-  
+def test_signed_distance_to_boundary():
+  import scipy.ndimage
+
+  labels = np.zeros([ 301, 301, 301 ], order="F", dtype=bool)
+  # labels[1:300,1:300,1:300] = 1
+  labels[100:201,100:201,100:201] = 1
+
+  sdt = -scipy.ndimage.distance_transform_edt(labels)
+  sdt += scipy.ndimage.distance_transform_edt(labels == 0) * (labels == 0)
+
+  pts = np.random.randint(0,300, size=[100,3], dtype=np.uint16)
+  arr = crackle.compressa(labels)
+  arr.parallel = 2
+  ckl_result = arr.signed_distance_to_boundary(label=1, points=pts)
+  scipy_result = sdt[pts[:,0], pts[:,1], pts[:,2]]
 
 
-
-
-
+  assert np.all(np.abs(ckl_result - scipy_result) <= 1)
 
