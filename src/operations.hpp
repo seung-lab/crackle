@@ -374,8 +374,9 @@ pointcloud_t _point_cloud_binary_image(
 			}
 		}
 	}
-
-	copy_contour_fn(ptc_ccls, label_maps[0], z_start);
+	else {
+		copy_contour_fn(ptc_ccls, label_maps[0], z_start);
+	}
 
 	for (int64_t z = z_start + 1, i = 1; i < (int64_t)crack_codes.size(); z++, i++) {
 		int64_t bottom_j = i & 0b1;
@@ -420,16 +421,33 @@ pointcloud_t _point_cloud_binary_image(
 				const uint8_t top_val = (top_vcg[loc] + top_offset) & 0b1;
 				const uint8_t bottom_val = (bottom_vcg[loc] + bottom_offset) & 0b1;
 
-				uint64_t current_label = uniq[bottom_val];
-				if (
-					(skip_background && current_label == 0) 
-					|| (selective && *label != current_label)
-				) {
-					continue;
-				}
+				if (top_val != bottom_val) {
+					if (
+						!(skip_background && uniq[top_val] == 0) 
+						&& !(selective && *label != uniq[top_val])
+					) {
+						auto& label_points = ptc[top_val];
+						label_points.push_back(x);
+						label_points.push_back(y);
+						label_points.push_back(static_cast<uint16_t>(z));
+					}
 
-				if (top_val != bottom_val || z == sz - 1) {
-					std::vector<uint16_t>& label_points = ptc[bottom_val];
+					if (
+						!(skip_background && uniq[bottom_val] == 0) 
+						&& !(selective && *label != uniq[bottom_val])
+					) {
+						auto& label_points = ptc[bottom_val];
+						label_points.push_back(x);
+						label_points.push_back(y);
+						label_points.push_back(static_cast<uint16_t>(z));
+					}
+				}
+				else if (
+					z == sz - 1 
+					&& !(skip_background && uniq[bottom_val] == 0) 
+					&& !(selective && *label != uniq[bottom_val])
+				) {
+					auto& label_points = ptc[bottom_val];
 					label_points.push_back(x);
 					label_points.push_back(y);
 					label_points.push_back(static_cast<uint16_t>(z));
@@ -681,6 +699,9 @@ point_cloud(
 	int64_t cz = szr / parallel;
 	cz = std::max(cz, (int64_t)2);
 	cz = std::min(cz, (int64_t)szr);
+
+	parallel = std::min(parallel, (int)(szr / cz));
+	parallel = std::max(parallel, (int)1);
 
 	const int64_t num_chunks = std::max((int64_t)((szr + cz - 1) / cz), (int64_t)1);
 
