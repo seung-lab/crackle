@@ -103,6 +103,11 @@ result = arr == arr2
 
 # efficient impl. of np.where(mask, arr, 0)
 result = arr.apply_binary_mask(mask)
+# boolean mask of whether these points are inside the label
+mask = arr.select_enclosed_points(label, points)
+# Compute the signed distance transform for sparse points in low memory
+# should be exact for external points within one voxel for internal points
+radii = arr.signed_distance_to_boundary(label, points, anisotropy=[32,32,40])
 
 # for working with files
 # if .gz is appended to the filename, the file will be
@@ -117,6 +122,7 @@ crackle.save(binary, "example.npy.gz")
 arr = crackle.CrackleArray(binary, parallel=0) # 0 means use all cores (default)
 res = arr[:10,:10,:10] # array slicing (efficient z ranges)
 arr[:,:,30] = 20 # write to a crackle array (whole z slices write faster)
+arr[xs, ys, zs] # efficient fetching of fancy indexing that clusters points by z
 20 in arr # log(N) check
 arr = arr.numpy() # convert to a numpy array
 
