@@ -1260,7 +1260,7 @@ def signed_distance_to_boundary(
   for z in iter:
     ptc = point_cloud(
       binary, 
-      z_start=z,
+      z_start=np.max([ z-1, 0 ]),
       z_end=np.min([ z+z_chunk, head.sz ]),
       label=label, 
       parallel=parallel
@@ -1279,7 +1279,6 @@ def signed_distance_to_boundary(
     # axial, square diagonal, and cubic directions
     # distances inside need to be expanded, points outside contracted
     np.add(chunk_radii, correction_factor, out=chunk_radii, where=inside_mask)
-    np.subtract(chunk_radii, correction_factor, out=chunk_radii, where=~inside_mask)
     np.minimum(radii, chunk_radii, out=radii)
 
   np.negative(radii, out=radii, where=inside_mask)

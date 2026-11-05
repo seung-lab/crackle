@@ -2,6 +2,7 @@ cloud-volume
 connected-components-3d
 compresso
 fastremap
+pykdtree
 pytest
 networkx
 tqdm

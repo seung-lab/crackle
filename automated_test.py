@@ -668,21 +668,13 @@ def test_contiguous_fortran():
   assert np.all(arr2.binary == binary)
 
 def test_point_cloud():
-  input_arr = np.array([
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ], dtype=np.uint32, order="F")
+  input_arr = np.zeros([7,7,3], dtype=np.uint32, order="F")
 
   binary = crackle.compress(input_arr)
-  ptc = crackle.point_cloud(binary, 0, skip_background=False)[:,:2]
+  ptc = crackle.point_cloud(binary, 0, skip_background=False)
+  ptc = ptc[ptc[:,2] == 1][:,:2]
 
-  sx, sy = input_arr.shape
+  sx, sy = input_arr.shape[:2]
 
   result = []
   for x in range(sx):
@@ -699,6 +691,42 @@ def test_point_cloud():
   ptc = np.sort(ptc, axis=0)
 
   assert np.all(result == ptc)
+
+  input_arr = np.zeros([500,500,500], dtype=np.uint8)
+  input_arr[200:300,200:300,200:300] = 1
+  arr = crackle.compressa(input_arr)
+  arr.parallel = 2
+  ptc = arr.point_cloud()[1]
+
+  input_arr[201:299,201:299,201:299] = 0
+  ptc_gt = np.where(input_arr)
+
+  gt = np.zeros([ptc_gt[0].shape[0], 3], dtype=np.uint16)
+  gt[:,0] = ptc_gt[0]
+  gt[:,1] = ptc_gt[1]
+  gt[:,2] = ptc_gt[2]
+
+  fn = lambda y: set(map(lambda x: (int(x[0]), int(x[1]), int(x[2])), y))
+
+  ptc_set = fn(ptc)
+  gt_set  = fn(gt)
+
+  assert len(gt_set - ptc_set) == 0
+  assert len(ptc_set - gt_set) == 0
+  
+def test_point_cloud_solid():
+  input_arr = np.ones([100,100,100], dtype=np.uint8)
+  arr = crackle.compressa(input_arr)
+  arr.parallel = 2
+  ptc = arr.point_cloud()[1]
+
+  input_arr[1:99,1:99,1:99] = 0
+  z_idx, y_idx, x_idx = np.where(input_arr)
+  gt = np.stack([x_idx, y_idx, z_idx], axis=-1).astype(np.uint16)
+  ptc_set = set(map(tuple, ptc))
+  gt_set  = set(map(tuple, gt))
+
+  assert ptc_set == gt_set
 
 @pytest.mark.parametrize("allow_pins", [False, True])
 @pytest.mark.parametrize("dtype", [np.uint16, np.uint32])
@@ -1163,10 +1191,22 @@ def test_select_enclosed_points(binary_mode):
 
   assert np.all(mask == gt)
 
-  
+def test_signed_distance_to_boundary():
+  import scipy.ndimage
+
+  labels = np.zeros([ 301, 301, 301 ], order="F", dtype=bool)
+  # labels[1:300,1:300,1:300] = 1
+  labels[100:201,100:201,100:201] = 1
+
+  sdt = -scipy.ndimage.distance_transform_edt(labels)
+  sdt += scipy.ndimage.distance_transform_edt(labels == 0) * (labels == 0)
+
+  pts = np.random.randint(0,300, size=[100,3], dtype=np.uint16)
+  arr = crackle.compressa(labels)
+  arr.parallel = 2
+  ckl_result = arr.signed_distance_to_boundary(label=1, points=pts)
+  scipy_result = sdt[pts[:,0], pts[:,1], pts[:,2]]
 
 
-
-
-
+  assert np.all(np.abs(ckl_result - scipy_result) <= 1)
 
