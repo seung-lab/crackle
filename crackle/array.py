@@ -160,8 +160,13 @@ class CrackleArray:
   def numpy(self, *args, **kwargs) -> np.ndarray:
     return self.decompress(*args, **kwargs)
 
-  def decompress(self, label:Optional[int] = None, crop:bool = False) -> bytes:
-    return decompress(self.binary, label=label, parallel=self.parallel, crop=crop)
+  def decompress(
+    self,
+    label:Optional[int] = None,
+    crop:bool = False,
+    verify:bool = True,
+  ) -> bytes:
+    return decompress(self.binary, label=label, parallel=self.parallel, crop=crop, verify=verify)
 
   def condense(self) -> "CrackleArray":
     return CrackleArray(codec.condense_unique(self.binary), parallel=self.parallel)
@@ -223,8 +228,8 @@ class CrackleArray:
       return_mapping=return_mapping,
     )
     if return_mapping:
-      return (CrackleArray(out[0]), out[1])
-    return CrackleArray(out)
+      return (CrackleArray(out[0], parallel=self.parallel), out[1])
+    return CrackleArray(out, parallel=self.parallel)
 
   def mode_pooling_2x2x1(self, sparse:bool = False) -> "CrackleArray":
     ds_binary = mode_pooling_2x2x1(self.binary, sparse=sparse, parallel=self.parallel)
