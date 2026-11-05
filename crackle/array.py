@@ -201,12 +201,14 @@ class CrackleArray:
     self,
     label:int,
     points:np.ndarray,
+    anisotropy:np.ndarray = np.ones(3, dtype=np.float32),
     progress:bool = False,
   ) -> npt.NDArray[np.float32]:
     return signed_distance_to_boundary(
       self.binary,
       label=label,
       points=points,
+      anisotropy=anisotropy,
       progress=progress,
       parallel=self.parallel,
     )
