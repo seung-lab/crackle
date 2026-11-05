@@ -692,13 +692,11 @@ def test_point_cloud():
 
   assert np.all(result == ptc)
 
-
   input_arr = np.zeros([500,500,500], dtype=np.uint8)
-  input_arr[200:300,200:300,:200:300] = 1
+  input_arr[200:300,200:300,200:300] = 1
   arr = crackle.compressa(input_arr)
   arr.parallel = 2
   ptc = arr.point_cloud()[1]
-  ptc.sort(axis=0)
 
   input_arr[201:299,201:299,201:299] = 0
   ptc_gt = np.where(input_arr)
@@ -707,12 +705,15 @@ def test_point_cloud():
   gt[:,0] = ptc_gt[0]
   gt[:,1] = ptc_gt[1]
   gt[:,2] = ptc_gt[2]
-  gt.sort(axis=0)
 
-  ptc_set = set(map(tuple, ptc))
-  gt_set  = set(map(tuple, gt))
-  assert ptc_set == gt_set
+  fn = lambda y: set(map(lambda x: (int(x[0]), int(x[1]), int(x[2])), y))
 
+  ptc_set = fn(ptc)
+  gt_set  = fn(gt)
+
+  assert len(gt_set - ptc_set) == 0
+  assert len(ptc_set - gt_set) == 0
+  
 def test_point_cloud_solid():
   input_arr = np.ones([100,100,100], dtype=np.uint8)
   arr = crackle.compressa(input_arr)
