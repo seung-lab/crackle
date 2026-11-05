@@ -1260,7 +1260,7 @@ def signed_distance_to_boundary(
   for z in iter:
     ptc = point_cloud(
       binary, 
-      z_start=z,
+      z_start=np.max([ z-1, 0 ]),
       z_end=np.min([ z+z_chunk, head.sz ]),
       label=label, 
       parallel=parallel
