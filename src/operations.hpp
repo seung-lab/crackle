@@ -553,6 +553,8 @@ pointcloud_t _point_cloud_multivalued_image(
 		}
 	};
 
+	auto ptc_ccls = crackle::dual_graph::extract_contours(vcgs[0], ccls[0], N, header.sx, header.sy);
+
 	if (z_start == 0) {
 		for (int64_t y = 0; y < sy; y++) {
 			for (int64_t x = 0; x < sx; x++) {
@@ -573,9 +575,9 @@ pointcloud_t _point_cloud_multivalued_image(
 			}
 		}
 	}
-
-	auto ptc_ccls = crackle::dual_graph::extract_contours(vcgs[0], ccls[0], N, header.sx, header.sy);
-	copy_contour_fn(ptc_ccls, label_maps[0], z_start);
+	else {
+		copy_contour_fn(ptc_ccls, label_maps[0], z_start);
+	}
 
 	for (int64_t z = z_start + 1, i = 1; i < (int64_t)crack_codes.size(); z++, i++) {
 		int64_t bottom_j = i & 0b1;
@@ -618,19 +620,36 @@ pointcloud_t _point_cloud_multivalued_image(
 			for (int64_t x = 0; x < sx; x++) {
 				const int64_t loc = x + sx * y;
 
-				const uint64_t current_label = bottom_label_map[bottom_ccl[loc]];
-
-				if (
-					(skip_background && current_label == 0) 
-					|| (selective && !labels_set.contains(current_label))
-				) {
-					continue;
-				}
-
 				const uint64_t top_label = top_label_map[top_ccl[loc]];
+				const uint64_t bottom_label = bottom_label_map[bottom_ccl[loc]];
 
-				if (top_label != current_label || z == sz - 1) {
-					std::vector<uint16_t>& label_points = ptcs[current_label];
+				if (top_label != bottom_label) {
+					if (
+						!(skip_background && top_label == 0) 
+						&& !(selective && !labels_set.contains(top_label))
+					) {
+						auto& label_points = ptcs[top_label];
+						label_points.push_back(x);
+						label_points.push_back(y);
+						label_points.push_back(static_cast<uint16_t>(z));
+					}
+
+					if (
+						!(skip_background && bottom_label == 0) 
+						&& !(selective && !labels_set.contains(bottom_label))
+					) {
+						auto& label_points = ptcs[bottom_label];
+						label_points.push_back(x);
+						label_points.push_back(y);
+						label_points.push_back(static_cast<uint16_t>(z));
+					}
+				}
+				else if (
+					z == sz - 1 
+					&& !(skip_background && bottom_label == 0) 
+					&& !(selective && !labels_set.contains(bottom_label))
+				) {
+					auto& label_points = ptcs[bottom_label];
 					label_points.push_back(x);
 					label_points.push_back(y);
 					label_points.push_back(static_cast<uint16_t>(z));
