@@ -429,7 +429,7 @@ pointcloud_t _point_cloud_binary_image(
 						auto& label_points = ptc[top_val];
 						label_points.push_back(x);
 						label_points.push_back(y);
-						label_points.push_back(static_cast<uint16_t>(z));
+						label_points.push_back(static_cast<uint16_t>(z - 1));
 					}
 
 					if (
@@ -631,7 +631,7 @@ pointcloud_t _point_cloud_multivalued_image(
 						auto& label_points = ptcs[top_label];
 						label_points.push_back(x);
 						label_points.push_back(y);
-						label_points.push_back(static_cast<uint16_t>(z));
+						label_points.push_back(static_cast<uint16_t>(z - 1));
 					}
 
 					if (
