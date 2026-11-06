@@ -71,14 +71,19 @@ from .util import save, load, aload, bload, save_numpy
 def compressa(*args, **kwargs) -> CrackleArray:
   """compress but return the result as a CrackleArray."""
   if len(args) and isinstance(args[0], CrackleArray):
-  	binary = reencode(
-  		args[0].binary,
-  		markov_model_order=kwargs.get("markov_model_order", 0),
-  		parallel=kwargs.get("parallel", 0),
-  	)
+    binary = reencode(
+      args[0].binary,
+      markov_model_order=kwargs.get("markov_model_order", 0),
+      parallel=kwargs.get("parallel", 0),
+      verify=kwargs.get("verify", True),
+    )
   else:
-  	binary = compress(*args, **kwargs)
+    binary = compress(*args, **kwargs)
 
-  return CrackleArray(binary, parallel=kwargs.get("parallel", 0))
+  return CrackleArray(
+    binary,
+    parallel=kwargs.get("parallel", 0),
+    verify=kwargs.get("verify", True),
+  )
 
 
