@@ -44,12 +44,13 @@ import numpy as np
 import numpy.typing as npt
 
 class CrackleArray:
-  def __init__(self, binary:bytes, parallel:int = 0):
+  def __init__(self, binary:bytes, parallel:int = 0, verify:bool = True):
     self.binary = binary
 
     head = header(self.binary)
     self.shape = (head.sx, head.sy, head.sz)
     self.parallel = parallel
+    self.verify = verify
 
   def __len__(self):
     return len(self.binary)
@@ -76,17 +77,20 @@ class CrackleArray:
 
   def copy(self, order:Literal['C', 'F', 'K'] = 'K') -> "CrackleArray":
     if order == 'K':
-      return CrackleArray(self.binary, parallel=self.parallel)
+      return self.create(self.binary)
     elif order == 'F':
       return self.asfortranarray()
     else:
       return self.ascontiguousarray()
 
+  def create(self, binary:bytes) -> "CrackleArray":
+    return CrackleArray(binary, parallel=self.parallel, verify=self.verify)
+
   def asfortranarray(self) -> "CrackleArray":
-    return CrackleArray(asfortranarray(self.binary), parallel=self.parallel)
+    return self.create(asfortranarray(self.binary))
 
   def ascontiguousarray(self) -> "CrackleArray":
-    return CrackleArray(ascontiguousarray(self.binary), parallel=self.parallel)
+    return self.create(ascontiguousarray(self.binary))
 
   @property
   def dtype(self):
@@ -141,21 +145,21 @@ class CrackleArray:
     return operations.max(self.binary)
 
   def remap(self, mapping:Dict[int,int], preserve_missing_labels:bool = False):
-    return CrackleArray(remap(self.binary, mapping, preserve_missing_labels), parallel=self.parallel)
+    return self.create(remap(self.binary, mapping, preserve_missing_labels))
 
   def refit(self):
-    return CrackleArray(refit(self.binary), parallel=self.parallel)
+    return self.create(refit(self.binary))
 
   def astype(self,   
     dtype:npt.DTypeLike,
     order:Literal['C', 'F', 'K', 'A'] = 'K',
     casting:Literal['no','equiv','safe','same_kind','unsafe'] = "unsafe",
   ) -> "CrackleArray":
-    return CrackleArray(astype(self.binary, dtype, order, casting), parallel=self.parallel)
+    return self.create(astype(self.binary, dtype, order, casting))
 
   def renumber(self, start:int = 0) -> tuple["CrackleArray", dict[int,int]]:
     binary, mapping = renumber(self.binary, start)
-    return CrackleArray(binary, parallel=self.parallel), mapping
+    return self.create(binary), mapping
 
   def numpy(self, *args, **kwargs) -> np.ndarray:
     return self.decompress(*args, **kwargs)
@@ -164,12 +168,11 @@ class CrackleArray:
     self,
     label:Optional[int] = None,
     crop:bool = False,
-    verify:bool = True,
   ) -> bytes:
-    return decompress(self.binary, label=label, parallel=self.parallel, crop=crop, verify=verify)
+    return decompress(self.binary, label=label, parallel=self.parallel, crop=crop, verify=self.verify)
 
   def condense(self) -> "CrackleArray":
-    return CrackleArray(codec.condense_unique(self.binary), parallel=self.parallel)
+    return self.create(codec.condense_unique(self.binary))
 
   def point_cloud(
     self, 
@@ -230,12 +233,12 @@ class CrackleArray:
       return_mapping=return_mapping,
     )
     if return_mapping:
-      return (CrackleArray(out[0], parallel=self.parallel), out[1])
-    return CrackleArray(out, parallel=self.parallel)
+      return (self.create(out[0]), out[1])
+    return self.create(out)
 
   def mode_pooling_2x2x1(self, sparse:bool = False) -> "CrackleArray":
     ds_binary = mode_pooling_2x2x1(self.binary, sparse=sparse, parallel=self.parallel)
-    return CrackleArray(ds_binary, parallel=self.parallel)
+    return self.create(ds_binary)
 
   def voxel_connectivity_graph(
     self, connectivity:Literal[4,6] = 4,
@@ -267,7 +270,7 @@ class CrackleArray:
     del before_0
 
     if z_end - z_start == 1:
-      return CrackleArray(mid_0, parallel=self.parallel)
+      return self.create(mid_0)
 
     (before_1, mid_1, after_1) = zsplit(after_0, z_end - z_start - 1)
     del after_1
@@ -277,7 +280,7 @@ class CrackleArray:
     binary = zstack([
       mid_0, before_1
     ])
-    return CrackleArray(binary, parallel=self.parallel)
+    return self.create(binary)
   
   def to_parquet(self):
     return to_parquet(self.binary, parallel=self.parallel)
@@ -296,13 +299,13 @@ class CrackleArray:
 
   def mask(self, labels:list[int], value:int = 0, in_place:bool = False) -> "CrackleArray":
     binary = operations.mask(
-      self.binary, 
-      labels=labels, 
+      self.binary,
+      labels=labels,
       value=value,
       in_place=in_place,
       parallel=self.parallel,
     )
-    return CrackleArray(binary, parallel=self.parallel)
+    return self.create(binary)
 
   def mask_except(self, labels:list[int], value:int = 0, in_place:bool = False) -> "CrackleArray":
     binary = operations.mask_except(
@@ -312,7 +315,7 @@ class CrackleArray:
       in_place=in_place,
       parallel=self.parallel,
     )
-    return CrackleArray(binary, parallel=self.parallel)
+    return self.create(binary)
 
   def array_equal(self, other:"CrackleArray") -> bool:
     return array_equal(self.binary, other.binary)
@@ -327,14 +330,14 @@ class CrackleArray:
     binary = apply_binary_mask(
       self.binary, other.binary, parallel=self.parallel
     )
-    return CrackleArray(binary, parallel=self.parallel)
+    return self.create(binary)
 
   def recompress(self) -> "CrackleArray":
     """
     Regenerate crack codes after remapping.
     """
     binary = recompress(self.binary, parallel=self.parallel)
-    return CrackleArray(binary, parallel=self.parallel)
+    return self.create(binary)
 
   def viewer(self):
     """
@@ -347,10 +350,10 @@ class CrackleArray:
 
   def _dispatch_binary_operator(self, other:Union[int, Any], scalarfn:Callable, oper:str) -> bytes:
     if isinstance(other, (int, np.integer)):
-      return CrackleArray(scalarfn(self.binary, other), parallel=self.parallel)
+      return self.create(scalarfn(self.binary, other))
     elif isinstance(other, CrackleArray):
       binary = binary_operator(self.binary, other.binary, oper, self.parallel)
-      return CrackleArray(binary, parallel=self.parallel)
+      return self.create(binary)
     else:
       raise TypeError(f"Type {type(other)} is not supported.")
 
@@ -456,7 +459,8 @@ class CrackleArray:
     img = decompress_range(
       self.binary, 
       slices[2].start, slices[2].stop, 
-      parallel=self.parallel
+      parallel=self.parallel,
+      verify=self.verify,
     )
     zslc = slice(None, None, slices[2].step)
     if isinstance(slcs[2], (int, np.integer)):
@@ -638,7 +642,7 @@ class CrackleRemoteArray(CrackleArray):
 
     crackcode = self.fetch_crack_code(z)
     binary = self._synthetic_crackle_file(z, crackcode)
-    return CrackleArray(binary)[:,:,z]
+    return self.create(binary)[:,:,z]
 
 def reify_slices(slices, sx, sy, sz):
   """
