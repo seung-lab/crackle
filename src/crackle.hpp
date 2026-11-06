@@ -26,6 +26,7 @@
 #include "markov.hpp"
 #include "dual_graph.hpp"
 #include "threadpool.hpp"
+#include "packed_array.hpp"
 
 namespace crackle {
 
@@ -509,6 +510,7 @@ std::vector<LABEL> decode_label_map(
 template <typename LABEL, typename OUT>
 void decompress_multivalued_slice(
 	OUT* output,
+	crackle::packed_array::OneBitArray &bool_array,
 	const CrackleHeader& header,
 	const std::span<const unsigned char> binary,
 	const std::vector<std::vector<uint8_t>>& markov_model,
@@ -520,7 +522,8 @@ void decompress_multivalued_slice(
 	const uint64_t sxy,
 	const uint64_t z,
 	std::span<uint8_t> vcg,
-	std::span<uint32_t> cc_labels
+	std::span<uint32_t> cc_labels,
+	const bool bit_packed_output
 ) {
 	uint64_t N = 0;
 	crack_codes_to_cc_labels<uint32_t>(
@@ -554,15 +557,32 @@ void decompress_multivalued_slice(
 		const uint64_t label_v = *label;
 
 		if (header.fortran_order) {
-			for (uint64_t i = 0; i < sxy; i++) {
-				output[i + z * sxy] = (label_map[cc_labels[i]] == label_v);
+			if (bit_packed_output) {
+				for (uint64_t i = 0; i < sxy; i++) {
+					bool_array.set(i + z * sxy, (label_map[cc_labels[i]] == label_v));
+				}
+			}
+			else {
+				for (uint64_t i = 0; i < sxy; i++) {
+					output[i + z * sxy] = (label_map[cc_labels[i]] == label_v);
+				}
 			}
 		}
 		else {
-			uint64_t i = 0;
-			for (uint64_t y = 0; y < header.sy; y++) {
-				for (uint64_t x = 0; x < header.sx; x++, i++) {
-					output[z + szr * (y + header.sy * x)] = (label_map[cc_labels[i]] == label_v);
+			if (bit_packed_output) {
+				uint64_t i = 0;
+				for (uint64_t y = 0; y < header.sy; y++) {
+					for (uint64_t x = 0; x < header.sx; x++, i++) {
+						bool_array.set(z + szr * (y + header.sy * x), (label_map[cc_labels[i]] == label_v));
+					}
+				}
+			}
+			else {
+				uint64_t i = 0;
+				for (uint64_t y = 0; y < header.sy; y++) {
+					for (uint64_t x = 0; x < header.sx; x++, i++) {
+						output[z + szr * (y + header.sy * x)] = (label_map[cc_labels[i]] == label_v);
+					}
 				}
 			}
 		}
@@ -595,6 +615,7 @@ void decompress_multivalued_slice(
 template <typename LABEL, typename OUT>
 void decompress_binary_slice(
 	OUT* output,
+	crackle::packed_array::OneBitArray &bool_array,
 	const CrackleHeader& header,
 	const std::span<const unsigned char> binary,
 	const std::vector<std::vector<uint8_t>>& markov_model,
@@ -606,7 +627,8 @@ void decompress_binary_slice(
 	const uint64_t sxy,
 	const uint64_t z,
 	std::span<uint8_t> vcg,
-	const std::span<uint64_t> uniq
+	const std::span<uint64_t> uniq,
+	const bool bit_packed_output
 ) {
 	const std::vector<LABEL> label_map = decode_label_map<LABEL>(
 		header, binary, nullptr, 0, z_start + z, z_start + z + 1
@@ -631,16 +653,33 @@ void decompress_binary_slice(
 
 	if (label.has_value()) {
 		if (header.fortran_order) {
-			for (uint64_t i = 0; i < sxy; i++) {
-				output[i + z * sxy] = vcg[i];
+			if (bit_packed_output) {
+				for (uint64_t i = 0; i < sxy; i++) {
+					output[i + z * sxy] = vcg[i];
+				}
+			}
+			else {
+				for (uint64_t i = 0; i < sxy; i++) {
+					bool_array.set(i + z * sxy, vcg[i]);
+				}
 			}
 		}
 		else {
-			uint64_t i = 0;
-			for (uint64_t y = 0; y < header.sy; y++) {
-				for (uint64_t x = 0; x < header.sx; x++, i++) {
-					output[z + szr * (y + header.sy * x)] = vcg[i];
+			if (bit_packed_output) {
+				uint64_t i = 0;
+				for (uint64_t y = 0; y < header.sy; y++) {
+					for (uint64_t x = 0; x < header.sx; x++, i++) {
+						bool_array.set(z + szr * (y + header.sy * x), vcg[i]);
+					}
 				}
+			}
+			else {
+				uint64_t i = 0;
+				for (uint64_t y = 0; y < header.sy; y++) {
+					for (uint64_t x = 0; x < header.sx; x++, i++) {
+						output[z + szr * (y + header.sy * x)] = vcg[i];
+					}
+				}				
 			}
 		}
 	}
@@ -670,7 +709,8 @@ OUT* decompress(
 	int64_t z_end = -1,
 	size_t parallel = 1,
 	const std::optional<uint64_t> label = std::nullopt,
-	const bool verify = true
+	const bool verify = true,
+	const bool bit_packed_output = false
 ) {
 	if (num_bytes < CrackleHeader::header_size) {
 		std::string err = "crackle: Input too small to be a valid stream. Bytes: ";
@@ -717,7 +757,28 @@ OUT* decompress(
 	
 	auto crack_codes = get_crack_codes(header, binary, z_start, z_end);
 
-	if (output == NULL) {
+	crackle::packed_array::OneBitArray bool_array;
+
+	if (bit_packed_output) {
+		if (output != NULL) {
+			throw std::invalid_argument(
+				"output pointer provided as input not currently supported in bit packed mode"
+			);
+		}
+		if (std::is_same_v<OUT, uint8_t>) {
+			throw std::invalid_argument(
+				"bit packed mode is only valid for uint8 output"
+			);
+		}
+		if (!label.has_value()) {
+			throw std::invalid_argument(
+				"bit packed mode is only valid for binary images with a provided label"
+			);
+		}
+
+		bool_array.resize(voxels);
+	}
+	else if (output == NULL) {
 		output = new OUT[voxels];
 	}
 
@@ -748,8 +809,18 @@ OUT* decompress(
 		uniq = crackle::labels::unique(binary);
 
 		if (label.has_value() && !(uniq[0] == *label || uniq[1] == *label)) {
-			std::fill(output, output + voxels, 0u);
-			return output;
+			if (bit_packed_output) {
+				if constexpr (std::is_same_v<OUT, uint8_t>) {
+					return const_cast<OUT*>(bool_array.data());
+				}
+				else {
+					throw std::runtime_error("invalid template type for packed bits");
+				}
+			}
+			else {
+				std::fill(output, output + voxels, 0u);
+				return output;
+			}
 		}
 	}
 
@@ -767,6 +838,7 @@ OUT* decompress(
 			pool.enqueue([&,z](size_t t) {
 				decompress_binary_slice<LABEL, OUT>(
 					output,
+					bool_array,
 					header,
 					binary,
 					markov_model,
@@ -778,7 +850,8 @@ OUT* decompress(
 					sxy,
 					z,
 					std::span<uint8_t>(vcg_scratch[t].get(), sxy),
-					uniq
+					uniq,
+					bit_packed_output
 				);
 			});			
 		}
@@ -786,6 +859,7 @@ OUT* decompress(
 			pool.enqueue([&,z](size_t t) {
 				decompress_multivalued_slice<LABEL, OUT>(
 					output,
+					bool_array,
 					header,
 					binary,
 					markov_model,
@@ -797,13 +871,21 @@ OUT* decompress(
 					sxy,
 					z,
 					std::span<uint8_t>(vcg_scratch[t].get(), sxy),
-					std::span<uint32_t>(cc_labels_scratch[t].get(), sxy)
+					std::span<uint32_t>(cc_labels_scratch[t].get(), sxy),
+					bit_packed_output
 				);
 			});
 		}
 	}
 
 	pool.join();
+
+	if constexpr (std::is_same_v<OUT, uint8_t>) {
+		return const_cast<OUT*>(bool_array.data());
+	}
+	else {
+		throw std::runtime_error("invalid template type for packed bits");
+	}
 
 	return output;
 }

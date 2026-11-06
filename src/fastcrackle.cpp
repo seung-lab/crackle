@@ -141,6 +141,109 @@ py::array decompress(
 }
 
 template <typename LABEL>
+py::array_t<uint8_t> bit_packed_decompress_helper(
+	const crackle::CrackleHeader& head, 
+	const uint8_t* buffer,
+	const uint64_t num_bytes,
+	int64_t z_start, int64_t z_end,
+	size_t parallel,
+	const uint64_t label,
+	const bool verify
+) {
+	int64_t voxels = head.sx * head.sy;
+	z_start = std::max(z_start, static_cast<int64_t>(0));
+	if (z_end == -1) {
+		z_end = head.sz;
+	}
+	z_end = std::min(
+		std::max(z_end, static_cast<int64_t>(0)), 
+		static_cast<int64_t>(head.sz)
+	);
+
+	voxels *= z_end - z_start;
+
+	if (voxels == 0) {
+		return py::array_t<uint8_t>({ 0 }, { 1 });
+	}
+
+	uint8_t* output = nullptr;
+	
+	{
+		py::gil_scoped_release release;
+		output = crackle::decompress<LABEL, uint8_t>(
+			buffer, num_bytes,
+			nullptr,
+			z_start, z_end, 
+			parallel, label, verify,
+			/*bit_packed_output=*/true
+		);
+	}
+
+	if (!output) {
+		throw std::runtime_error("crackle::decompress returned null");
+	}
+
+	const py::ssize_t num_packed_bytes = (voxels + 7) >> 3;
+
+	py::capsule capsule(output, [](void* ptr) {
+		if (ptr) {
+			delete[] static_cast<uint8_t*>(ptr);
+		}
+	});
+
+	return py::array_t<uint8_t>(
+		{num_packed_bytes},
+		{1},
+		output,
+		capsule
+	);
+}
+
+py::array_t<uint8_t> bit_packed_decompress(
+	const py::buffer buffer, 
+	const uint64_t label,
+	const int64_t z_start = 0,
+	const int64_t z_end = -1,
+	const size_t parallel = 1,
+	const bool verify = true
+) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::invalid_argument("Expected a 1D buffer");
+	}
+
+	uint8_t* data = static_cast<uint8_t*>(info.ptr);
+
+	crackle::CrackleHeader head(data);
+
+	if (head.data_width == 1) {
+		return decompress_helper<uint8_t>(
+			head, data, info.size, z_start, z_end, 
+			parallel, label, verify
+		);
+	}
+	else if (head.data_width == 2) {
+		return decompress_helper<uint16_t>(
+			head, data, info.size, z_start, z_end,
+			parallel, label, verify
+		);
+	}
+	else if (head.data_width == 4) {
+		return decompress_helper<uint32_t>(
+			head, data, info.size, z_start, z_end,
+			parallel, label, verify
+		);	
+	}
+	else {
+		return decompress_helper<uint64_t>(
+			head, data, info.size, z_start, z_end,
+			parallel, label, verify
+		);
+	}
+}
+
+template <typename LABEL>
 py::bytes compress_helper(
 	const py::array &labels, 
 	const bool allow_pins = false,
@@ -962,6 +1065,7 @@ py::array scattered_points(
 PYBIND11_MODULE(fastcrackle, m) {
 	m.doc() = "Accelerated crackle functions."; 
 	m.def("decompress", &decompress, "Decompress a crackle file into a numpy array.");
+	m.def("bit_packed_decompress", &bit_packed_decompress, "Decompress a single label in a crackle file into a bit packed buffer.");
 	m.def("compress", &compress, "Compress a numpy array into a binary crackle file returned as bytes.");
 	m.def("reencode_markov", &reencode_markov, "Change the markov order of an existing crackle binary.");
 	m.def("remap", &remap, "Remap a buffer's unique labels in place.");
