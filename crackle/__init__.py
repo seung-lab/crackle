@@ -75,7 +75,6 @@ def compressa(*args, **kwargs) -> CrackleArray:
       args[0].binary,
       markov_model_order=kwargs.get("markov_model_order", 0),
       parallel=kwargs.get("parallel", 0),
-      verify=kwargs.get("verify", True),
     )
   else:
     binary = compress(*args, **kwargs)
