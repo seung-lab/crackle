@@ -1310,9 +1310,9 @@ def signed_distance_to_boundary(
 
   # Check for distance to image boundary
   if black_border:
-    np.minimum(radii, scaled_points[:,0]+anisotropy[0], out=radii)
-    np.minimum(radii, scaled_points[:,1]+anisotropy[1], out=radii)
-    np.minimum(radii, scaled_points[:,2]+anisotropy[2], out=radii)
+    np.minimum(radii, scaled_points[:,0] + anisotropy[0], out=radii)
+    np.minimum(radii, scaled_points[:,1] + anisotropy[1], out=radii)
+    np.minimum(radii, scaled_points[:,2] + anisotropy[2], out=radii)
     np.minimum(radii, head.sx * anisotropy[0] - scaled_points[:,0], out=radii)
     np.minimum(radii, head.sy * anisotropy[1] - scaled_points[:,1], out=radii)
     np.minimum(radii, head.sz * anisotropy[2] - scaled_points[:,2], out=radii)
