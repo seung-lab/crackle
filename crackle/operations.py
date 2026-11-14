@@ -1227,11 +1227,16 @@ def signed_distance_to_boundary(
   parallel:int = 0,
   z_chunk:int = 100,
   progress:bool = False,
+  black_border:bool = True,
 ) -> npt.NDArray[float]:
   """
   Compute the signed distance field for a sparse set of points.
   """
-  from pykdtree.kdtree import KDTree
+  try:
+    from pykdtree.kdtree import KDTree
+  except ImportError:
+    from scipy.spatial import cKDTree as KDTree
+
   from tqdm import tqdm
 
   points = np.asarray(points)
@@ -1246,42 +1251,78 @@ def signed_distance_to_boundary(
   z_chunk = np.min([ z_chunk, head.sz ])
   anisotropy = np.asarray(anisotropy, dtype=np.float32)
 
-  correction_factor = np.min(anisotropy)
-
   scaled_points = points * anisotropy
   scaled_points = scaled_points.astype(np.float32)
 
-  iter = tqdm(
+  pbar = tqdm(
     range(0, head.sz, z_chunk),
     disable=(not progress),
     desc="Signed Distance to Boundary",
   )
 
-  for z in iter:
-    ptc = point_cloud(
-      binary, 
-      z_start=np.max([ z-1, 0 ]),
-      z_end=np.min([ z+z_chunk, head.sz ]),
-      label=label, 
-      parallel=parallel
-    )
+  def get_radii(ptc, pts):
     if ptc.size == 0:
-      continue
-
+      return np.full(pts.shape[0], np.inf, dtype=np.float32)
     ptc = ptc.astype(np.float32)
     ptc[:] *= anisotropy
     tree = KDTree(ptc)
-    chunk_radii, _ = tree.query(scaled_points, k=1)
+    chunk_radii, _ = tree.query(pts, k=1)
+    return chunk_radii
 
-    # regular edt is distance to bg, kdtree returns
-    # distance to contour, which is a difference of 1 
-    # can maybe improve this by taking the mean of the
-    # axial, square diagonal, and cubic directions
-    # distances inside need to be expanded, points outside contracted
-    np.add(chunk_radii, correction_factor, out=chunk_radii, where=inside_mask)
-    np.minimum(radii, chunk_radii, out=radii)
+  outside_mask = ~inside_mask
 
-  np.negative(radii, out=radii, where=inside_mask)
+  any_inside = np.any(inside_mask)
+  any_outside = np.any(outside_mask)
+
+  # This is a memory optimization that
+  # will discard the larger external point
+  # cloud if we don't need it.
+  query_label = None
+  if not any_inside:
+    query_label = label
+
+  for z in pbar:
+    ptcs = point_cloud(
+      binary, 
+      label=query_label,
+      z_start=np.max([ z-1, 0 ]),
+      z_end=np.min([ z+z_chunk, head.sz ]),
+      parallel=parallel,
+      skip_background=False,
+    )
+    if not isinstance(ptcs, dict):
+      ptcs = { label: ptcs }
+
+    internal_ptc = ptcs.pop(label, np.zeros([0,3], dtype=np.uint16))
+
+    if len(ptcs):
+      external_ptc = np.concatenate([ ptc for ptc in ptcs.values() ])
+    else:
+      external_ptc = np.zeros([0,3], dtype=np.uint16)
+
+    del ptcs
+
+    if any_outside:
+      external_radii = get_radii(internal_ptc, scaled_points[outside_mask])
+      radii[outside_mask] = np.minimum(radii[outside_mask], external_radii)
+      del external_radii
+
+    if any_inside:
+      internal_radii = get_radii(external_ptc, scaled_points[inside_mask])
+      radii[inside_mask] = np.minimum(radii[inside_mask], internal_radii)
+      del internal_radii
+
+  # Check for distance to image boundary
+  if black_border:
+    np.minimum(radii, scaled_points[:,0] + anisotropy[0], out=radii)
+    np.minimum(radii, scaled_points[:,1] + anisotropy[1], out=radii)
+    np.minimum(radii, scaled_points[:,2] + anisotropy[2], out=radii)
+    np.minimum(radii, head.sx * anisotropy[0] - scaled_points[:,0], out=radii)
+    np.minimum(radii, head.sy * anisotropy[1] - scaled_points[:,1], out=radii)
+    np.minimum(radii, head.sz * anisotropy[2] - scaled_points[:,2], out=radii)
+
+  if any_inside:
+    np.negative(radii, out=radii, where=inside_mask)
 
   return radii
 

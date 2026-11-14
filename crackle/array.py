@@ -206,6 +206,7 @@ class CrackleArray:
     points:np.ndarray,
     anisotropy:np.ndarray = np.ones(3, dtype=np.float32),
     progress:bool = False,
+    black_border:bool = True,
   ) -> npt.NDArray[np.float32]:
     return signed_distance_to_boundary(
       self.binary,
@@ -214,6 +215,7 @@ class CrackleArray:
       anisotropy=anisotropy,
       progress=progress,
       parallel=self.parallel,
+      black_border=black_border,
     )
 
   def connected_components(
