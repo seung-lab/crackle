@@ -1230,9 +1230,11 @@ def test_signed_distance_to_boundary():
   pts = np.random.randint(0,300, size=[100,3], dtype=np.uint16)
   arr = crackle.compressa(labels)
   arr.parallel = 2
-  ckl_result = arr.signed_distance_to_boundary(label=1, points=pts)
+  ckl_result = arr.signed_distance_to_boundary(
+    label=1, points=pts,
+    black_border=False,
+  )
   scipy_result = sdt[pts[:,0], pts[:,1], pts[:,2]]
 
-
-  assert np.all(np.abs(ckl_result - scipy_result) <= 1)
+  assert np.all(np.abs(ckl_result - scipy_result) <= 0.001)
 
