@@ -1281,6 +1281,14 @@ def signed_distance_to_boundary(
     np.add(chunk_radii, correction_factor, out=chunk_radii, where=inside_mask)
     np.minimum(radii, chunk_radii, out=radii)
 
+  # Check for distance to image boundary
+  np.minimum(radii, points[:,0]+1, out=radii)
+  np.minimum(radii, points[:,1]+1, out=radii)
+  np.minimum(radii, points[:,2]+1, out=radii)
+  np.minimum(radii, header.sx - points[:,0], out=radii)
+  np.minimum(radii, header.sy - points[:,1], out=radii)
+  np.minimum(radii, header.sz - points[:,2], out=radii)
+
   np.negative(radii, out=radii, where=inside_mask)
 
   return radii
