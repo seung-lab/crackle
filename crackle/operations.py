@@ -1232,7 +1232,11 @@ def signed_distance_to_boundary(
   """
   Compute the signed distance field for a sparse set of points.
   """
-  from pykdtree.kdtree import KDTree
+  try:
+    from pykdtree.kdtree import KDTree
+  except ImportError:
+    from scipy.spatial import cKDTree as KDTree
+
   from tqdm import tqdm
 
   points = np.asarray(points)
