@@ -1273,9 +1273,17 @@ def signed_distance_to_boundary(
   any_inside = np.any(inside_mask)
   any_outside = np.any(outside_mask)
 
+  # This is a memory optimization that
+  # will discard the larger external point
+  # cloud if we don't need it.
+  query_label = None
+  if not any_inside:
+    query_label = label
+
   for z in iter:
     ptcs = point_cloud(
       binary, 
+      label=query_label,
       z_start=np.max([ z-1, 0 ]),
       z_end=np.min([ z+z_chunk, head.sz ]),
       parallel=parallel
@@ -1296,12 +1304,12 @@ def signed_distance_to_boundary(
       del internal_radii
 
   # Check for distance to image boundary
-  np.minimum(radii, points[:,0]+1, out=radii)
-  np.minimum(radii, points[:,1]+1, out=radii)
-  np.minimum(radii, points[:,2]+1, out=radii)
-  np.minimum(radii, head.sx - points[:,0], out=radii)
-  np.minimum(radii, head.sy - points[:,1], out=radii)
-  np.minimum(radii, head.sz - points[:,2], out=radii)
+  np.minimum(radii, scaled_points[:,0]+anisotropy[0], out=radii)
+  np.minimum(radii, scaled_points[:,1]+anisotropy[1], out=radii)
+  np.minimum(radii, scaled_points[:,2]+anisotropy[2], out=radii)
+  np.minimum(radii, head.sx * anisotropy[0] - scaled_points[:,0], out=radii)
+  np.minimum(radii, head.sy * anisotropy[1] - scaled_points[:,1], out=radii)
+  np.minimum(radii, head.sz * anisotropy[2] - scaled_points[:,2], out=radii)
 
   np.negative(radii, out=radii, where=inside_mask)
 
