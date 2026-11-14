@@ -1325,7 +1325,8 @@ def signed_distance_to_boundary(
     np.minimum(radii, head.sy * anisotropy[1] - scaled_points[:,1], out=radii)
     np.minimum(radii, head.sz * anisotropy[2] - scaled_points[:,2], out=radii)
 
-  np.negative(radii, out=radii, where=inside_mask)
+  if any_inside:
+    np.negative(radii, out=radii, where=inside_mask)
 
   return radii
 
