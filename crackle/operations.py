@@ -1251,20 +1251,16 @@ def signed_distance_to_boundary(
   z_chunk = np.min([ z_chunk, head.sz ])
   anisotropy = np.asarray(anisotropy, dtype=np.float32)
 
-  correction_factor = np.min(anisotropy)
-
   scaled_points = points * anisotropy
   scaled_points = scaled_points.astype(np.float32)
 
-  iter = tqdm(
+  pbar = tqdm(
     range(0, head.sz, z_chunk),
     disable=(not progress),
     desc="Signed Distance to Boundary",
   )
 
   def get_radii(ptc, pts):
-    nonlocal radii
-
     if ptc.size == 0:
       return np.full(pts.shape[0], np.inf, dtype=np.float32)
     ptc = ptc.astype(np.float32)
@@ -1285,7 +1281,7 @@ def signed_distance_to_boundary(
   if not any_inside:
     query_label = label
 
-  for z in iter:
+  for z in pbar:
     ptcs = point_cloud(
       binary, 
       label=query_label,
