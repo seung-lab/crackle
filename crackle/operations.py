@@ -1294,9 +1294,16 @@ def signed_distance_to_boundary(
       parallel=parallel,
       skip_background=False,
     )
+    if not isinstance(ptcs, dict):
+      ptcs = { label: ptcs }
 
     internal_ptc = ptcs.pop(label, np.zeros([0,3], dtype=np.uint16))
-    external_ptc = np.concatenate([ ptc for ptc in ptcs.values() ])
+
+    if len(ptcs):
+      external_ptc = np.concatenate([ ptc for ptc in ptcs.values() ])
+    else:
+      external_ptc = np.zeros([0,3], dtype=np.uint16)
+
     del ptcs
 
     if any_outside:
