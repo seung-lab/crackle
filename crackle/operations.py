@@ -1291,7 +1291,8 @@ def signed_distance_to_boundary(
       label=query_label,
       z_start=np.max([ z-1, 0 ]),
       z_end=np.min([ z+z_chunk, head.sz ]),
-      parallel=parallel
+      parallel=parallel,
+      skip_background=False,
     )
 
     internal_ptc = ptcs.pop(label, np.zeros([0,3], dtype=np.uint16))
