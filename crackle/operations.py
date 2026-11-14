@@ -1257,37 +1257,51 @@ def signed_distance_to_boundary(
     desc="Signed Distance to Boundary",
   )
 
-  for z in iter:
-    ptc = point_cloud(
-      binary, 
-      z_start=np.max([ z-1, 0 ]),
-      z_end=np.min([ z+z_chunk, head.sz ]),
-      label=label, 
-      parallel=parallel
-    )
-    if ptc.size == 0:
-      continue
+  def get_radii(ptc, pts):
+    nonlocal radii
 
+    if ptc.size == 0:
+      return np.full(pts.shape[0], np.inf, dtype=np.float32)
     ptc = ptc.astype(np.float32)
     ptc[:] *= anisotropy
     tree = KDTree(ptc)
-    chunk_radii, _ = tree.query(scaled_points, k=1)
+    chunk_radii, _ = tree.query(pts, k=1)
+    return chunk_radii
 
-    # regular edt is distance to bg, kdtree returns
-    # distance to contour, which is a difference of 1 
-    # can maybe improve this by taking the mean of the
-    # axial, square diagonal, and cubic directions
-    # distances inside need to be expanded, points outside contracted
-    np.add(chunk_radii, correction_factor, out=chunk_radii, where=inside_mask)
-    np.minimum(radii, chunk_radii, out=radii)
+  outside_mask = ~inside_mask
+
+  any_inside = np.any(inside_mask)
+  any_outside = np.any(outside_mask)
+
+  for z in iter:
+    ptcs = point_cloud(
+      binary, 
+      z_start=np.max([ z-1, 0 ]),
+      z_end=np.min([ z+z_chunk, head.sz ]),
+      parallel=parallel
+    )
+
+    internal_ptc = ptcs.pop(label, np.zeros([0,3], dtype=np.uint16))
+    external_ptc = np.concatenate([ ptc for ptc in ptcs.values() ])
+    del ptcs
+
+    if any_outside:
+      external_radii = get_radii(internal_ptc, scaled_points[outside_mask])
+      np.minimum(radii[outside_mask], external_radii, out=radii[outside_mask])
+      del external_radii
+
+    if any_inside:
+      internal_radii = get_radii(external_ptc, scaled_points[inside_mask])
+      np.minimum(radii[inside_mask], internal_radii, out=radii[inside_mask])
+      del internal_radii
 
   # Check for distance to image boundary
   np.minimum(radii, points[:,0]+1, out=radii)
   np.minimum(radii, points[:,1]+1, out=radii)
   np.minimum(radii, points[:,2]+1, out=radii)
-  np.minimum(radii, header.sx - points[:,0], out=radii)
-  np.minimum(radii, header.sy - points[:,1], out=radii)
-  np.minimum(radii, header.sz - points[:,2], out=radii)
+  np.minimum(radii, head.sx - points[:,0], out=radii)
+  np.minimum(radii, head.sy - points[:,1], out=radii)
+  np.minimum(radii, head.sz - points[:,2], out=radii)
 
   np.negative(radii, out=radii, where=inside_mask)
 
