@@ -1227,6 +1227,7 @@ def signed_distance_to_boundary(
   parallel:int = 0,
   z_chunk:int = 100,
   progress:bool = False,
+  black_border:bool = True,
 ) -> npt.NDArray[float]:
   """
   Compute the signed distance field for a sparse set of points.
@@ -1304,12 +1305,13 @@ def signed_distance_to_boundary(
       del internal_radii
 
   # Check for distance to image boundary
-  np.minimum(radii, scaled_points[:,0]+anisotropy[0], out=radii)
-  np.minimum(radii, scaled_points[:,1]+anisotropy[1], out=radii)
-  np.minimum(radii, scaled_points[:,2]+anisotropy[2], out=radii)
-  np.minimum(radii, head.sx * anisotropy[0] - scaled_points[:,0], out=radii)
-  np.minimum(radii, head.sy * anisotropy[1] - scaled_points[:,1], out=radii)
-  np.minimum(radii, head.sz * anisotropy[2] - scaled_points[:,2], out=radii)
+  if black_border:
+    np.minimum(radii, scaled_points[:,0]+anisotropy[0], out=radii)
+    np.minimum(radii, scaled_points[:,1]+anisotropy[1], out=radii)
+    np.minimum(radii, scaled_points[:,2]+anisotropy[2], out=radii)
+    np.minimum(radii, head.sx * anisotropy[0] - scaled_points[:,0], out=radii)
+    np.minimum(radii, head.sy * anisotropy[1] - scaled_points[:,1], out=radii)
+    np.minimum(radii, head.sz * anisotropy[2] - scaled_points[:,2], out=radii)
 
   np.negative(radii, out=radii, where=inside_mask)
 
