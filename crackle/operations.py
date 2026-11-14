@@ -1308,12 +1308,12 @@ def signed_distance_to_boundary(
 
     if any_outside:
       external_radii = get_radii(internal_ptc, scaled_points[outside_mask])
-      np.minimum(radii[outside_mask], external_radii, out=radii[outside_mask])
+      radii[outside_mask] = np.minimum(radii[outside_mask], external_radii)
       del external_radii
 
     if any_inside:
       internal_radii = get_radii(external_ptc, scaled_points[inside_mask])
-      np.minimum(radii[inside_mask], internal_radii, out=radii[inside_mask])
+      radii[inside_mask] = np.minimum(radii[inside_mask], internal_radii)
       del internal_radii
 
   # Check for distance to image boundary
