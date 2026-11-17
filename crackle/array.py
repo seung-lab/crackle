@@ -712,10 +712,13 @@ def reify_slices(slices, sx, sy, sz):
         raise ValueError(f'Negative step sizes are not supported. Got: {step}')
 
       if start < 0: # this is support for negative indicies
-        start = maxpt[index] + start         
+        start = maxpt[index] + start
       check_bounds(start, minpt[index], maxpt[index])
+      
       if end < 0: # this is support for negative indicies
         end = maxpt[index] + end
+      if end > maxpt[index]:
+        end = maxpt[index]
       check_bounds(end, minpt[index], maxpt[index])
 
       slices[index] = slice(start, end, step)
